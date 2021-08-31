@@ -1,0 +1,7 @@
+
+# VIM swap files.
+*.swp
+
+# Python artifacts.
+__pycache__/
+
