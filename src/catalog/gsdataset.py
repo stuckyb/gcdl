@@ -2,9 +2,9 @@
 import json
 
 
-class DataSource:
+class GSDataSet:
     """
-    Base class for all catalog data sources.
+    Base class for all geospatial catalog data sets.
     """
     def __init__(self):
         # Basic dataset information.
@@ -37,12 +37,37 @@ class DataSource:
         # Class attributes to copy directly.
         attribs = [
             'dataset_name', 'dataset_url', 'description', 'provider_name',
-            'provider_url', 'vars', 'date_ranges'
+            'provider_url', 'vars'
         ]
 
         resp = {}
         for attrib in attribs:
             resp[attrib] = getattr(self, attrib)
+
+        resp['date_ranges'] = {}
+        if self.date_ranges['year'][0] is None:
+            resp['date_ranges']['year'] = [None, None]
+        else:
+            resp['date_ranges']['year'] = [
+                self.date_ranges['year'][0].year,
+                self.date_ranges['year'][1].year
+            ]
+
+        if self.date_ranges['month'][0] is None:
+            resp['date_ranges']['month'] = [None, None]
+        else:
+            resp['date_ranges']['month'] = [
+                self.date_ranges['month'][0].strftime('%Y-%m'),
+                self.date_ranges['month'][1].strftime('%Y-%m')
+            ]
+
+        if self.date_ranges['day'][0] is None:
+            resp['date_ranges']['day'] = [None, None]
+        else:
+            resp['date_ranges']['day'] = [
+                self.date_ranges['day'][0].strftime('%Y-%m-%d'),
+                self.date_ranges['day'][1].strftime('%Y-%m-%d')
+            ]
 
         return json.dumps(resp)
 
