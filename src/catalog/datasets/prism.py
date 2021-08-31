@@ -1,5 +1,5 @@
 
-from gsdataset import GSDataSet
+from .gsdataset import GSDataSet
 import datetime
 
 
@@ -8,8 +8,8 @@ class PRISM(GSDataSet):
         super().__init__()
 
         # Basic dataset information.
-        self.dataset_name = 'PRISM'
-        self.dataset_url = 'https://prism.oregonstate.edu/'
+        self.name = 'PRISM'
+        self.url = 'https://prism.oregonstate.edu/'
 
         # The variables/layers/bands in the dataset.
         self.vars = [

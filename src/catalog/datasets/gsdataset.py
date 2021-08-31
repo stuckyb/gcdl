@@ -8,9 +8,13 @@ class GSDataSet:
     """
     def __init__(self):
         # Basic dataset information.
-        self.dataset_name = ''
-        self.dataset_url = ''
+        self.name = ''
+        self.url = ''
         self.description = ''
+
+        # An optional, internal identifier string that should only be
+        # externally accessed through the "id" property.
+        self._id = None
 
         # Provider information, if different from the dataset information.
         self.provider_name = ''
@@ -30,13 +34,24 @@ class GSDataSet:
             'day': [None, None]
         }
 
+    @property
+    def id(self):
+        if self._id is None:
+            return self.name
+        else:
+            return self._id
+
+    @id.setter
+    def id(self, idstr):
+        self._id = idstr
+
     def getMetadataJSON(self):
         """
         Returns a JSON representation of the dataset's metadata.
         """
         # Class attributes to copy directly.
         attribs = [
-            'dataset_name', 'dataset_url', 'description', 'provider_name',
+            'name', 'id', 'url', 'description', 'provider_name',
             'provider_url', 'vars'
         ]
 
