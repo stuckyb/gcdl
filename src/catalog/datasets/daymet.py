@@ -14,6 +14,9 @@ class DAYMET(GSDataSet):
         self.name = 'DAYMET'
         self.url = 'https://daymet.ornl.gov/'
 
+        # The grid size, in meters.
+        self.grid_size = 1000
+
         # The variables/layers/bands in the dataset.
         self.vars = [
             'day length', 'shortwave radiation',

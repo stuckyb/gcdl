@@ -14,6 +14,9 @@ class PRISM(GSDataSet):
         self.name = 'PRISM'
         self.url = 'https://prism.oregonstate.edu/'
 
+        # The grid size, in meters.
+        self.grid_size = 4000
+
         # The variables/layers/bands in the dataset.
         self.vars = [
             'precipitation', 'mean temperature', 'minimum temperature',

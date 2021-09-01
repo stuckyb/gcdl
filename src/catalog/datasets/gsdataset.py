@@ -23,6 +23,9 @@ class GSDataSet:
         self.provider_name = ''
         self.provider_url = '' 
 
+        # The grid size, in meters.
+        self.grid_size = None
+
         # The variables/layers/bands in the dataset.
         self.vars = []
 
@@ -55,7 +58,7 @@ class GSDataSet:
         # Class attributes to copy directly.
         attribs = [
             'name', 'id', 'url', 'description', 'provider_name',
-            'provider_url', 'vars'
+            'provider_url', 'grid_size', 'vars'
         ]
 
         resp = {}
