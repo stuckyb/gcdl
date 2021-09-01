@@ -1,6 +1,5 @@
 
 from pathlib import Path
-import json
 
 
 class DatasetCatalog:
@@ -28,7 +27,10 @@ class DatasetCatalog:
         """
         self.datasets[dataset.id] = dataset
 
-    def getDatasetsListingJSON(self):
+    def getCatalogEntries(self):
+        """
+        Returns a list of dataset id/name pairings.
+        """
         dsl = []
         for key in self.datasets:
             dsl.append({'id': key, 'name': self.datasets[key].name})
@@ -36,7 +38,7 @@ class DatasetCatalog:
         # Sort by dataset name.
         dsl.sort(key=lambda item: item['name'])
 
-        return json.dumps(dsl)
+        return dsl
 
     def getDataset(self, dataset_id):
         if dataset_id not in self.datasets:

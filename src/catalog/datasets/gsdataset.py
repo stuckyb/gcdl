@@ -1,6 +1,4 @@
 
-import json
-
 
 class GSDataSet:
     """
@@ -51,9 +49,9 @@ class GSDataSet:
     def id(self, idstr):
         self._id = idstr
 
-    def getMetadataJSON(self):
+    def getMetadata(self):
         """
-        Returns a JSON representation of the dataset's metadata.
+        Returns a data structure containing the dataset's metadata.
         """
         # Class attributes to copy directly.
         attribs = [
@@ -90,5 +88,5 @@ class GSDataSet:
                 self.date_ranges['day'][1].strftime('%Y-%m-%d')
             ]
 
-        return json.dumps(resp)
+        return resp
 
