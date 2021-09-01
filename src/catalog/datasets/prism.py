@@ -4,8 +4,11 @@ import datetime
 
 
 class PRISM(GSDataSet):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, store_path):
+        """
+        store_path (Path): The location of on-disk dataset storage.
+        """
+        super().__init__(store_path)
 
         # Basic dataset information.
         self.name = 'PRISM'

@@ -6,7 +6,10 @@ class GSDataSet:
     """
     Base class for all geospatial catalog data sets.
     """
-    def __init__(self):
+    def __init__(self, store_path):
+        """
+        store_path (Path): The location of on-disk dataset storage.
+        """
         # Basic dataset information.
         self.name = ''
         self.url = ''
