@@ -39,6 +39,12 @@ class PRISM(GSDataSet):
             datetime.date(1981, 1, 1), datetime.date(2021, 1, 31)
         ]
 
+        # File name patterns for each PRISM variable.
+        self.fpatterns = {
+            'ppt': 'PRISM_ppt_stable_4kmM2_{0}_bil.bil',
+            'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
+        }
+
     def getSubset(self, output_dir, date_start, date_end, varnames, bounds):
         """
         Extracts a subset of the data. Dates must be specified as strings,
@@ -65,9 +71,7 @@ class PRISM(GSDataSet):
 
             for year in range(start, end):
                 for varname in varnames:
-                    fname = 'PRISM_{0}_stable_4kmM2_{1}_bil.bil'.format(
-                        varname, year
-                    )
+                    fname = self.fpatterns[varname].format(year)
                     fpath = self.store_path / fname
                     fout_path = output_dir / 'PRISM_{0}_{1}.tif'.format(
                         varname, year
@@ -81,7 +85,7 @@ class PRISM(GSDataSet):
         data = rioxarray.open_rasterio(fpath, masked=True)
 
         if bounds is None:
-            pass
+            data.rio.to_raster(output_path)
         else:
             clip_geom = [{
                 'type': 'Polygon',
