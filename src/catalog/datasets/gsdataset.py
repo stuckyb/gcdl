@@ -1,4 +1,7 @@
 
+from pathlib import Path
+from pyproj.crs import CRS
+
 
 class GSDataSet:
     """
@@ -8,6 +11,8 @@ class GSDataSet:
         """
         store_path (Path): The location of on-disk dataset storage.
         """
+        self.store_path = Path(store_path)
+
         # Basic dataset information.
         self.name = ''
         self.url = ''
@@ -19,13 +24,16 @@ class GSDataSet:
 
         # Provider information, if different from the dataset information.
         self.provider_name = ''
-        self.provider_url = '' 
+        self.provider_url = ''
+
+        # CRS information.
+        self.epsg_code = None
 
         # The grid size, in meters.
         self.grid_size = None
 
         # The variables/layers/bands in the dataset.
-        self.vars = []
+        self.vars = {}
 
         # Temporal coverage of the dataset. In concrete subclasses, start and
         # end dates should be provided with datetime.date objects.
@@ -63,6 +71,7 @@ class GSDataSet:
         for attrib in attribs:
             resp[attrib] = getattr(self, attrib)
 
+        # Generate the temporal metadata.
         resp['date_ranges'] = {}
         if self.date_ranges['year'][0] is None:
             resp['date_ranges']['year'] = [None, None]
@@ -87,6 +96,20 @@ class GSDataSet:
                 self.date_ranges['day'][0].strftime('%Y-%m-%d'),
                 self.date_ranges['day'][1].strftime('%Y-%m-%d')
             ]
+
+        # Generate CRS metadata.
+        if self.epsg_code is not None:
+            crs = CRS.from_epsg(self.epsg_code)
+
+            resp['crs'] = {}
+            resp['crs']['name'] = crs.name
+            resp['crs']['epsg'] = self.epsg_code
+            resp['crs']['proj4'] = crs.to_proj4()
+            resp['crs']['datum'] = crs.datum.name
+            resp['crs']['is_geographic'] = crs.is_geographic
+            resp['crs']['is_projected'] = crs.is_projected
+        else:
+            resp['crs'] = None
 
         return resp
 
