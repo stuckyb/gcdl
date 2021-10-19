@@ -46,6 +46,9 @@ class DatasetCatalog:
         else:
             return self.datasets[dataset_id]
 
+    def __contains__(self, dataset_id):
+        return dataset_id in self.datasets
+
     def __getitem__(self, dataset_id):
         return self.getDataset(dataset_id)
 

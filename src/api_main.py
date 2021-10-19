@@ -1,18 +1,29 @@
 
 from catalog.catalog import DatasetCatalog
 from catalog.datasets import PRISM, DAYMET
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi.exceptions import RequestValidationError
 
 
 dsc = DatasetCatalog('local_data')
 dsc.addDatasetsByClass(PRISM, DAYMET)
 
+def check_dsid(dsid, ds_catalog):
+    """
+    Raises an exception if a given dataset ID is invalid.
+    """
+    if dsid not in ds_catalog:
+        raise HTTPException(
+            status_code=404, detail=f'Invalid dataset ID: {dsid}'
+        )
+
+
 app = FastAPI(
-    title='Common Geospatial Data Library REST API',
+    title='Geospatial Common Data Library REST API',
     description='Welcome to the interactive documentation for USDA-ARS\'s '
-    'Common Geospatial Data Library (CGDL) REST API! Here, you can see all '
-    'available API endpoints and directly experiment with CGDL API calls. '
-    'Note that most users will find it easier to access the CGDL via one of '
+    'Geospatial Common Data Library (GeoCDL) REST API! Here, you can see all '
+    'available API endpoints and directly experiment with GeoCDL API calls. '
+    'Note that most users will find it easier to access the GeoCDL via one of '
     'our higher-level interfaces, including a web GUI interface and packages '
     'for Python and R.'
 )
@@ -25,6 +36,7 @@ app = FastAPI(
 async def list_datasets():
     return dsc.getCatalogEntries()
 
+
 @app.get(
     '/ds_info',
     summary='Returns metadata for the geospatial dataset with the provided ID.'
@@ -34,8 +46,80 @@ async def ds_info(
         ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
     )
 ):
+    check_dsid(dsid, dsc)
+
+    return dsc[dsid].getMetadata()
+
+
+def parse_varslist(
+    ds_vars: str = Query(
+        ..., alias='vars', title='Variables', description='The dataset '
+        'variables to include, specified as a comma-separated list.'
+    )
+):
+    """
+    Parses a comma-separated list of dataset variables.
+    """
+    return ds_vars.split(',')
+
+def parse_rect_bounds(
+    bbox: str = Query(
+        None, title='Bounding box', description='The upper left and lower '
+        'right corners of the bounding box for subsetting the data, specifed '
+        'as a comma-separated list of the form '
+        '"UPPER_LEFT_Y_COORD,UPPER_LEFT_X_COORD,'
+        'LOWER_RIGHT_Y_COORD,LOWER_RIGHT_X_COORD." If no bounding box is '
+        'specified, the full spatial extent will be returned.'
+    )
+):
+    """
+    Parses comma-separated rectangular bounding box coordinates.
+    """
+    if bbox is None:
+        return None
+
+    parts = bbox.split(',')
+    if len(parts) != 4:
+        raise HTTPException(
+            status_code=400, detail='Incorrect bounding box specification.'
+        )
+
     try:
-        return dsc[dsid].getMetadata()
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        parts = [float(part) for part in parts]
+    except:
+        raise HTTPException(
+            status_code=400, detail='Incorrect bounding box specification.'
+        )
+
+    coords = [[parts[0], parts[1]], [parts[2], parts[3]]]
+
+    return coords
+
+@app.get(
+    '/subset',
+    summary='Requests a geographic subset (which can be the full dataset) of '
+    'one or more variables from one or more geospatial datasets.'
+)
+async def subset(
+    dsid: str = Query(
+        ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
+    ),
+    date_start: str = Query(
+        ..., title='Start date (inclusive)', description='The starting date '
+        'for which to request data. Dates must be specified as strings, where '
+        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
+        '"YYYY-MM-DD" is for daily data.'
+    ),
+    date_end: str = Query(
+        ..., title='End date (inclusive)', description='The ending date '
+        'for which to request data. Dates must be specified as strings, where '
+        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
+        '"YYYY-MM-DD" is for daily data.'
+    ),
+    ds_vars: list = Depends(parse_varslist),
+    bbox: list = Depends(parse_rect_bounds)
+):
+    check_dsid(dsid, dsc)
+
+    return bbox
 
