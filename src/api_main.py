@@ -3,10 +3,21 @@ from catalog.catalog import DatasetCatalog
 from catalog.datasets import PRISM, DAYMET
 from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
+import tempfile
+import zipfile
+import random
+from pathlib import Path
 
 
 dsc = DatasetCatalog('local_data')
 dsc.addDatasetsByClass(PRISM, DAYMET)
+
+# Characters for generating random file names.
+fname_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
+# Directory for serving output files.
+output_dir = Path('output')
 
 def check_dsid(dsid, ds_catalog):
     """
@@ -98,7 +109,7 @@ def parse_rect_bounds(
 @app.get(
     '/subset',
     summary='Requests a geographic subset (which can be the full dataset) of '
-    'one or more variables from one or more geospatial datasets.'
+    'one or more variables from a geospatial dataset.'
 )
 async def subset(
     dsid: str = Query(
@@ -121,5 +132,22 @@ async def subset(
 ):
     check_dsid(dsid, dsc)
 
-    return bbox
+    ds = dsc[dsid]
+    out_paths = ds.getSubset(output_dir, date_start, date_end, ds_vars, bbox)
+
+    zfname = (
+        'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
+        '.zip'
+    )
+    zfpath = output_dir / zfname
+    zfile = zipfile.ZipFile(
+        zfpath, mode='w', compression=zipfile.ZIP_DEFLATED
+    )
+
+    for out_path in out_paths:
+        zfile.write(out_path, arcname=out_path.name)
+
+    zfile.close()
+
+    return FileResponse(zfpath, filename=zfpath.name)
 
