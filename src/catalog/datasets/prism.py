@@ -66,9 +66,13 @@ class PRISM(GSDataSet):
         output_dir = Path(output_dir)
 
         if len(date_start) == 4:
+            # Annual data.
+
+            # Parse the start and end years.
             start = int(date_start)
             end = int(date_end) + 1
 
+            # Get the data for each year.
             for year in range(start, end):
                 for varname in varnames:
                     fname = self.fpatterns[varname].format(year)
@@ -78,6 +82,34 @@ class PRISM(GSDataSet):
                     )
                     fout_paths.append(fout_path)
                     self._extractData(fout_path, fpath, bounds)
+        elif len(date_start) == 7:
+            # Monthly data.
+
+            # Parse the start and end years and months.
+            start_y, start_m = [int(val) for val in date_start.split('-')]
+            end_y, end_m = [int(val) for val in date_end.split('-')]
+            if end_y * 12 + end_m < start_y * 12 + start_m:
+                raise ValueError('The end date cannot precede the start date.')
+
+            # Get the data for each month.
+            cur_y = start_y
+            cur_m = start_m
+            m_cnt = start_m - 1
+            while cur_y * 12 + cur_m <= end_y * 12 + end_m:
+                #print(cur_y, cur_m, datestr)
+                for varname in varnames:
+                    datestr = '{0}{1:02}'.format(cur_y, cur_m)
+                    fname = self.fpatterns[varname].format(datestr)
+                    fpath = self.store_path / fname
+                    fout_path = output_dir / 'PRISM_{0}_{1}-{2:02}.tif'.format(
+                        varname, cur_y, cur_m
+                    )
+                    fout_paths.append(fout_path)
+                    self._extractData(fout_path, fpath, bounds)
+
+                m_cnt += 1
+                cur_y = start_y + m_cnt // 12
+                cur_m = (m_cnt % 12) + 1
 
         return fout_paths
 
