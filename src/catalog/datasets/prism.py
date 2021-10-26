@@ -93,8 +93,8 @@ class PRISM(GSDataSet):
             for varname in varnames:
                 fname = self.fpatterns[varname].format(year)
                 fpath = self.ds_path / fname
-                fout_path = output_dir / 'PRISM_{0}_{1}.tif'.format(
-                    varname, year
+                fout_path = output_dir / '{0}_{1}_{2}.tif'.format(
+                    self.id, varname, year
                 )
                 fout_paths.append(fout_path)
                 self._extractData(fout_path, fpath, bounds)
