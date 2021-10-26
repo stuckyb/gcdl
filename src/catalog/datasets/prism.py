@@ -10,7 +10,7 @@ class PRISM(GSDataSet):
         """
         store_path (Path): The location of on-disk dataset storage.
         """
-        super().__init__(store_path)
+        super().__init__(store_path, 'prism')
 
         # Basic dataset information.
         self.name = 'PRISM'
@@ -92,7 +92,7 @@ class PRISM(GSDataSet):
         for year in range(start, end):
             for varname in varnames:
                 fname = self.fpatterns[varname].format(year)
-                fpath = self.store_path / fname
+                fpath = self.ds_path / fname
                 fout_path = output_dir / 'PRISM_{0}_{1}.tif'.format(
                     varname, year
                 )
@@ -121,7 +121,7 @@ class PRISM(GSDataSet):
             for varname in varnames:
                 datestr = '{0}{1:02}'.format(cur_y, cur_m)
                 fname = self.fpatterns[varname].format(datestr)
-                fpath = self.store_path / fname
+                fpath = self.ds_path / fname
                 fout_path = output_dir / 'PRISM_{0}_{1}-{2:02}.tif'.format(
                     varname, cur_y, cur_m
                 )

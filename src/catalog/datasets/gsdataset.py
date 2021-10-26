@@ -7,11 +7,12 @@ class GSDataSet:
     """
     Base class for all geospatial catalog data sets.
     """
-    def __init__(self, store_path):
+    def __init__(self, store_path, dataset_dir=''):
         """
         store_path (Path): The location of on-disk dataset storage.
+        dataset_dir (str): The name of a sub-directory for the dataset.
         """
-        self.store_path = Path(store_path)
+        self.ds_path = Path(store_path) / dataset_dir
 
         # Basic dataset information.
         self.name = ''
@@ -28,6 +29,8 @@ class GSDataSet:
 
         # CRS information.
         self.epsg_code = None
+        self.proj4_str = None
+        self.wkt_str = None
 
         # The grid size, in meters.
         self.grid_size = None
@@ -100,11 +103,19 @@ class GSDataSet:
         # Generate CRS metadata.
         if self.epsg_code is not None:
             crs = CRS.from_epsg(self.epsg_code)
+        elif self.wkt_str is not None:
+            crs = CRS.from_wkt(self.wkt_str)
+        elif self.proj4_str is not None:
+            crs = CRS.from_proj4(self.proj4_str)
+        else:
+            crs = None
 
+        if crs is not None:
             resp['crs'] = {}
             resp['crs']['name'] = crs.name
-            resp['crs']['epsg'] = self.epsg_code
+            resp['crs']['epsg'] = crs.to_epsg()
             resp['crs']['proj4'] = crs.to_proj4()
+            resp['crs']['wkt'] = crs.to_wkt('WKT2_2019')
             resp['crs']['datum'] = crs.datum.name
             resp['crs']['is_geographic'] = crs.is_geographic
             resp['crs']['is_projected'] = crs.is_projected
