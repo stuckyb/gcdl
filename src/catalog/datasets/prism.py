@@ -45,7 +45,9 @@ class PRISM(GSDataSet):
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
         }
 
-    def getSubset(self, output_dir, date_start, date_end, varnames, bounds):
+    def getSubset(
+        self, output_dir, date_start, date_end, varnames, bounds, crs
+    ):
         """
         Extracts a subset of the data. Dates must be specified as strings,
         where 'YYYY' means extract annual data, 'YYYY-MM' is for monthly data,
@@ -58,27 +60,29 @@ class PRISM(GSDataSet):
         varnames: A list of variable names to include.
         bounds: A sequence defining the opposite corners of a bounding
             rectangle, specifed as: [
-              [upper_left_lat, upper_left_long],
-              [lower_right_lat, lower_right_long]
+              [upper_left_x, upper_left_y],
+              [lower_right_x, lower_right_y]
             ]. If None, the entire layer is returned.
+        crs: The CRS to use for the output data. If None, the native CRS is
+            used.
         """
         output_dir = Path(output_dir)
 
         if len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, bounds
+                output_dir, date_start, date_end, varnames, bounds, crs
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, bounds
+                output_dir, date_start, date_end, varnames, bounds, crs
             )
 
         return fout_paths
 
     def _getAnnualSubset(
-        self, output_dir, date_start, date_end, varnames, bounds
+        self, output_dir, date_start, date_end, varnames, bounds, crs
     ):
         fout_paths = []
 
@@ -97,12 +101,12 @@ class PRISM(GSDataSet):
                     self.id, varname, year
                 )
                 fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds)
+                self._extractData(fout_path, fpath, bounds, crs)
 
         return fout_paths
 
     def _getMonthlySubset(
-        self, output_dir, date_start, date_end, varnames, bounds
+        self, output_dir, date_start, date_end, varnames, bounds, crs
     ):
         fout_paths = []
 
@@ -126,7 +130,7 @@ class PRISM(GSDataSet):
                     varname, cur_y, cur_m
                 )
                 fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds)
+                self._extractData(fout_path, fpath, bounds, crs)
 
             m_cnt += 1
             cur_y = start_y + m_cnt // 12
@@ -134,8 +138,10 @@ class PRISM(GSDataSet):
 
         return fout_paths
 
-    def _extractData(self, output_path, fpath, bounds):
+    def _extractData(self, output_path, fpath, bounds, crs):
         data = rioxarray.open_rasterio(fpath, masked=True)
+        if crs is not None:
+            data = data.rio.reproject(crs)
 
         if bounds is None:
             data.rio.to_raster(output_path)
@@ -144,17 +150,18 @@ class PRISM(GSDataSet):
                 'type': 'Polygon',
                 'coordinates': [[
                     # Top left.
-                    [bounds[0][1], bounds[0][0]],
+                    [bounds[0][0], bounds[0][1]],
                     # Top right.
-                    [bounds[1][1], bounds[0][0]],
+                    [bounds[1][0], bounds[0][1]],
                     # Bottom right.
-                    [bounds[1][1], bounds[1][0]],
+                    [bounds[1][0], bounds[1][1]],
                     # Bottom left.
-                    [bounds[0][1], bounds[1][0]],
+                    [bounds[0][0], bounds[1][1]],
                     # Top left.
-                    [bounds[0][1], bounds[0][0]]
+                    [bounds[0][0], bounds[0][1]]
                 ]]
             }]
+            print(clip_geom)
             
             clipped = data.rio.clip(clip_geom)
             clipped.rio.to_raster(output_path)

@@ -78,8 +78,8 @@ def parse_rect_bounds(
         None, title='Bounding box', description='The upper left and lower '
         'right corners of the bounding box for subsetting the data, specifed '
         'as a comma-separated list of the form '
-        '"UPPER_LEFT_Y_COORD,UPPER_LEFT_X_COORD,'
-        'LOWER_RIGHT_Y_COORD,LOWER_RIGHT_X_COORD." If no bounding box is '
+        '"UPPER_LEFT_X_COORD,UPPER_LEFT_Y_COORD,'
+        'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
         'specified, the full spatial extent will be returned.'
     )
 ):
@@ -128,12 +128,19 @@ async def subset(
         '"YYYY-MM-DD" is for daily data.'
     ),
     ds_vars: list = Depends(parse_varslist),
-    bbox: list = Depends(parse_rect_bounds)
+    bbox: list = Depends(parse_rect_bounds),
+    crs: str = Query(
+        None, title='Target coordinate reference system.',
+        description='The target coordinate reference system (CRS) for the '
+        'returned data, specified as an EPSG code.'
+    )
 ):
     check_dsid(dsid, dsc)
 
     ds = dsc[dsid]
-    out_paths = ds.getSubset(output_dir, date_start, date_end, ds_vars, bbox)
+    out_paths = ds.getSubset(
+        output_dir, date_start, date_end, ds_vars, bbox, crs
+    )
 
     zfname = (
         'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
