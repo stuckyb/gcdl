@@ -68,6 +68,9 @@ class PRISM(GSDataSet):
         """
         output_dir = Path(output_dir)
 
+        if crs is not None and len(crs) == 4:
+            crs = 'EPSG:' + crs
+
         if len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
@@ -161,7 +164,6 @@ class PRISM(GSDataSet):
                     [bounds[0][0], bounds[0][1]]
                 ]]
             }]
-            print(clip_geom)
             
             clipped = data.rio.clip(clip_geom)
             clipped.rio.to_raster(output_path)

@@ -62,16 +62,24 @@ async def ds_info(
     return dsc[dsid].getMetadata()
 
 
-def parse_varslist(
-    ds_vars: str = Query(
-        ..., alias='vars', title='Variables', description='The dataset '
-        'variables to include, specified as a comma-separated list.'
+def parse_datasets(
+    datasets: str = Query(
+        ..., title='Datasets and variables', description='The datasets and '
+        'variables to include, specified as '
+        '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...].  '
+        'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
     )
 ):
     """
-    Parses a comma-separated list of dataset variables.
+    Parses a string specifying datasets and variables.
     """
-    return ds_vars.split(',')
+    ds_vars = {}
+    for ds_spec in datasets.split(';'):
+        parts = ds_spec.split(':')
+        varnames = parts[1].split(',')
+        ds_vars[parts[0]] = varnames
+
+    return ds_vars
 
 def parse_rect_bounds(
     bbox: str = Query(
@@ -112,9 +120,7 @@ def parse_rect_bounds(
     'one or more variables from a geospatial dataset.'
 )
 async def subset(
-    dsid: str = Query(
-        ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
-    ),
+    datasets: str = Depends(parse_datasets),
     date_start: str = Query(
         ..., title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
@@ -127,7 +133,6 @@ async def subset(
         '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
         '"YYYY-MM-DD" is for daily data.'
     ),
-    ds_vars: list = Depends(parse_varslist),
     bbox: list = Depends(parse_rect_bounds),
     crs: str = Query(
         None, title='Target coordinate reference system.',
@@ -135,12 +140,18 @@ async def subset(
         'returned data, specified as an EPSG code.'
     )
 ):
-    check_dsid(dsid, dsc)
+    print(datasets)
+    #return
 
-    ds = dsc[dsid]
-    out_paths = ds.getSubset(
-        output_dir, date_start, date_end, ds_vars, bbox, crs
-    )
+    out_paths = []
+
+    for dsid in datasets:
+        check_dsid(dsid, dsc)
+
+        ds = dsc[dsid]
+        out_paths.extend(ds.getSubset(
+            output_dir, date_start, date_end, datasets[dsid], bbox, crs
+        ))
 
     zfname = (
         'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
