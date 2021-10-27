@@ -40,7 +40,7 @@ app = FastAPI(
 )
 
 @app.get(
-    '/list_datasets',
+    '/list_datasets', tags=['Library catalog operations'],
     summary='Returns a list with the ID and name of each dataset in the '
     'library.'
 )
@@ -49,7 +49,7 @@ async def list_datasets():
 
 
 @app.get(
-    '/ds_info',
+    '/ds_info', tags=['Dataset operations'],
     summary='Returns metadata for the geospatial dataset with the provided ID.'
 )
 async def ds_info(
@@ -115,7 +115,7 @@ def parse_rect_bounds(
     return coords
 
 @app.get(
-    '/subset',
+    '/subset', tags=['Dataset operations'],
     summary='Requests a geographic subset (which can be the full dataset) of '
     'one or more variables from a geospatial dataset.'
 )
@@ -140,9 +140,6 @@ async def subset(
         'returned data, specified as an EPSG code.'
     )
 ):
-    print(datasets)
-    #return
-
     out_paths = []
 
     for dsid in datasets:
