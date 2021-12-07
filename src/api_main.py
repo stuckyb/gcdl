@@ -76,7 +76,17 @@ def parse_datasets(
     ds_vars = {}
     for ds_spec in datasets.split(';'):
         parts = ds_spec.split(':')
+        if len(parts) != 2:
+            raise HTTPException(
+                status_code=400, detail='Incorrect dataset specification.'
+            )
+
         varnames = parts[1].split(',')
+        if varnames[0] == '':
+            raise HTTPException(
+                status_code=400, detail='Incorrect dataset specification.'
+            )
+
         ds_vars[parts[0]] = varnames
 
     return ds_vars
@@ -117,7 +127,7 @@ def parse_rect_bounds(
 @app.get(
     '/subset', tags=['Dataset operations'],
     summary='Requests a geographic subset (which can be the full dataset) of '
-    'one or more variables from a geospatial dataset.'
+    'one or more variables from one or more geospatial datasets.'
 )
 async def subset(
     datasets: str = Depends(parse_datasets),
