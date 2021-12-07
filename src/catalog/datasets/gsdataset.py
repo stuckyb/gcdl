@@ -178,7 +178,7 @@ class GSDataSet:
         # Get the data for each year.
         for year in range(start, end):
             for varname in varnames:
-                fname = self._getFileName(varname, year)
+                fname = self._getDataFile(varname, year)
                 fpath = self.ds_path / fname
                 fout_path = output_dir /'{0}_{1}_{2}.tif'.format(
                     self.id, varname, year
@@ -206,7 +206,7 @@ class GSDataSet:
         while cur_y * 12 + cur_m <= end_y * 12 + end_m:
             #print(cur_y, cur_m, datestr)
             for varname in varnames:
-                fname = self._getFileName(varname, cur_y, cur_m)
+                fname = self._getDataFile(varname, cur_y, cur_m)
                 fpath = self.ds_path / fname
                 fout_path = output_dir / '{0}_{1}_{2}-{3:02}.tif'.format(
                     self.id, varname, cur_y, cur_m

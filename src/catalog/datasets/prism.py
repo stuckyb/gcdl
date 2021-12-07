@@ -44,7 +44,7 @@ class PRISM(GSDataSet):
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
         }
 
-    def _getFileName(self, varname, year, month=None, day=None):
+    def _getDataFile(self, varname, year, month=None, day=None):
         print(varname, year)
         if day is not None:
             pass

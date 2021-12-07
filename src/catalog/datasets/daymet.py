@@ -47,7 +47,7 @@ class DAYMET(GSDataSet):
             'tmax': 'daymet_v4_tmax_annavg_na_{0}.tif',
         }
 
-    def _getFileName(self, varname, year, month=None, day=None):
+    def _getDataFile(self, varname, year, month=None, day=None):
         print(varname, year)
         if day is not None:
             pass
