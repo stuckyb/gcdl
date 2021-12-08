@@ -7,7 +7,7 @@
 1. Run `pip install -r requirements.txt`.
 
 
-# Running the GeoCDL
+## Running the GeoCDL
 
 1. Move to the `src` directory (`cd src`).
 1. Run `uvicorn api_main:app --reload`.
