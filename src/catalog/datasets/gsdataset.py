@@ -133,15 +133,16 @@ class GSDataSet:
         return resp
 
     def getSubsetMetadata(self, date_start, date_end, varnames, bounds, crs):
-        md = self.getDatasetMetadata()
-        del md['date_ranges']
-        md['native_crs'] = md['crs']
-        del md['crs']
+        md = {}
 
-        md['requested_vars'] = varnames
-        md['requested_date_range'] = [date_start, date_end]
+        md['dataset_info'] = self.getDatasetMetadata()
 
-        md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
+        req_md = {}
+        req_md['requested_vars'] = varnames
+        req_md['target_date_range'] = [date_start, date_end]
+        req_md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
+
+        md['request_info'] = req_md
 
         return md
 
@@ -174,12 +175,12 @@ class GSDataSet:
         if len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, bounds, 'EPSG:'+crs
+                output_dir, date_start, date_end, varnames, bounds, crs
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, bounds, 'EPSG:'+crs
+                output_dir, date_start, date_end, varnames, bounds, crs
             )
 
         dataset_md = self.getSubsetMetadata(
@@ -247,7 +248,7 @@ class GSDataSet:
     def _extractData(self, output_path, fpath, bounds, crs):
         data = rioxarray.open_rasterio(fpath, masked=True)
         if crs is not None:
-            data = data.rio.reproject(crs)
+            data = data.rio.reproject('EPSG:' + crs)
 
         if bounds is None:
             data.rio.to_raster(output_path)

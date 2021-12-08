@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 import tempfile
 import zipfile
 import random
+import json
 from pathlib import Path
 
 
@@ -163,6 +164,14 @@ async def subset(
         ds_metadata.append(md)
         out_paths.extend(paths)
 
+    # Write the metadata file.
+    md_path = output_dir / (
+        ''.join(random.choices(fname_chars, k=16)) + '.json'
+    )
+    with open(md_path, 'w') as fout:
+        json.dump(ds_metadata, fout, indent=4)
+
+    # Generate the output ZIP archive.
     zfname = (
         'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
         '.zip'
@@ -171,6 +180,8 @@ async def subset(
     zfile = zipfile.ZipFile(
         zfpath, mode='w', compression=zipfile.ZIP_DEFLATED
     )
+
+    zfile.write(md_path, arcname='metadata.json')
 
     for out_path in out_paths:
         zfile.write(out_path, arcname=out_path.name)
