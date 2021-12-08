@@ -61,7 +61,31 @@ class GSDataSet:
     def id(self, idstr):
         self._id = idstr
 
-    def getMetadata(self):
+    def _getCRSMetadata(self, epsg_code=None, wkt_str=None, proj4_str=None):
+        if epsg_code is not None:
+            crs = CRS.from_epsg(epsg_code)
+        elif wkt_str is not None:
+            crs = CRS.from_wkt(wkt_str)
+        elif proj4_str is not None:
+            crs = CRS.from_proj4(proj4_str)
+        else:
+            crs = None
+
+        if crs is not None:
+            crs_md = {}
+            crs_md['name'] = crs.name
+            crs_md['epsg'] = crs.to_epsg()
+            crs_md['proj4'] = crs.to_proj4()
+            crs_md['wkt'] = crs.to_wkt('WKT2_2019')
+            crs_md['datum'] = crs.datum.name
+            crs_md['is_geographic'] = crs.is_geographic
+            crs_md['is_projected'] = crs.is_projected
+        else:
+            crs_md = None
+
+        return crs_md
+
+    def getDatasetMetadata(self):
         """
         Returns a data structure containing the dataset's metadata.
         """
@@ -102,28 +126,24 @@ class GSDataSet:
             ]
 
         # Generate CRS metadata.
-        if self.epsg_code is not None:
-            crs = CRS.from_epsg(self.epsg_code)
-        elif self.wkt_str is not None:
-            crs = CRS.from_wkt(self.wkt_str)
-        elif self.proj4_str is not None:
-            crs = CRS.from_proj4(self.proj4_str)
-        else:
-            crs = None
-
-        if crs is not None:
-            resp['crs'] = {}
-            resp['crs']['name'] = crs.name
-            resp['crs']['epsg'] = crs.to_epsg()
-            resp['crs']['proj4'] = crs.to_proj4()
-            resp['crs']['wkt'] = crs.to_wkt('WKT2_2019')
-            resp['crs']['datum'] = crs.datum.name
-            resp['crs']['is_geographic'] = crs.is_geographic
-            resp['crs']['is_projected'] = crs.is_projected
-        else:
-            resp['crs'] = None
+        resp['crs'] = self._getCRSMetadata(
+            self.epsg_code, self.wkt_str, self.proj4_str
+        )
 
         return resp
+
+    def getSubsetMetadata(self, date_start, date_end, varnames, bounds, crs):
+        md = self.getDatasetMetadata()
+        del md['date_ranges']
+        md['native_crs'] = md['crs']
+        del md['crs']
+
+        md['requested_vars'] = varnames
+        md['requested_date_range'] = [date_start, date_end]
+
+        md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
+
+        return md
 
     def getSubset(
         self, output_dir, date_start, date_end, varnames, bounds, crs
@@ -143,26 +163,30 @@ class GSDataSet:
               [upper_left_x, upper_left_y],
               [lower_right_x, lower_right_y]
             ]. If None, the entire layer is returned.
-        crs: The CRS to use for the output data. If None, the native CRS is
-            used.
+        crs: The CRS to use for the output data, specified as an EPSG code. If
+            None, the native CRS is used.
         """
         output_dir = Path(output_dir)
 
-        if crs is not None and len(crs) == 4:
-            crs = 'EPSG:' + crs
+        if crs is not None and len(crs) != 4:
+            raise ValueError(f'{crs} is not a valid EPSG CRS code.')
 
         if len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, bounds, crs
+                output_dir, date_start, date_end, varnames, bounds, 'EPSG:'+crs
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, bounds, crs
+                output_dir, date_start, date_end, varnames, bounds, 'EPSG:'+crs
             )
 
-        return fout_paths
+        dataset_md = self.getSubsetMetadata(
+            date_start, date_end, varnames, bounds, crs
+        )
+
+        return dataset_md, fout_paths
 
     def _getAnnualSubset(
         self, output_dir, date_start, date_end, varnames, bounds, crs

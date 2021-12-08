@@ -59,7 +59,7 @@ async def ds_info(
 ):
     check_dsid(dsid, dsc)
 
-    return dsc[dsid].getMetadata()
+    return dsc[dsid].getDatasetMetadata()
 
 
 def parse_datasets(
@@ -150,15 +150,18 @@ async def subset(
         'returned data, specified as an EPSG code.'
     )
 ):
+    ds_metadata = []
     out_paths = []
 
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
         ds = dsc[dsid]
-        out_paths.extend(ds.getSubset(
+        md, paths = ds.getSubset(
             output_dir, date_start, date_end, datasets[dsid], bbox, crs
-        ))
+        )
+        ds_metadata.append(md)
+        out_paths.extend(paths)
 
     zfname = (
         'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
