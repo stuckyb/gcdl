@@ -5,3 +5,5 @@
 # Python artifacts.
 __pycache__/
 
+# Mac
+.DS_Store

@@ -11,6 +11,6 @@
 
 1. Move to the `src` directory (`cd src`).
 1. Run `uvicorn api_main:app --reload`.
-1. API endpoints will be available at [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (e.g., [http://127.0.0.1:8000/ds_info?id=DAYMET](http://127.0.0.1:8000/ds_info?id=DAYMET)).
+1. API endpoints will be available at [http://127.0.0.1:8000/](http://127.0.0.1:8000/) (e.g., [http://127.0.0.1:8000/ds_info?id=DaymetV4](http://127.0.0.1:8000/ds_info?id=DaymetV4)).
 1. API documentation will be available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
