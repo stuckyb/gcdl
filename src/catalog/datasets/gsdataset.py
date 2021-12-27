@@ -135,14 +135,14 @@ class GSDataSet:
     def getSubsetMetadata(self, date_start, date_end, varnames, bounds, crs):
         md = {}
 
-        md['dataset_info'] = self.getDatasetMetadata()
+        md['dataset'] = self.getDatasetMetadata()
 
         req_md = {}
         req_md['requested_vars'] = varnames
         req_md['target_date_range'] = [date_start, date_end]
         req_md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
 
-        md['request_info'] = req_md
+        md['subset'] = req_md
 
         return md
 

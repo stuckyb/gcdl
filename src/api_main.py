@@ -1,9 +1,11 @@
 
 from catalog.catalog import DatasetCatalog
 from catalog.datasets import PRISM, DAYMET
-from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
+from collections import OrderedDict
+from datetime import datetime, timezone
 import tempfile
 import zipfile
 import random
@@ -131,6 +133,7 @@ def parse_rect_bounds(
     'one or more variables from one or more geospatial datasets.'
 )
 async def subset(
+    req: Request,
     datasets: str = Depends(parse_datasets),
     date_start: str = Query(
         ..., title='Start date (inclusive)', description='The starting date '
@@ -151,8 +154,14 @@ async def subset(
         'returned data, specified as an EPSG code.'
     )
 ):
+    req_md = OrderedDict()
     ds_metadata = []
     out_paths = []
+
+    # Generate the request metadata.
+    req_md['request'] = {}
+    req_md['request']['url'] = str(req.url)
+    req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
 
     for dsid in datasets:
         check_dsid(dsid, dsc)
@@ -164,12 +173,14 @@ async def subset(
         ds_metadata.append(md)
         out_paths.extend(paths)
 
+    req_md['datasets'] = ds_metadata
+    
     # Write the metadata file.
     md_path = output_dir / (
         ''.join(random.choices(fname_chars, k=16)) + '.json'
     )
     with open(md_path, 'w') as fout:
-        json.dump(ds_metadata, fout, indent=4)
+        json.dump(req_md, fout, indent=4)
 
     # Generate the output ZIP archive.
     zfname = (
