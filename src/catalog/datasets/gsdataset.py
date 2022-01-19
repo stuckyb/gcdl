@@ -93,7 +93,7 @@ class GSDataSet:
         # Class attributes to copy directly.
         attribs = [
             'name', 'id', 'url', 'description', 'provider_name',
-            'provider_url', 'grid_size', 'vars'
+            'provider_url', 'grid_size', 'grid_unit', 'vars'
         ]
 
         resp = {}
