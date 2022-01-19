@@ -18,8 +18,9 @@ class PRISM(GSDataSet):
         # CRS information.
         self.epsg_code = 4269
 
-        # The grid size, in meters.
+        # The grid size
         self.grid_size = 4000
+        self.grid_unit = 'meters'
 
         # The variables/layers/bands in the dataset.
         self.vars = {

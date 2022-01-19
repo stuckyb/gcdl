@@ -20,8 +20,9 @@ class DAYMET(GSDataSet):
         self.proj4_str = '+proj=lcc +lat_1=25 +lat_2=60 +lat_0=42.5 +lon_0=-100 '
         '+x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs'
 
-        # The grid size, in meters.
+        # The grid size
         self.grid_size = 1000
+        self.grid_unit = 'meters'
 
         # The variables/layers/bands in the dataset.
         self.vars = {

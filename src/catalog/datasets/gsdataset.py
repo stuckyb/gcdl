@@ -33,8 +33,9 @@ class GSDataSet:
         self.proj4_str = None
         self.wkt_str = None
 
-        # The grid size, in meters.
+        # The grid size
         self.grid_size = None
+        self.grid_unit = None
 
         # The variables/layers/bands in the dataset.
         self.vars = {}
