@@ -152,6 +152,12 @@ async def subset(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
+    ),
+    resample_method: str = Query(
+        None, title='Resample method.',
+        description='The resampling method used in reprojection. Available '
+        'methods: nearest, bilinear, cubic, cubic-spline, lanczos, average, '
+        'or mode. Default is nearest. Only used if target crs is provided.'
     )
 ):
     req_md = OrderedDict()
@@ -168,7 +174,7 @@ async def subset(
 
         ds = dsc[dsid]
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], bbox, crs
+            output_dir, date_start, date_end, datasets[dsid], bbox, crs, resample_method
         )
         ds_metadata.append(md)
         out_paths.extend(paths)

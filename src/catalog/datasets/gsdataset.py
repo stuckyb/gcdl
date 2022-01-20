@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from pyproj.crs import CRS
+from rasterio.enums import Resampling
 import rioxarray
 
 
@@ -133,7 +134,7 @@ class GSDataSet:
 
         return resp
 
-    def getSubsetMetadata(self, date_start, date_end, varnames, bounds, crs):
+    def getSubsetMetadata(self, date_start, date_end, varnames, bounds, crs, resample_method):
         md = {}
 
         md['dataset'] = self.getDatasetMetadata()
@@ -142,13 +143,14 @@ class GSDataSet:
         req_md['requested_vars'] = varnames
         req_md['target_date_range'] = [date_start, date_end]
         req_md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
+        req_md['resample_method'] = resample_method
 
         md['subset'] = req_md
 
         return md
 
     def getSubset(
-        self, output_dir, date_start, date_end, varnames, bounds, crs
+        self, output_dir, date_start, date_end, varnames, bounds, crs, resample_method
     ):
         """
         Extracts a subset of the data. Dates must be specified as strings,
@@ -167,31 +169,37 @@ class GSDataSet:
             ]. If None, the entire layer is returned.
         crs: The CRS to use for the output data, specified as an EPSG code. If
             None, the native CRS is used.
+        resample_method: The resampling method used in reprojection. If
+            None, nearest neighbor method is used. 
         """
         output_dir = Path(output_dir)
 
         if crs is not None and len(crs) != 4:
             raise ValueError(f'{crs} is not a valid EPSG CRS code.')
 
+        if resample_method is not None and resample_method not in ['nearest', 'bilinear',
+        'cubic','cubic-spline','lanczos','average','mode']:
+            raise ValueError(f'{resample_method} is not a valid resampling method.')
+
         if len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, bounds, crs
+                output_dir, date_start, date_end, varnames, bounds, crs, resample_method
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, bounds, crs
+                output_dir, date_start, date_end, varnames, bounds, crs, resample_method
             )
 
         dataset_md = self.getSubsetMetadata(
-            date_start, date_end, varnames, bounds, crs
+            date_start, date_end, varnames, bounds, crs, resample_method
         )
 
         return dataset_md, fout_paths
 
     def _getAnnualSubset(
-        self, output_dir, date_start, date_end, varnames, bounds, crs
+        self, output_dir, date_start, date_end, varnames, bounds, crs, resample_method
     ):
         fout_paths = []
 
@@ -210,12 +218,12 @@ class GSDataSet:
                     self.id, varname, year
                 )
                 fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds, crs)
+                self._extractData(fout_path, fpath, bounds, crs, resample_method)
 
         return fout_paths
 
     def _getMonthlySubset(
-        self, output_dir, date_start, date_end, varnames, bounds, crs
+        self, output_dir, date_start, date_end, varnames, bounds, crs, resample_method
     ):
         fout_paths = []
 
@@ -238,7 +246,7 @@ class GSDataSet:
                     self.id, varname, cur_y, cur_m
                 )
                 fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds, crs)
+                self._extractData(fout_path, fpath, bounds, crs, resample_method)
 
             m_cnt += 1
             cur_y = start_y + m_cnt // 12
@@ -246,10 +254,13 @@ class GSDataSet:
 
         return fout_paths
 
-    def _extractData(self, output_path, fpath, bounds, crs):
+    def _extractData(self, output_path, fpath, bounds, crs, resample_method):
         data = rioxarray.open_rasterio(fpath, masked=True)
-        if crs is not None:
+        if crs is not None and resample_method is None:
             data = data.rio.reproject('EPSG:' + crs)
+        elif crs is not None and resample_method is not None:
+            data = data.rio.reproject('EPSG:' + crs, 
+                resampling=Resampling[resample_method])
 
         if bounds is None:
             data.rio.to_raster(output_path)
