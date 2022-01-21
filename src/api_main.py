@@ -1,6 +1,6 @@
 
 from catalog.catalog import DatasetCatalog
-from catalog.datasets import PRISM, DAYMET
+from catalog.datasets import PRISM, DAYMET, GTOPO
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 dsc = DatasetCatalog('local_data')
-dsc.addDatasetsByClass(PRISM, DAYMET)
+dsc.addDatasetsByClass(PRISM, DAYMET, GTOPO)
 
 # Characters for generating random file names.
 fname_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
