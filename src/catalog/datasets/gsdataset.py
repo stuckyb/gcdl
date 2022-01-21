@@ -246,7 +246,11 @@ class GSDataSet:
                     self.id, varname, cur_y, cur_m
                 )
                 fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds, crs, resample_method)
+                if str(cur_m) not in fname:  #not the safest test
+                    layer_val = cur_m - 1
+                    self._extractData(fout_path, fpath, bounds, crs, resample_method, t_layer=layer_val)
+                else:
+                    self._extractData(fout_path, fpath, bounds, crs, resample_method)
 
             m_cnt += 1
             cur_y = start_y + m_cnt // 12
@@ -254,8 +258,12 @@ class GSDataSet:
 
         return fout_paths
 
-    def _extractData(self, output_path, fpath, bounds, crs, resample_method):
+    def _extractData(self, output_path, fpath, bounds, crs, resample_method, t_layer=None):
         data = rioxarray.open_rasterio(fpath, masked=True)
+
+        if t_layer is not None:
+            data = rioxarray.open_rasterio(fpath, masked=True).isel(time=t_layer)
+
         if crs is not None and resample_method is None:
             data = data.rio.reproject('EPSG:' + crs)
         elif crs is not None and resample_method is not None:
