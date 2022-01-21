@@ -136,16 +136,18 @@ async def subset(
     req: Request,
     datasets: str = Depends(parse_datasets),
     date_start: str = Query(
-        ..., title='Start date (inclusive)', description='The starting date '
+        None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
         '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data.'
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
     ),
     date_end: str = Query(
-        ..., title='End date (inclusive)', description='The ending date '
+        None, title='End date (inclusive)', description='The ending date '
         'for which to request data. Dates must be specified as strings, where '
         '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data.'
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
     ),
     bbox: list = Depends(parse_rect_bounds),
     crs: str = Query(

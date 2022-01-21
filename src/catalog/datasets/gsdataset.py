@@ -184,7 +184,12 @@ class GSDataSet:
         'cubic','cubic-spline','lanczos','average','mode']:
             raise ValueError(f'{resample_method} is not a valid resampling method.')
 
-        if len(date_start) == 4:
+        if date_start == None:
+            # Non-temporal data.
+            fout_paths = self._getNonTemporalSubset(
+                output_dir, varnames, bounds, crs, resample_method
+            )
+        elif len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
                 output_dir, date_start, date_end, varnames, bounds, crs, resample_method
@@ -201,27 +206,55 @@ class GSDataSet:
 
         return dataset_md, fout_paths
 
+    def _getNonTemporalSubset(
+        self, output_dir, varnames, bounds, crs, resample_method
+    ):
+        # Check for temporal data interpreted as non-temporal
+        print(self.id, self.date_ranges['year'])
+        if self.date_ranges['year'] != [None, None]:
+            raise ValueError(f'{self.id} is a temporal dataset. Provide start and end dates')
+
+        fout_paths = []
+
+        # Get the data
+        for varname in varnames:
+            fname = self._getDataFile(varname)
+            fpath = self.ds_path / fname
+            fout_path = output_dir /'{0}_{1}.tif'.format(
+                self.id, varname
+            )
+            fout_paths.append(fout_path)
+            self._extractData(fout_path, fpath, bounds, crs, resample_method)
+
+        return fout_paths
+
     def _getAnnualSubset(
         self, output_dir, date_start, date_end, varnames, bounds, crs, resample_method
     ):
         fout_paths = []
 
-        # Parse the start and end years.
-        start = int(date_start)
-        end = int(date_end) + 1
-        if end < start:
-            raise ValueError('The end date cannot precede the start date.')
+        #Check for non-temporal dataset included in temporal request
+        if self.date_ranges['year'] == [None, None]:
+            fout_paths = self._getNonTemporalSubset(
+                output_dir, varnames, bounds, crs, resample_method
+            )
+        else:
+            # Parse the start and end years.
+            start = int(date_start)
+            end = int(date_end) + 1
+            if end < start:
+                raise ValueError('The end date cannot precede the start date.')
 
-        # Get the data for each year.
-        for year in range(start, end):
-            for varname in varnames:
-                fname = self._getDataFile(varname, year)
-                fpath = self.ds_path / fname
-                fout_path = output_dir /'{0}_{1}_{2}.tif'.format(
-                    self.id, varname, year
-                )
-                fout_paths.append(fout_path)
-                self._extractData(fout_path, fpath, bounds, crs, resample_method)
+            # Get the data for each year.
+            for year in range(start, end):
+                for varname in varnames:
+                    fname = self._getDataFile(varname, year)
+                    fpath = self.ds_path / fname
+                    fout_path = output_dir /'{0}_{1}_{2}.tif'.format(
+                        self.id, varname, year
+                    )
+                    fout_paths.append(fout_path)
+                    self._extractData(fout_path, fpath, bounds, crs, resample_method)
 
         return fout_paths
 
@@ -230,34 +263,40 @@ class GSDataSet:
     ):
         fout_paths = []
 
-        # Parse the start and end years and months.
-        start_y, start_m = [int(val) for val in date_start.split('-')]
-        end_y, end_m = [int(val) for val in date_end.split('-')]
-        if end_y * 12 + end_m < start_y * 12 + start_m:
-            raise ValueError('The end date cannot precede the start date.')
+        #Check for non-temporal dataset included in temporal request
+        if self.date_ranges['year'] == [None,None]:
+            fout_paths = self._getNonTemporalSubset(
+                output_dir, varnames, bounds, crs, resample_method
+            )
+        else:
+            # Parse the start and end years and months.
+            start_y, start_m = [int(val) for val in date_start.split('-')]
+            end_y, end_m = [int(val) for val in date_end.split('-')]
+            if end_y * 12 + end_m < start_y * 12 + start_m:
+                raise ValueError('The end date cannot precede the start date.')
 
-        # Get the data for each month.
-        cur_y = start_y
-        cur_m = start_m
-        m_cnt = start_m - 1
-        while cur_y * 12 + cur_m <= end_y * 12 + end_m:
-            #print(cur_y, cur_m, datestr)
-            for varname in varnames:
-                fname = self._getDataFile(varname, cur_y, cur_m)
-                fpath = self.ds_path / fname
-                fout_path = output_dir / '{0}_{1}_{2}-{3:02}.tif'.format(
-                    self.id, varname, cur_y, cur_m
-                )
-                fout_paths.append(fout_path)
-                if str(cur_m) not in fname:  #not the safest test
-                    layer_val = cur_m - 1
-                    self._extractData(fout_path, fpath, bounds, crs, resample_method, t_layer=layer_val)
-                else:
-                    self._extractData(fout_path, fpath, bounds, crs, resample_method)
+            # Get the data for each month.
+            cur_y = start_y
+            cur_m = start_m
+            m_cnt = start_m - 1
+            while cur_y * 12 + cur_m <= end_y * 12 + end_m:
+                #print(cur_y, cur_m, datestr)
+                for varname in varnames:
+                    fname = self._getDataFile(varname, cur_y, cur_m)
+                    fpath = self.ds_path / fname
+                    fout_path = output_dir / '{0}_{1}_{2}-{3:02}.tif'.format(
+                        self.id, varname, cur_y, cur_m
+                    )
+                    fout_paths.append(fout_path)
+                    if str(cur_m) not in fname:  #not the safest test
+                        layer_val = cur_m - 1
+                        self._extractData(fout_path, fpath, bounds, crs, resample_method, t_layer=layer_val)
+                    else:
+                        self._extractData(fout_path, fpath, bounds, crs, resample_method)
 
-            m_cnt += 1
-            cur_y = start_y + m_cnt // 12
-            cur_m = (m_cnt % 12) + 1
+                m_cnt += 1
+                cur_y = start_y + m_cnt // 12
+                cur_m = (m_cnt % 12) + 1
 
         return fout_paths
 
