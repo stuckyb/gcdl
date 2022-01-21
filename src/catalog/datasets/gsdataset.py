@@ -174,8 +174,11 @@ class GSDataSet:
         """
         output_dir = Path(output_dir)
 
-        if crs is not None and len(crs) != 4:
-            raise ValueError(f'{crs} is not a valid EPSG CRS code.')
+        if crs is not None:
+            try:
+                CRS.from_epsg(crs)
+            except Exception:
+                raise ValueError(f'{crs} is not a valid EPSG CRS code.')
 
         if resample_method is not None and resample_method not in ['nearest', 'bilinear',
         'cubic','cubic-spline','lanczos','average','mode']:
