@@ -101,8 +101,9 @@ def parse_rect_bounds(
         'as a comma-separated list of the form '
         '"UPPER_LEFT_X_COORD,UPPER_LEFT_Y_COORD,'
         'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
-        'specified, the full spatial extent will be returned. Coordinates '
-        'are assumed to match the target CRS or the CRS of the first '
+        'specified, the full spatial extent will be returned. '
+        'If both bbox and points are specified, the bbox will be used. '
+        'Coordinates are assumed to match the target CRS or the CRS of the first '
         'requested dataset if no target CRS is specified.'
     )
 ):
@@ -129,6 +130,43 @@ def parse_rect_bounds(
 
     return coords
 
+def parse_points(
+    points: str = Query(
+        None, title='Point Extraction', description='The x and y coordinates '
+        'of point locations for extracting from the data, specifed '
+        'as x1,y1;x2,y2;... If no point coordinates are '
+        'specified, the full spatial extent will be returned. '
+        'If both bbox and points are specified, the bbox will be used. '
+        'Coordinates are assumed to match the target CRS or the CRS of the first '
+        'requested dataset if no target CRS is specified.'
+    )
+):
+    """
+    Parses comma-separated rectangular bounding box coordinates.
+    """
+    if points is None:
+        return None
+
+    pt_coords = []
+    for pt in points.split(';'):
+        parts = pt.split(',')
+        if len(parts) != 2:
+            raise HTTPException(
+                status_code=400, detail='Incorrect point coordinate specification.'
+            )
+
+        try:
+            parts = [float(part) for part in parts]
+        except:
+            raise HTTPException(
+                status_code=400, detail='Incorrect point coordinate specification.'
+            )
+
+        pt_coords.append([parts[0], parts[1]])
+
+    return pt_coords
+
+
 @app.get(
     '/subset', tags=['Dataset operations'],
     summary='Requests a geographic subset (which can be the full dataset) of '
@@ -152,6 +190,7 @@ async def subset(
         'data requests.'
     ),
     bbox: list = Depends(parse_rect_bounds),
+    points: list = Depends(parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -191,6 +230,11 @@ async def subset(
                     [bbox[0][0], bbox[0][1]]
                 ]]
             }]
+    elif points is not None:
+        user_geom = [{
+            'type': 'Point',
+            'coordinates': points
+        }]
 
     # Subset data
     user_crs = crs

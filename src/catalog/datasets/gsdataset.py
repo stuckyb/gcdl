@@ -1,8 +1,10 @@
 
 from pathlib import Path
 from pyproj.crs import CRS
+from pyproj import Transformer
 from rasterio.enums import Resampling
 import rioxarray
+import csv
 
 
 class GSDataSet:
@@ -302,18 +304,33 @@ class GSDataSet:
     def _extractData(self, output_path, fpath, user_crs, user_geom, crs, resample_method, t_layer=None):
         data = rioxarray.open_rasterio(fpath, masked=True)
 
+        # Extract time layer from multi-layer raster, if applicable
         if t_layer is not None:
             data = rioxarray.open_rasterio(fpath, masked=True).isel(time=t_layer)
 
+        # Reproject raster if requested 
         if crs is not None and resample_method is None:
             data = data.rio.reproject('EPSG:' + crs)
         elif crs is not None and resample_method is not None:
             data = data.rio.reproject('EPSG:' + crs, 
                 resampling=Resampling[resample_method])
 
+        # Subset raster to user geometry (polygon or points) if requested
+        # Write requested data to file
         if user_geom is None:
             data.rio.to_raster(output_path)
-        else:
+        elif user_geom[0]['type'] == 'Polygon':
             clipped = data.rio.clip(user_geom, crs = user_crs)
             clipped.rio.to_raster(output_path)
+        else:
+            pt_transformer = Transformer.from_crs(user_crs, data.rio.crs, always_xy=True)
+            pt_vals = []
+            for pt in user_geom[0]['coordinates']:
+                pt_x, pt_y = pt_transformer.transform(pt[0], pt[1])
+                pt_val = data.sel(x = pt_x, y = pt_y, method = 'nearest').values
+                pt_vals.append([pt_x, pt_y, pt_val])
 
+            with open('geocdl_{0}_pts.csv'.format(self.id),'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(['x', 'y', 'value'])
+                writer.writerows(pt_vals)
