@@ -134,7 +134,7 @@ class GSDataSet:
 
         return resp
 
-    def getSubsetMetadata(self, date_start, date_end, varnames, user_crs, bounds, crs, resample_method):
+    def getSubsetMetadata(self, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method):
         md = {}
 
         md['dataset'] = self.getDatasetMetadata()
@@ -150,7 +150,7 @@ class GSDataSet:
         return md
 
     def getSubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
     ):
         """
         Extracts a subset of the data. Dates must be specified as strings,
@@ -162,11 +162,10 @@ class GSDataSet:
         date_start: Starting date (inclusive).
         date_end: Ending date (inclusive).
         varnames: A list of variable names to include.
-        bounds: A sequence defining the opposite corners of a bounding
-            rectangle, specifed as: [
-              [upper_left_x, upper_left_y],
-              [lower_right_x, lower_right_y]
-            ]. If None, the entire layer is returned.
+        user_crs: The crs of the geometries used in subsetting. Used only
+            if user_geom is not None.
+        user_geom: A polygon or points geometry specified by user. If None, 
+            the entire layer is returned.
         crs: The CRS to use for the output data, specified as an EPSG code. If
             None, the native CRS is used.
         resample_method: The resampling method used in reprojection. If
@@ -187,27 +186,27 @@ class GSDataSet:
         if date_start == None:
             # Non-temporal data.
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, bounds, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method
             )
         elif len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
             )
 
         dataset_md = self.getSubsetMetadata(
-            date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+            date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
         )
 
         return dataset_md, fout_paths
 
     def _getNonTemporalSubset(
-        self, output_dir, varnames, user_crs, bounds, crs, resample_method
+        self, output_dir, varnames, user_crs, user_geom, crs, resample_method
     ):
         # Check for temporal data interpreted as non-temporal
         print(self.id, self.date_ranges['year'])
@@ -224,19 +223,19 @@ class GSDataSet:
                 self.id, varname
             )
             fout_paths.append(fout_path)
-            self._extractData(fout_path, fpath, user_crs, bounds, crs, resample_method)
+            self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
 
         return fout_paths
 
     def _getAnnualSubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
     ):
         fout_paths = []
 
         #Check for non-temporal dataset included in temporal request
         if self.date_ranges['year'] == [None, None]:
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, bounds, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method
             )
         else:
             # Parse the start and end years.
@@ -254,19 +253,19 @@ class GSDataSet:
                         self.id, varname, year
                     )
                     fout_paths.append(fout_path)
-                    self._extractData(fout_path, fpath, user_crs, bounds, crs, resample_method)
+                    self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
 
         return fout_paths
 
     def _getMonthlySubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, bounds, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
     ):
         fout_paths = []
 
         #Check for non-temporal dataset included in temporal request
         if self.date_ranges['year'] == [None,None]:
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, bounds, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method
             )
         else:
             # Parse the start and end years and months.
@@ -290,9 +289,9 @@ class GSDataSet:
                     fout_paths.append(fout_path)
                     if str(cur_m) not in fname:  #not the safest test
                         layer_val = cur_m - 1
-                        self._extractData(fout_path, fpath, user_crs, bounds, crs, resample_method, t_layer=layer_val)
+                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, t_layer=layer_val)
                     else:
-                        self._extractData(fout_path, fpath, user_crs, bounds, crs, resample_method)
+                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
 
                 m_cnt += 1
                 cur_y = start_y + m_cnt // 12
@@ -300,7 +299,7 @@ class GSDataSet:
 
         return fout_paths
 
-    def _extractData(self, output_path, fpath, user_crs, bounds, crs, resample_method, t_layer=None):
+    def _extractData(self, output_path, fpath, user_crs, user_geom, crs, resample_method, t_layer=None):
         data = rioxarray.open_rasterio(fpath, masked=True)
 
         if t_layer is not None:
@@ -312,25 +311,9 @@ class GSDataSet:
             data = data.rio.reproject('EPSG:' + crs, 
                 resampling=Resampling[resample_method])
 
-        if bounds is None:
+        if user_geom is None:
             data.rio.to_raster(output_path)
         else:
-            clip_geom = [{
-                'type': 'Polygon',
-                'coordinates': [[
-                    # Top left.
-                    [bounds[0][0], bounds[0][1]],
-                    # Top right.
-                    [bounds[1][0], bounds[0][1]],
-                    # Bottom right.
-                    [bounds[1][0], bounds[1][1]],
-                    # Bottom left.
-                    [bounds[0][0], bounds[1][1]],
-                    # Top left.
-                    [bounds[0][0], bounds[0][1]]
-                ]]
-            }]
-            
-            clipped = data.rio.clip(clip_geom, crs=user_crs)
+            clipped = data.rio.clip(user_geom, crs = user_crs)
             clipped.rio.to_raster(output_path)
 

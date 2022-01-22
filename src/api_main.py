@@ -173,17 +173,37 @@ async def subset(
     req_md['request']['url'] = str(req.url)
     req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
 
+    # Define user geometry
+    user_geom = None
+    if bbox is not None:
+        user_geom = [{
+                'type': 'Polygon',
+                'coordinates': [[
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]],
+                    # Top right.
+                    [bbox[1][0], bbox[0][1]],
+                    # Bottom right.
+                    [bbox[1][0], bbox[1][1]],
+                    # Bottom left.
+                    [bbox[0][0], bbox[1][1]],
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]]
+                ]]
+            }]
+
     # Subset data
     user_crs = crs
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
         ds = dsc[dsid]
+        # Assume first dataset's crs for user geometries if target crs is not specified
         if user_crs is None:
             user_crs = ds.epsg_code
 
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], user_crs, bbox, crs, resample_method
+            output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs, resample_method
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
