@@ -101,7 +101,9 @@ def parse_rect_bounds(
         'as a comma-separated list of the form '
         '"UPPER_LEFT_X_COORD,UPPER_LEFT_Y_COORD,'
         'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
-        'specified, the full spatial extent will be returned.'
+        'specified, the full spatial extent will be returned. Coordinates '
+        'are assumed to match the target CRS or the CRS of the first '
+        'requested dataset if no target CRS is specified.'
     )
 ):
     """
@@ -171,12 +173,17 @@ async def subset(
     req_md['request']['url'] = str(req.url)
     req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
 
+    # Subset data
+    user_crs = crs
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
         ds = dsc[dsid]
+        if user_crs is None:
+            user_crs = ds.epsg_code
+
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], bbox, crs, resample_method
+            output_dir, date_start, date_end, datasets[dsid], user_crs, bbox, crs, resample_method
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
