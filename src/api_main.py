@@ -196,6 +196,12 @@ async def subset(
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
     ),
+    point_method: str = Query(
+        None, title='Point extraction method.',
+        description='The method used in extracting point values. Available '
+        'methods: nearest or bilinear. Default is nearest. '
+        'Only used if point coordinates are provided.'
+    ),
     resample_method: str = Query(
         None, title='Resample method.',
         description='The resampling method used in reprojection. Available '
@@ -247,7 +253,8 @@ async def subset(
             user_crs = ds.epsg_code
 
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs, resample_method
+            output_dir, date_start, date_end, datasets[dsid], 
+            user_crs, user_geom, crs, resample_method, point_method
         )
         ds_metadata.append(md)
         out_paths.extend(paths)

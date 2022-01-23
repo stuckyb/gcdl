@@ -136,7 +136,7 @@ class GSDataSet:
 
         return resp
 
-    def getSubsetMetadata(self, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method):
+    def getSubsetMetadata(self, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method):
         md = {}
 
         md['dataset'] = self.getDatasetMetadata()
@@ -152,7 +152,7 @@ class GSDataSet:
         return md
 
     def getSubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
     ):
         """
         Extracts a subset of the data. Dates must be specified as strings,
@@ -185,30 +185,33 @@ class GSDataSet:
         'cubic','cubic-spline','lanczos','average','mode']:
             raise ValueError(f'{resample_method} is not a valid resampling method.')
 
+        if point_method is not None and point_method not in ['nearest', 'bilinear']:
+            raise ValueError(f'{point_method} is not a valid point extraction method.')   
+
         if date_start == None:
             # Non-temporal data.
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, user_geom, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method, point_method
             )
         elif len(date_start) == 4:
             # Annual data.
             fout_paths = self._getAnnualSubset(
-                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
             )
         elif len(date_start) == 7:
             # Monthly data.
             fout_paths = self._getMonthlySubset(
-                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+                output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
             )
 
         dataset_md = self.getSubsetMetadata(
-            date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+            date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
         )
 
         return dataset_md, fout_paths
 
     def _getNonTemporalSubset(
-        self, output_dir, varnames, user_crs, user_geom, crs, resample_method
+        self, output_dir, varnames, user_crs, user_geom, crs, resample_method, point_method
     ):
         # Check for temporal data interpreted as non-temporal
         print(self.id, self.date_ranges['year'])
@@ -225,19 +228,19 @@ class GSDataSet:
                 self.id, varname
             )
             fout_paths.append(fout_path)
-            self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
+            self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, point_method)
 
         return fout_paths
 
     def _getAnnualSubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
     ):
         fout_paths = []
 
         #Check for non-temporal dataset included in temporal request
         if self.date_ranges['year'] == [None, None]:
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, user_geom, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method, point_method
             )
         else:
             # Parse the start and end years.
@@ -255,19 +258,19 @@ class GSDataSet:
                         self.id, varname, year
                     )
                     fout_paths.append(fout_path)
-                    self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
+                    self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, point_method)
 
         return fout_paths
 
     def _getMonthlySubset(
-        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method
+        self, output_dir, date_start, date_end, varnames, user_crs, user_geom, crs, resample_method, point_method
     ):
         fout_paths = []
 
         #Check for non-temporal dataset included in temporal request
         if self.date_ranges['year'] == [None,None]:
             fout_paths = self._getNonTemporalSubset(
-                output_dir, varnames, user_crs, user_geom, crs, resample_method
+                output_dir, varnames, user_crs, user_geom, crs, resample_method, point_method
             )
         else:
             # Parse the start and end years and months.
@@ -291,9 +294,9 @@ class GSDataSet:
                     fout_paths.append(fout_path)
                     if str(cur_m) not in fname:  #not the safest test
                         layer_val = cur_m - 1
-                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, t_layer=layer_val)
+                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, point_method, t_layer=layer_val)
                     else:
-                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method)
+                        self._extractData(fout_path, fpath, user_crs, user_geom, crs, resample_method, point_method)
 
                 m_cnt += 1
                 cur_y = start_y + m_cnt // 12
@@ -301,7 +304,7 @@ class GSDataSet:
 
         return fout_paths
 
-    def _extractData(self, output_path, fpath, user_crs, user_geom, crs, resample_method, t_layer=None):
+    def _extractData(self, output_path, fpath, user_crs, user_geom, crs, resample_method, point_method, t_layer=None):
         data = rioxarray.open_rasterio(fpath, masked=True)
 
         # Extract time layer from multi-layer raster, if applicable
@@ -327,7 +330,10 @@ class GSDataSet:
             pt_vals = []
             for pt in user_geom[0]['coordinates']:
                 pt_x, pt_y = pt_transformer.transform(pt[0], pt[1])
-                pt_val = data.sel(x = pt_x, y = pt_y, method = 'nearest').values
+                if point_method == 'nearest':
+                    pt_val = data.sel(x = pt_x, y = pt_y, method = 'nearest').values
+                else:
+                    pt_val = data.interp(x = pt_x, y = pt_y).values
                 pt_vals.append([pt_x, pt_y, pt_val])
 
             with open('geocdl_{0}_pts.csv'.format(self.id),'w') as f:
