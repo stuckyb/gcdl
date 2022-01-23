@@ -172,6 +172,8 @@ class GSDataSet:
             None, the native CRS is used.
         resample_method: The resampling method used in reprojection. If
             None, nearest neighbor method is used. 
+        point_method: The point extraction method used in reprojection. If
+            None, nearest neighbor method is used. 
         """
         output_dir = Path(output_dir)
 
