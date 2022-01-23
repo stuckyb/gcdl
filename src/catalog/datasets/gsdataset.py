@@ -361,11 +361,11 @@ class GSDataSet:
                 if point_method == 'nearest':
                     pt_val = data.sel(x = pt_x, y = pt_y, method = 'nearest').values
                 else:
-                    pt_val = data.interp(x = pt_x, y = pt_y).values
+                    pt_val = data.interp(x = pt_x, y = pt_y).values[0]
                 pt_vals.append([pt_x, pt_y, pt_val])
 
             if file_ext == 'csv':
                 with open(output_path,'w') as f:
                     writer = csv.writer(f)
-                    writer.writerow(['x', 'y', 'value'])
+                    writer.writerow(['x', 'y', data.dims[0]])
                     writer.writerows(pt_vals)
