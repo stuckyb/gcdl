@@ -244,6 +244,7 @@ async def subset(
 
     # Subset data
     user_crs = crs
+    file_ext = 'tif' if points is None else 'csv'
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
@@ -253,8 +254,8 @@ async def subset(
             user_crs = ds.epsg_code
 
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], 
-            user_crs, user_geom, crs, resample_method, point_method
+            output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs,
+             resample_method, point_method, file_ext
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
