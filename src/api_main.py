@@ -196,6 +196,12 @@ async def subset(
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
     ),
+    resolution: str = Query(
+        None, title='Target spatial resolution.',
+        description='The target spatial resolution for the '
+        'returned data, specified in units of target crs or the CRS of '
+        'the first dataset.'
+    ),
     point_method: str = Query(
         None, title='Point extraction method.',
         description='The method used in extracting point values. Available '
@@ -206,7 +212,8 @@ async def subset(
         None, title='Resample method.',
         description='The resampling method used in reprojection. Available '
         'methods: nearest, bilinear, cubic, cubic-spline, lanczos, average, '
-        'or mode. Default is nearest. Only used if target crs is provided.'
+        'or mode. Default is nearest. Only used if target crs and/or spatial '
+        'resolution are provided. '
     )
 ):
     req_md = OrderedDict()
@@ -245,6 +252,7 @@ async def subset(
     # Subset data
     user_crs = crs
     file_ext = 'tif' if points is None else 'csv'
+    resample_method = 'nearest' if resample_method is None else resample_method
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
@@ -255,7 +263,7 @@ async def subset(
 
         md, paths = ds.getSubset(
             output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs,
-             resample_method, point_method, file_ext
+            resolution, resample_method, point_method, file_ext
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
