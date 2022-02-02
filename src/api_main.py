@@ -103,8 +103,8 @@ def parse_rect_bounds(
         'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
         'specified, the full spatial extent will be returned. '
         'If both bbox and points are specified, the bbox will be used. '
-        'Coordinates are assumed to match the target CRS or the CRS of the first '
-        'requested dataset if no target CRS is specified.'
+        'Coordinates are assumed to match the target CRS or the CRS of the '
+        'first requested dataset if no target CRS is specified.'
     )
 ):
     """
@@ -133,12 +133,12 @@ def parse_rect_bounds(
 def parse_points(
     points: str = Query(
         None, title='Point Extraction', description='The x and y coordinates '
-        'of point locations for extracting from the data, specifed '
-        'as x1,y1;x2,y2;... If no point coordinates are '
-        'specified, the full spatial extent will be returned. '
-        'If both bbox and points are specified, the bbox will be used. '
-        'Coordinates are assumed to match the target CRS or the CRS of the first '
-        'requested dataset if no target CRS is specified.'
+        'of point locations for extracting from the data, specified '
+        'as x1,y1;x2,y2;... If no point coordinates are specified, the full '
+        'spatial extent will be returned. If both bbox and points are '
+        'specified, the bbox will be used. Coordinates are assumed to match '
+        'the target CRS or the CRS of the first requested dataset if no '
+        'target CRS is specified.'
     )
 ):
     """
@@ -152,14 +152,16 @@ def parse_points(
         parts = pt.split(',')
         if len(parts) != 2:
             raise HTTPException(
-                status_code=400, detail='Incorrect point coordinate specification.'
+                status_code=400,
+                detail='Incorrect point coordinate specification.'
             )
 
         try:
             parts = [float(part) for part in parts]
         except:
             raise HTTPException(
-                status_code=400, detail='Incorrect point coordinate specification.'
+                status_code=400,
+                detail='Incorrect point coordinate specification.'
             )
 
         pt_coords.append([parts[0], parts[1]])
@@ -257,13 +259,14 @@ async def subset(
         check_dsid(dsid, dsc)
 
         ds = dsc[dsid]
-        # Assume first dataset's crs for user geometries if target crs is not specified
+        # Assume first dataset's crs for user geometries if target crs is not
+        # specified.
         if user_crs is None:
             user_crs = ds.epsg_code
 
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs,
-            resolution, resample_method, point_method, file_ext
+            output_dir, date_start, date_end, datasets[dsid], user_crs,
+            user_geom, crs, resolution, resample_method, point_method, file_ext
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
