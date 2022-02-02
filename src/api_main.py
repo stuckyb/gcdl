@@ -1,6 +1,6 @@
 
 from catalog.catalog import DatasetCatalog
-from catalog.datasets import PRISM, DAYMET
+from catalog.datasets import PRISM, DAYMET, GTOPO
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 dsc = DatasetCatalog('local_data')
-dsc.addDatasetsByClass(PRISM, DAYMET)
+dsc.addDatasetsByClass(PRISM, DAYMET, GTOPO)
 
 # Characters for generating random file names.
 fname_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -101,7 +101,10 @@ def parse_rect_bounds(
         'as a comma-separated list of the form '
         '"UPPER_LEFT_X_COORD,UPPER_LEFT_Y_COORD,'
         'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
-        'specified, the full spatial extent will be returned.'
+        'specified, the full spatial extent will be returned. '
+        'If both bbox and points are specified, the bbox will be used. '
+        'Coordinates are assumed to match the target CRS or the CRS of the first '
+        'requested dataset if no target CRS is specified.'
     )
 ):
     """
@@ -127,6 +130,43 @@ def parse_rect_bounds(
 
     return coords
 
+def parse_points(
+    points: str = Query(
+        None, title='Point Extraction', description='The x and y coordinates '
+        'of point locations for extracting from the data, specifed '
+        'as x1,y1;x2,y2;... If no point coordinates are '
+        'specified, the full spatial extent will be returned. '
+        'If both bbox and points are specified, the bbox will be used. '
+        'Coordinates are assumed to match the target CRS or the CRS of the first '
+        'requested dataset if no target CRS is specified.'
+    )
+):
+    """
+    Parses comma-separated rectangular bounding box coordinates.
+    """
+    if points is None:
+        return None
+
+    pt_coords = []
+    for pt in points.split(';'):
+        parts = pt.split(',')
+        if len(parts) != 2:
+            raise HTTPException(
+                status_code=400, detail='Incorrect point coordinate specification.'
+            )
+
+        try:
+            parts = [float(part) for part in parts]
+        except:
+            raise HTTPException(
+                status_code=400, detail='Incorrect point coordinate specification.'
+            )
+
+        pt_coords.append([parts[0], parts[1]])
+
+    return pt_coords
+
+
 @app.get(
     '/subset', tags=['Dataset operations'],
     summary='Requests a geographic subset (which can be the full dataset) of '
@@ -136,22 +176,44 @@ async def subset(
     req: Request,
     datasets: str = Depends(parse_datasets),
     date_start: str = Query(
-        ..., title='Start date (inclusive)', description='The starting date '
+        None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
         '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data.'
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
     ),
     date_end: str = Query(
-        ..., title='End date (inclusive)', description='The ending date '
+        None, title='End date (inclusive)', description='The ending date '
         'for which to request data. Dates must be specified as strings, where '
         '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data.'
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
     ),
     bbox: list = Depends(parse_rect_bounds),
+    points: list = Depends(parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
+    ),
+    resolution: str = Query(
+        None, title='Target spatial resolution.',
+        description='The target spatial resolution for the '
+        'returned data, specified in units of target crs or the CRS of '
+        'the first dataset.'
+    ),
+    point_method: str = Query(
+        None, title='Point extraction method.',
+        description='The method used in extracting point values. Available '
+        'methods: nearest or bilinear. Default is nearest. '
+        'Only used if point coordinates are provided.'
+    ),
+    resample_method: str = Query(
+        None, title='Resample method.',
+        description='The resampling method used in reprojection. Available '
+        'methods: nearest, bilinear, cubic, cubic-spline, lanczos, average, '
+        'or mode. Default is nearest. Only used if target crs and/or spatial '
+        'resolution are provided. '
     )
 ):
     req_md = OrderedDict()
@@ -163,12 +225,45 @@ async def subset(
     req_md['request']['url'] = str(req.url)
     req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
 
+    # Define user geometry
+    user_geom = None
+    if bbox is not None:
+        user_geom = [{
+                'type': 'Polygon',
+                'coordinates': [[
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]],
+                    # Top right.
+                    [bbox[1][0], bbox[0][1]],
+                    # Bottom right.
+                    [bbox[1][0], bbox[1][1]],
+                    # Bottom left.
+                    [bbox[0][0], bbox[1][1]],
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]]
+                ]]
+            }]
+    elif points is not None:
+        user_geom = [{
+            'type': 'Point',
+            'coordinates': points
+        }]
+
+    # Subset data
+    user_crs = crs
+    file_ext = 'tif' if points is None else 'csv'
+    resample_method = 'nearest' if resample_method is None else resample_method
     for dsid in datasets:
         check_dsid(dsid, dsc)
 
         ds = dsc[dsid]
+        # Assume first dataset's crs for user geometries if target crs is not specified
+        if user_crs is None:
+            user_crs = ds.epsg_code
+
         md, paths = ds.getSubset(
-            output_dir, date_start, date_end, datasets[dsid], bbox, crs
+            output_dir, date_start, date_end, datasets[dsid], user_crs, user_geom, crs,
+            resolution, resample_method, point_method, file_ext
         )
         ds_metadata.append(md)
         out_paths.extend(paths)
