@@ -45,7 +45,6 @@ class PRISM(GSDataSet):
         }
 
     def _getDataFile(self, varname, year, month=None, day=None):
-        print(varname, year)
         if day is not None:
             pass
         elif month is not None:
