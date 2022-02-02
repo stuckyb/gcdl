@@ -164,7 +164,7 @@ def parse_points(
                 detail='Incorrect point coordinate specification.'
             )
 
-        pt_coords.append([parts[0], parts[1]])
+        pt_coords.append(parts)
 
     return pt_coords
 
