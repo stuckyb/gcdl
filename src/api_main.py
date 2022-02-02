@@ -1,6 +1,6 @@
 
-from catalog.catalog import DatasetCatalog
-from catalog.datasets import PRISM, DAYMET, GTOPO
+from library.catalog import DatasetCatalog
+from library.datasets import PRISM, DAYMET, GTOPO
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
