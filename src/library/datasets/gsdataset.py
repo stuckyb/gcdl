@@ -66,24 +66,15 @@ class GSDataSet:
         self._id = idstr
 
     def _getCRSMetadata(self, epsg_code=None, wkt_str=None, proj4_str=None):
-        if epsg_code is not None:
-            crs = CRS.from_epsg(epsg_code)
-        elif wkt_str is not None:
-            crs = CRS.from_wkt(wkt_str)
-        elif proj4_str is not None:
-            crs = CRS.from_proj4(proj4_str)
-        else:
-            crs = None
-
-        if crs is not None:
+        if self.crs is not None:
             crs_md = {}
-            crs_md['name'] = crs.name
-            crs_md['epsg'] = crs.to_epsg()
-            crs_md['proj4'] = crs.to_proj4()
-            crs_md['wkt'] = crs.to_wkt('WKT2_2019')
-            crs_md['datum'] = crs.datum.name
-            crs_md['is_geographic'] = crs.is_geographic
-            crs_md['is_projected'] = crs.is_projected
+            crs_md['name'] = self.crs.name
+            crs_md['epsg'] = self.crs.to_epsg()
+            crs_md['proj4'] = self.crs.to_proj4()
+            crs_md['wkt'] = self.crs.to_wkt('WKT2_2019')
+            crs_md['datum'] = self.crs.datum.name
+            crs_md['is_geographic'] = self.crs.is_geographic
+            crs_md['is_projected'] = self.crs.is_projected
         else:
             crs_md = None
 
