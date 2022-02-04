@@ -1,0 +1,146 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "assets/R_GCDL_pilot_tutorial/"
+)
+```
+
+<!--
+---
+title: GeoCDL Pilot Tutorial
+layout: single
+author: Heather Savoy
+author_profile: true
+header:
+  overlay_color: "444444"
+  overlay_image: /assets/images/margaret-weir-GZyjbLNOaFg-unsplash_dark.jpg
+---
+--> 
+
+**Last Update:** 04 February 2022 <br />
+**Download RMarkdown**: [R_GCDL_pilot_tutorial.Rmd](https://geospatial.101workbook.org/tutorials/R_GCDL_pilot_tutorial.Rmd)
+
+<!-- ToDo: would be great to have an R binder badge here -->
+
+## Overview
+
+This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a project from the Geospatial Working Group to reduce the time and  effort to access commonly used spatial datasets. This example covers the pilot features implemented in the GeoCDL web API and R package. For more details on the development of the web API, see [https://github.com/stuckyb/gcdl/](https://github.com/stuckyb/gcdl/).
+
+**Also link to r package when it exists.**
+
+**Insert figure of archiitecture.**
+
+**Assuming running on CERES?**
+
+*Language:* `R`
+
+*Primary Libraries/Packages:*
+
+| Name | Description | Link |
+|:--|:--|:--|
+| raster | Geographic Data Analysis and Modeling | https://cran.r-project.org/web/packages/raster/index.html |
+| sf | Simple Features for R | https://cran.r-project.org/web/packages/sf/index.html |
+
+## Nomenclature
+
+* *Web API:* < Description >
+* *Data access protocol:* < Description >
+* *Coordinate Reference System (CRS):* < Description >
+* *Name:* < Description >
+
+## Data Details
+
+* Data: MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015
+* Link: [https://doi.org/10.3334/ORNLDAAC/1299](https://doi.org/10.3334/ORNLDAAC/1299)
+* Other Details: This dataset is acquired via the GeoCDL. It is 70.8 GB, but the GeoCDL leverages data access protocols to access the dataset remotely from online servers, use server-side functions for spatial and temporal filtering, and download the user requested data. 
+
+
+* Repository: < Link to Repository >
+* Data: < Name of Dataset >
+* Link: < Link to the dataset >
+* Other Details: < other >
+
+## Analysis Steps
+
+* Specify desired data - Dataset, variables, temporal coverage, spatial coverage, spatial resolution, and CRS.
+* Title… - desc….
+  * desc..
+  * desc..
+  * desc..
+* Title… - desc…. - desc….
+
+## Step 0: Import Libraries/Packages
+
+**Will we have our R/python packages installed on CERES/ATLAS?**
+
+```{r libraries}
+library(raster)
+library(sf)
+library(jsonlite)
+#library(rgcdl) # ours
+```
+
+## Step 1: Point to Web API
+```{r step1}
+# Current location during testing:
+gcdl_url <- 'http://127.0.0.1:8000/'
+
+```
+
+
+## Step 2: Specify area of interest
+
+We will focus on the USDA-ARS Jornada Experimental Range in southern New Mexico. We will showcase returning both gridded data overlapping the site and point data at experiment locations. These shapefiles are in UTM 13N CRS.
+
+
+```{r step2}
+# Read in Jornada boundary shapefile and format for GeoCDL
+jer_bounds <- st_read('')  
+
+# Read in study location shapefile
+jer_locs <- st_read('')  
+
+```
+
+## Step 3: Select datasets, variables, and times of interest
+
+We can see that our MODIS NDVI dataset has a ... CRS, different from our area of interest objects. 
+
+```{r step3}
+# 1, Query the GeoCDL to list all datasets
+all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets')))
+my_ds <- 'PRISM' # not really, MODIS product once it's supported
+
+# 2. View a dataset's metadata
+fromJSON(url(paste0(gcdl_url,'ds_info?id=',my_ds)))
+my_vars <- c('ppt') # to be NDVI
+
+
+
+
+```
+
+## Step 4: Build and submit request to GeoCDL
+
+### Step 4.1: Web API
+
+```{r step4.1}
+# 
+
+```
+
+### Step 4.2: R package
+
+```{r step4.2}
+# Put Your code below - be sure to include comments
+```
+
+## Step 5: Read in and visualize results from GeoCDL
+
+```{r step5}
+# Put Your code below - be sure to include comments
+```
+
+
