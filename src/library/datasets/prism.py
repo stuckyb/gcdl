@@ -1,7 +1,10 @@
 
 from .gsdataset import GSDataSet
 from pathlib import Path
+from pyproj.crs import CRS
 import datetime
+import rioxarray
+import data_request as dr
 
 
 class PRISM(GSDataSet):
@@ -16,7 +19,7 @@ class PRISM(GSDataSet):
         self.url = 'https://prism.oregonstate.edu/'
 
         # CRS information.
-        self.epsg_code = 4269
+        self.crs = CRS.from_epsg(4269)
 
         # The grid size
         self.grid_size = 4000
@@ -45,12 +48,37 @@ class PRISM(GSDataSet):
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
         }
 
-    def _getDataFile(self, varname, year, month=None, day=None):
-        if day is not None:
-            pass
-        elif month is not None:
-            datestr = '{0}{1:02}'.format(year, month)
-            return self.fpatterns[varname].format(datestr)
+    def getData(self, varname, date_grain, request_date, clip_poly=None):
+        """
+        varname: The variable to return.
+        date_grain: The date granularity to return, specified as a constant in
+            data_request.
+        request_date: A data_request.RequestDate instance.
+        clip_poly: An instance of ClipPolygon.  If the CRS does not match the
+            dataset, an exception is raised.
+        """
+        # Get the path to the required data file.
+        if date_grain == dr.ANNUAL:
+            fname = self.fpatterns[varname].format(request_date.year)
+        elif date_grain == dr.MONTHLY:
+            datestr = '{0}{1:02}'.format(request_date.year, request_date.month)
+            fname = self.fpatterns[varname].format(datestr)
+        elif date_grain == dr.DAILY:
+            raise NotImplementedError()
         else:
-            return self.fpatterns[varname].format(year)
+            raise ValueError('Invalid date grain specification.')
+
+        fpath = self.ds_path / fname
+
+        data = rioxarray.open_rasterio(fpath, masked=True)
+
+        if clip_poly is not None:
+            if not(self.crs.equals(clip_poly.crs)):
+                raise ValueError(
+                    'Clip polygon CRS does not match dataset CRS.'
+                )
+
+            data = data.rio.clip([clip_poly.gj_dict])
+
+        return data
 
