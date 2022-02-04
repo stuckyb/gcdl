@@ -1,4 +1,8 @@
 
+import datetime as dt
+from pyproj.crs import CRS
+
+
 class DataRequest:
     """
     Encapsulates a single API data request.
@@ -19,12 +23,16 @@ class DataRequest:
         target_crs: A string specifying the target CRS.
         """
         self.dsvars = dsvars
+        self.dates = self._parse_dates(date_start, date_end)
+        self.clip_poly = clip_poly
+        self.target_crs = CRS(target_crs)
 
     def _parse_dates(self, date_start, date_end):
         """
         Parses the starting and ending date strings and returns a tree-like
         data structure that specifies all dates included in the request, with
-        year and month as keys.
+        year and month as keys.  We represent request dates this way because it
+        supports sparse date ranges.
         """
         # Note: We assume here that this is running under at least Python 3.7,
         # which is the point at which dict insertion order preservation became
@@ -63,7 +71,7 @@ class DataRequest:
                 if cur_y not in dates:
                     dates[cur_y] = {}
 
-                dates[cur_y][cur_m] = {}
+                dates[cur_y][cur_m] = []
 
                 m_cnt += 1
                 cur_y = start_y + m_cnt // 12
@@ -71,7 +79,31 @@ class DataRequest:
 
         elif len(date_start) == 10 and len(date_end) == 10:
             # Daily data request.
-            pass
+            start_y, start_m, start_d = [
+                int(val) for val in date_start.split('-')
+            ]
+            end_y, end_m, end_d = [int(val) for val in date_end.split('-')]
+
+            inc_date = dt.date(start_y, start_m, start_d)
+            end_date = dt.date(end_y, end_m, end_d)
+
+            if end_date < inc_date:
+                raise ValueError('The end date cannot precede the start date.')
+
+            interval = dt.timedelta(days=1)
+            end_date += interval
+
+            # Generate the dates data structure.
+            while inc_date != end_date:
+                if inc_date.year not in dates:
+                    dates[inc_date.year] = {}
+
+                if inc_date.month not in dates[inc_date.year]:
+                    dates[inc_date.year][inc_date.month] = []
+
+                dates[inc_date.year][inc_date.month].append(inc_date.day)
+
+                inc_date += interval
 
         else:
             raise ValueError(
