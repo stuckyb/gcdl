@@ -3,6 +3,12 @@ import datetime as dt
 from pyproj.crs import CRS
 
 
+# Date granularity constants.
+ANNUAL = 0
+MONTHLY = 1
+DAILY = 2
+
+
 class DataRequest:
     """
     Encapsulates a single API data request.
@@ -23,7 +29,7 @@ class DataRequest:
         target_crs: A string specifying the target CRS.
         """
         self.dsvars = dsvars
-        self.dates = self._parse_dates(date_start, date_end)
+        self.dates, self.date_grain = self._parse_dates(date_start, date_end)
         self.clip_poly = clip_poly
         self.target_crs = CRS(target_crs)
 
@@ -41,6 +47,8 @@ class DataRequest:
 
         if len(date_start) == 4 and len(date_end) == 4:
             # Annual data request.
+            date_grain = ANNUAL
+
             start = int(date_start)
             end = int(date_end) + 1
             if end <= start:
@@ -52,6 +60,8 @@ class DataRequest:
 
         elif len(date_start) == 7 and len(date_end) == 7:
             # Monthly data request.
+            date_grain = MONTHLY
+
             start_y, start_m = [int(val) for val in date_start.split('-')]
             end_y, end_m = [int(val) for val in date_end.split('-')]
 
@@ -79,6 +89,8 @@ class DataRequest:
 
         elif len(date_start) == 10 and len(date_end) == 10:
             # Daily data request.
+            date_grain = DAILY
+
             start_y, start_m, start_d = [
                 int(val) for val in date_start.split('-')
             ]
@@ -110,5 +122,5 @@ class DataRequest:
                 'Mismatched starting and ending date granularity.'
             )
 
-        return dates
+        return (dates, date_grain)
 
