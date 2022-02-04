@@ -1,5 +1,6 @@
 
 import datetime as dt
+from collections import namedtuple
 from pyproj.crs import CRS
 
 
@@ -7,6 +8,12 @@ from pyproj.crs import CRS
 ANNUAL = 0
 MONTHLY = 1
 DAILY = 2
+
+
+# A simple struct-like class for capturing data request date information.  We
+# need this instead of the standard datetime.date class because the latter does
+# not allow year- or month-only dates (i.e., where month or day are None).
+RequestDate = namedtuple('RequestDate', ['year', 'month', 'day'])
 
 
 class DataRequest:
@@ -35,15 +42,15 @@ class DataRequest:
 
     def _parse_dates(self, date_start, date_end):
         """
-        Parses the starting and ending date strings and returns a tree-like
-        data structure that specifies all dates included in the request, with
-        year and month as keys.  We represent request dates this way because it
-        supports sparse date ranges.
+        Parses the starting and ending date strings and returns a list of
+        DRDate instances that specifies all dates included in the request.  We
+        represent request dates this way because it supports sparse date
+        ranges.
         """
         # Note: We assume here that this is running under at least Python 3.7,
         # which is the point at which dict insertion order preservation became
         # an official feature.
-        dates = {}
+        dates = []
 
         if len(date_start) == 4 and len(date_end) == 4:
             # Annual data request.
@@ -56,7 +63,7 @@ class DataRequest:
             
             # Generate the dates data structure.
             for year in range(start, end):
-                dates[year] = {}
+                dates.append(RequestDate(year, None, None))
 
         elif len(date_start) == 7 and len(date_end) == 7:
             # Monthly data request.
@@ -78,10 +85,7 @@ class DataRequest:
             cur_m = start_m
             m_cnt = start_m - 1
             while cur_y * 12 + cur_m <= end_y * 12 + end_m:
-                if cur_y not in dates:
-                    dates[cur_y] = {}
-
-                dates[cur_y][cur_m] = []
+                dates.append(RequestDate(cur_y, cur_m, None))
 
                 m_cnt += 1
                 cur_y = start_y + m_cnt // 12
@@ -107,13 +111,9 @@ class DataRequest:
 
             # Generate the dates data structure.
             while inc_date != end_date:
-                if inc_date.year not in dates:
-                    dates[inc_date.year] = {}
-
-                if inc_date.month not in dates[inc_date.year]:
-                    dates[inc_date.year][inc_date.month] = []
-
-                dates[inc_date.year][inc_date.month].append(inc_date.day)
+                dates.append(
+                    RequestDate(inc_date.year, inc_date.month, inc_date.day)
+                )
 
                 inc_date += interval
 

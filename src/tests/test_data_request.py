@@ -3,6 +3,7 @@ import unittest
 import geojson
 import pyproj
 import data_request
+from data_request import RequestDate as RD
 
 
 class TestDataRequest(unittest.TestCase):
@@ -14,16 +15,18 @@ class TestDataRequest(unittest.TestCase):
         # an official feature.
 
         # Test annual data request ranges.
-        exp = {1980: {}}
+        exp = [RD(1980, None, None)]
         r, dg = dr._parse_dates('1980', '1980')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.ANNUAL, dg)
 
-        exp = {1980: {}, 1981: {}}
+        exp = [RD(1980, None, None), RD(1981, None, None)]
         r, dg = dr._parse_dates('1980', '1981')
         self.assertEqual(exp, r)
 
-        exp = {1980: {}, 1981: {}, 1982: {}}
+        exp = [
+            RD(1980, None, None), RD(1981, None, None), RD(1982, None, None)
+        ]
         r, dg = dr._parse_dates('1980', '1982')
         self.assertEqual(exp, r)
 
@@ -34,23 +37,16 @@ class TestDataRequest(unittest.TestCase):
             dr._parse_dates('1980', '1981-01')
 
         # Test monthly request ranges.
-        exp = {
-            1980: {1: []}
-        }
+        exp = [RD(1980, 1, None)]
         r, dg = dr._parse_dates('1980-01', '1980-01')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.MONTHLY, dg)
 
-        exp = {
-            1980: {1: [], 2: []}
-        }
+        exp = [RD(1980, 1, None), RD(1980, 2, None)]
         r, dg = dr._parse_dates('1980-01', '1980-02')
         self.assertEqual(exp, r)
 
-        exp = {
-            1980: {12: []},
-            1981: {1: [], 2: []}
-        }
+        exp = [RD(1980, 12, None), RD(1981, 1, None), RD(1981, 2, None)]
         r, dg = dr._parse_dates('1980-12', '1981-02')
         self.assertEqual(exp, r)
 
@@ -61,23 +57,16 @@ class TestDataRequest(unittest.TestCase):
             dr._parse_dates('1980-01', '1979-12')
 
         # Test daily request ranges.
-        exp = {
-            1980: {1: [1]}
-        }
+        exp = [RD(1980, 1, 1)]
         r, dg = dr._parse_dates('1980-01-01', '1980-01-01')
         self.assertEqual(exp, r)
 
-        exp = {
-            1980: {1: [1,2,3]}
-        }
+        exp = [RD(1980, 1, 1), RD(1980, 1, 2), RD(1980, 1, 3)]
         r, dg = dr._parse_dates('1980-01-01', '1980-01-03')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
-        exp = {
-            1980: {12: [30,31]},
-            1981: {1: [1]}
-        }
+        exp = [RD(1980, 12, 30), RD(1980, 12, 31), RD(1981, 1, 1)]
         r, dg = dr._parse_dates('1980-12-30', '1981-01-01')
         self.assertEqual(exp, r)
 
