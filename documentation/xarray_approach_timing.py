@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 from pathlib import Path
@@ -17,6 +18,10 @@ import pandas as pd
 #### Future: 
 ####	1. Incorporate dask and update timings	
 ##################
+
+parser = argparse.ArgumentParser()
+parser.add_argument("start_year",type=int)
+args = parser.parse_args()
 
 print("timing started")
 begin_time = time.time()
@@ -57,7 +62,7 @@ varnames = {
 }
 
 # local test data 2011-2020, monthly for PRISM, Daymet
-year_start = 2011
+year_start = args.start_year
 year_end = 2020
 years = year_end - year_start + 1
 output = "timing_" + str(year_start) + "-" + str(year_end) + ".csv"
