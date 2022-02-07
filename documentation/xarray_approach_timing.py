@@ -72,7 +72,7 @@ date_end = str(year_end) + '-12'
 time_coords = pd.date_range(date_start,date_end,freq='MS',name="time")
 
 ### append each step timing to csv file
-def time_to_csv(testid, years, file=local_data_path/output):
+def time_to_csv(testid, years, file=output):
     time_to_csv.count += 1
     if time_to_csv.count == 1:
         csv_file = open(file, "w")

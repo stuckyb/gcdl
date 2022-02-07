@@ -14,3 +14,6 @@ src/output/*
 
 # Rendered tutorials
 documentation/tutorials/*.html
+
+# CERES output files
+slurm*
