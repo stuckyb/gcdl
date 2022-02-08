@@ -12,4 +12,4 @@
 module load python_3/3.6.6
 module load gdal
 
-python3 ~/gcdl/documentation/xarray_approach_timing.py 2011
+python3 ~/gcdl/documentation/xarray_approach_timing.py 2012
