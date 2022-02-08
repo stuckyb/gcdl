@@ -73,8 +73,7 @@ time_coords = pd.date_range(date_start,date_end,freq='MS',name="time")
 
 ### append each step timing to csv file
 def time_to_csv(testid, years, file=output):
-    time_to_csv.count += 1
-    if time_to_csv.count == 1:
+    if not Path(file).is_file():
         csv_file = open(file, "w")
         csv_file.write("test_id, num_years, time_sec\n")
         csv_file.close()
@@ -83,7 +82,6 @@ def time_to_csv(testid, years, file=output):
     csv_file.write(timing + "\n")
     csv_file.close()
     print(timing)
-time_to_csv.count = 0
 
 # List filenames by dataset and variable
 #PRISM
