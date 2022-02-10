@@ -176,7 +176,7 @@ if 2 in args.datasets:
 	time_to_csv("1.2.2", years)
 
 ## TEST 1.3.1 CRU: opening per variable and month combination
-if years < 10 and if 3 in args.datasets:
+if years < 10 and 3 in args.datasets:
 	start_time = time.time()
 	for var in varnames["cru"]:
 		for t in cru_times: 
@@ -202,7 +202,7 @@ if 3 in args.datasets:
 	time_to_csv("1.3.2", years)
 
 ## TEST 1.4.1 CRU2: opening per variable and month combination
-if years < 10 and if 4 in args.datasets:
+if years < 10 and 4 in args.datasets:
 	start_time = time.time()
 	fpath = cru_files["pre"]
 	for var in varnames["cru2"]:
@@ -321,7 +321,7 @@ if 1 in args.datasets:
 	time_to_csv("3.1", years)
 
 ## TEST 3.2 Daymet: concatenate time, then merge variables into Dataset
-if 2 in args.datasets::	
+if 2 in args.datasets:	
 	start_time = time.time()
 	daymet_arrays = []
 	for var in varnames["daymet"]:
