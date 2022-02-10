@@ -19,7 +19,7 @@ all_timings <- tibble()
 for(file in tfiles){
   timings <- read_csv(file) %>%
     separate(test_id, c("approach","dataset","version"), fill='right') %>%
-    mutate(remote = dataset == 5,
+    mutate(remote = ifelse(dataset == 5,"Remote","Local"),
            dataset = ifelse(dataset == 5, 2, dataset),
            dataset = factor(dataset, levels=1:4,
                             labels = datasets),
@@ -41,21 +41,31 @@ for(file in tfiles){
 
 all_timings %>%
   ggplot(aes(num_years,time_sec_mean/60,color=approach)) +
-  geom_line(aes(linetype=approach,group=paste(approach,remote))) +
-  geom_point(aes(shape=remote)) +
+  geom_line(aes(linetype=approach,group=paste(approach,remote)),
+            size = 0.25) +
+  geom_point(aes(shape=remote),
+             size = 1) +
   geom_errorbar(aes(ymin = (time_sec_mean-time_sec_sd)/60,
                     ymax = (time_sec_mean+time_sec_sd)/60),
+                size = 0.25,
                 width = 0.25) +
   ylab("Processing time (minutes)") +
   xlab("No. data years processed") +
   theme_few(base_size = 8) +
-  theme(legend.position = c(0.25,0.92),
+  theme(legend.position = c(0.15,0.9),
+        legend.text = element_text(size = 4),
+        legend.title = element_text(size = 4),
         legend.background = element_blank(),
-        legend.key.height = unit(0.1,'cm')) +
+        legend.key.height = unit(0.1,'cm'),
+        legend.spacing = unit(0,'cm')) +
   facet_wrap(~dataset) +
   scale_color_colorblind(name="Approach") +
   scale_linetype_discrete(name="Approach") +
-  scale_y_log10()
+  scale_shape_discrete(name='Data location') +
+  scale_y_log10() +
+  guides(shape = guide_legend(order = 2),
+         linetype = guide_legend(order = 1),
+         col = guide_legend(order = 1))
 ggsave("xarray_timings.jpg",
        dpi = 300,
        units = 'in',
@@ -66,21 +76,31 @@ ggsave("xarray_timings.jpg",
 all_timings %>%
   mutate(time_sec = time_sec_mean/num_years) %>%
   ggplot(aes(num_years,time_sec,color=approach)) +
-  geom_line(aes(linetype=approach,group=paste(approach,remote))) +
-  geom_point(aes(shape=remote)) +
+  geom_line(aes(linetype=approach,group=paste(approach,remote)),
+            size = 0.25) +
+  geom_point(aes(shape=remote),
+             size = 1) +
   geom_errorbar(aes(ymin = (time_sec_mean-time_sec_sd)/num_years,
                     ymax = (time_sec_mean+time_sec_sd)/num_years),
+                size = 0.25,
                 width = 0.25) +
   ylab("Processing time (seconds/data year)") +
   xlab("No. data years processed") +
   theme_few(base_size = 8) +
   theme(legend.position = c(0.25,0.92),
+        legend.text = element_text(size = 4),
+        legend.title = element_text(size = 4),
         legend.background = element_blank(),
-        legend.key.height = unit(0.1,'cm')) +
+        legend.key.height = unit(0.1,'cm'),
+        legend.spacing = unit(0,'cm')) +
   facet_wrap(~dataset) +
   scale_color_colorblind(name="Approach") +
   scale_linetype_discrete(name="Approach") +
-  scale_y_log10()
+  scale_shape_discrete(name='Data location') +
+  scale_y_log10() +
+  guides(shape = guide_legend(order = 2),
+         linetype = guide_legend(order = 1),
+         col = guide_legend(order = 1))
 ggsave("xarray_timings_peryear.jpg",
        dpi = 300,
        units = 'in',
