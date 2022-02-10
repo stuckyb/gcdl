@@ -274,7 +274,7 @@ time_to_csv("2.4", years)
 ## TEST 2.5 Remote Daymet: concatenate each year file
 start_time = time.time()
 for var in varnames["daymet"]:
-	var_nc = Path('../src/output') / (var + '_tdssubset.nc')
+	var_nc = Path('../../src/output') / (var + '_tdssubset.nc')
 	cnt = 0
 	for fpath in daymet_urls[var]:
 		thredds_ds = open_url(fpath)
@@ -283,19 +283,12 @@ for var in varnames["daymet"]:
 			x=slice(lccbounds.minx[0],lccbounds.maxx[0]), 
 			y=slice(lccbounds.maxy[0],lccbounds.miny[0])
 		)
-    
-	    if cnt==0:
-	        ds_stack = ds_slice
-	    else:
-	        ds_stack = xr.concat([ds_stack, ds_slice], dim="time")
-	    
-	    cnt += 1
 
-	ds_stack.to_netcdf(var_nc)
-
-	# Create list of DataArrays from files 
-	data_stack = rioxarray.open_rasterio(var_nc, masked=True).squeeze(drop=True)
-	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
+	if cnt==0:
+		ds_stack = ds_slice
+	else:
+		ds_stack = xr.concat([ds_stack, ds_slice], dim="time")
+	cnt += 1
 	print("TEST 2.5 Remote Daymet", var)
 time_to_csv("2.5", years)
 
