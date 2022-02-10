@@ -25,6 +25,7 @@ import shapely.geometry as sg
 
 parser = argparse.ArgumentParser()
 parser.add_argument("start_year",type=int)
+parser.add_argument("--datasets",nargs='+',default=[1,2,3,4,5],type=int)
 args = parser.parse_args()
 
 print("timing started")
@@ -133,16 +134,17 @@ cru_files = {
 #########
 
 ## TEST 1.1 PRISM: Loop over files and perform geospatial operation on each individual file
-start_time = time.time()
-for var in varnames["prism"]:
-	for fpath in prism_files[var]:
-		data_loop = rioxarray.open_rasterio(fpath, masked=True)
-		clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
-		print("TEST 1.1 PRISM", var, fpath)
-time_to_csv("1.1", years)
+if 1 in args.datasets:
+	start_time = time.time()
+	for var in varnames["prism"]:
+		for fpath in prism_files[var]:
+			data_loop = rioxarray.open_rasterio(fpath, masked=True)
+			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
+			print("TEST 1.1 PRISM", var, fpath)
+	time_to_csv("1.1", years)
 
 ## TEST 1.2.1 Daymet: opening per month (current implementation)
-if years < 10:
+if 2 in args.datasets:
 	start_time = time.time()
 	for var in varnames["daymet"]:
 		for t in daymet_time: # Not looping over files since Daymet uses 12-bands for months
@@ -154,7 +156,7 @@ if years < 10:
 	time_to_csv("1.2.1", years)
 
 ## TEST 1.2.2 Daymet: opening per year (small variation to current implementation)
-if years < 10:
+if 2 in args.datasets:
 	start_time = time.time()
 	for var in varnames["daymet"]:
 		cur_y = list(daymet_years)[0]
@@ -174,7 +176,7 @@ if years < 10:
 	time_to_csv("1.2.2", years)
 
 ## TEST 1.3.1 CRU: opening per variable and month combination
-if years < 10:
+if years < 10 and if 3 in args.datasets:
 	start_time = time.time()
 	for var in varnames["cru"]:
 		for t in cru_times: 
@@ -187,19 +189,20 @@ if years < 10:
 
 
 ## TEST 1.3.2 CRU: opening per variable 
-start_time = time.time()
-for var in varnames["cru"]:
-	fpath = cru_files[var]
-	data_loop_all = rioxarray.open_rasterio(fpath, masked=True)[var]
-	data_loop_all.rio.write_crs("epsg:4326", inplace=True)
-	for t in cru_times:
-		data_loop = data_loop_all.sel(time=t)
-		clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
-		print("TEST 1.3.2 CRU", var, t)
-time_to_csv("1.3.2", years)
+if 3 in args.datasets:
+	start_time = time.time()
+	for var in varnames["cru"]:
+		fpath = cru_files[var]
+		data_loop_all = rioxarray.open_rasterio(fpath, masked=True)[var]
+		data_loop_all.rio.write_crs("epsg:4326", inplace=True)
+		for t in cru_times:
+			data_loop = data_loop_all.sel(time=t)
+			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
+			print("TEST 1.3.2 CRU", var, t)
+	time_to_csv("1.3.2", years)
 
 ## TEST 1.4.1 CRU2: opening per variable and month combination
-if years < 10:
+if years < 10 and if 4 in args.datasets:
 	start_time = time.time()
 	fpath = cru_files["pre"]
 	for var in varnames["cru2"]:
@@ -211,16 +214,17 @@ if years < 10:
 	time_to_csv("1.4.1", years)
 
 ## TEST 1.4.2 CRU2: opening per variable
-start_time = time.time() 
-fpath = cru_files["pre"]
-for var in varnames["cru2"]:
-	data_loop_all = rioxarray.open_rasterio(fpath, masked=True)[var]
-	data_loop_all.rio.write_crs("epsg:4326", inplace=True)
-	for t in cru_times:
-		data_loop = data_loop_all.sel(time=t)
-		clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
-		print("TEST 1.4.2 CRU2", var, t)
-time_to_csv("1.4.2", years)
+if 4 in args.datasets:
+	start_time = time.time() 
+	fpath = cru_files["pre"]
+	for var in varnames["cru2"]:
+		data_loop_all = rioxarray.open_rasterio(fpath, masked=True)[var]
+		data_loop_all.rio.write_crs("epsg:4326", inplace=True)
+		for t in cru_times:
+			data_loop = data_loop_all.sel(time=t)
+			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
+			print("TEST 1.4.2 CRU2", var, t)
+	time_to_csv("1.4.2", years)
 
 #########
 ### Approach 2: combining all time increments of one variable into one data array, 
@@ -229,18 +233,19 @@ time_to_csv("1.4.2", years)
 
 
 ## TEST 2.1 PRISM: concatenate monthly files per variable
-start_time = time.time()
-for var in varnames["prism"]:
-	# Create list of DataArrays from files 
-	data_stack = [rioxarray.open_rasterio(fpath, masked=True).squeeze(drop=True) for fpath in prism_files[var]]
-	# Concatenate files along time dimension (new dimension for PRISM)
-	data_stack = xr.concat(data_stack, dim=time_coords)
-	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
-	print("TEST 2.1 PRISM", var)
-time_to_csv("2.1", years)
+if 1 in args.datasets:
+	start_time = time.time()
+	for var in varnames["prism"]:
+		# Create list of DataArrays from files 
+		data_stack = [rioxarray.open_rasterio(fpath, masked=True).squeeze(drop=True) for fpath in prism_files[var]]
+		# Concatenate files along time dimension (new dimension for PRISM)
+		data_stack = xr.concat(data_stack, dim=time_coords)
+		clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
+		print("TEST 2.1 PRISM", var)
+	time_to_csv("2.1", years)
 
 ## TEST 2.2 Daymet: concatenate each year file
-if years < 10:
+if 2 in args.datasets:
 	start_time = time.time()
 	for var in varnames["daymet"]:
 		# Create list of DataArrays from files 
@@ -252,67 +257,71 @@ if years < 10:
 	time_to_csv("2.2", years)
 
 ## TEST 2.3 CRU: looping over vars only, don't need time concatenation
-start_time = time.time()
-for var in varnames["cru"]:
-	fpath = cru_files[var]
-	data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
-	data_stack.rio.write_crs("epsg:4326", inplace=True)
-	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
-	print("TEST 2.3 CRU", var)
-time_to_csv("2.3", years)
+if 3 in args.datasets:
+	start_time = time.time()
+	for var in varnames["cru"]:
+		fpath = cru_files[var]
+		data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
+		data_stack.rio.write_crs("epsg:4326", inplace=True)
+		clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
+		print("TEST 2.3 CRU", var)
+	time_to_csv("2.3", years)
 
 ## TEST 2.4 CRU2: looping over vars only, don't need time concatenation
-start_time = time.time()
-fpath = cru_files["pre"]
-for var in varnames["cru2"]:
-	data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
-	data_stack.rio.write_crs("epsg:4326", inplace=True)
-	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
-	print("TEST 2.4 CRU2", var)
-time_to_csv("2.4", years)
+if 4 in args.datasets:
+	start_time = time.time()
+	fpath = cru_files["pre"]
+	for var in varnames["cru2"]:
+		data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
+		data_stack.rio.write_crs("epsg:4326", inplace=True)
+		clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
+		print("TEST 2.4 CRU2", var)
+	time_to_csv("2.4", years)
 
 ## TEST 2.5 Remote Daymet: concatenate each year file
-start_time = time.time()
-for var in varnames["daymet"]:
-	var_nc = Path('../../src/output') / (var + '_tdssubset.nc')
-	cnt = 0
-	for fpath in daymet_urls[var]:
-		thredds_ds = open_url(fpath)
-		ds = xr.open_dataset(xr.backends.PydapDataStore(thredds_ds), decode_coords="all")
-		ds_slice = ds[var].sel(
-			x=slice(lccbounds.minx[0],lccbounds.maxx[0]), 
-			y=slice(lccbounds.maxy[0],lccbounds.miny[0])
-		)
+if 5 in args.datasets:
+	start_time = time.time()
+	for var in varnames["daymet"]:
+		var_nc = Path('../../src/output') / (var + '_tdssubset.nc')
+		cnt = 0
+		for fpath in daymet_urls[var]:
+			thredds_ds = open_url(fpath)
+			ds = xr.open_dataset(xr.backends.PydapDataStore(thredds_ds), decode_coords="all")
+			ds_slice = ds[var].sel(
+				x=slice(lccbounds.minx[0],lccbounds.maxx[0]), 
+				y=slice(lccbounds.maxy[0],lccbounds.miny[0])
+			)
 
-	if cnt==0:
-		ds_stack = ds_slice
-	else:
-		ds_stack = xr.concat([ds_stack, ds_slice], dim="time")
-	cnt += 1
-	print("TEST 2.5 Remote Daymet", var)
-time_to_csv("2.5", years)
+		if cnt==0:
+			ds_stack = ds_slice
+		else:
+			ds_stack = xr.concat([ds_stack, ds_slice], dim="time")
+		cnt += 1
+		print("TEST 2.5 Remote Daymet", var)
+	time_to_csv("2.5", years)
 
 #########
 ### Approach 3: combining all time increments and variables into one dataset
 #########
 
 ## TEST 3.1 PRISM: concatenate time, then merge variables into Dataset
-start_time = time.time()
-prism_arrays = []
-for var in varnames["prism"]:
-	# Create list of DataArrays from files 
-	data_stack = [rioxarray.open_rasterio(fpath, masked=True, default_name = var).squeeze(drop=True) for fpath in prism_files[var]]
-	# Concatenate files along time dimension (new dimension for PRISM)
-	data_stack = xr.concat(data_stack, dim=time_coords)
-	prism_arrays.append(data_stack)
-	print("TEST 3.1 PRISM", var)
+if 1 in args.datasets:
+	start_time = time.time()
+	prism_arrays = []
+	for var in varnames["prism"]:
+		# Create list of DataArrays from files 
+		data_stack = [rioxarray.open_rasterio(fpath, masked=True, default_name = var).squeeze(drop=True) for fpath in prism_files[var]]
+		# Concatenate files along time dimension (new dimension for PRISM)
+		data_stack = xr.concat(data_stack, dim=time_coords)
+		prism_arrays.append(data_stack)
+		print("TEST 3.1 PRISM", var)
 
-prism_dataset = xr.merge(prism_arrays)
-clipped_dataset = prism_dataset.rio.clip(user_geom, crs = user_crs)
-time_to_csv("3.1", years)
+	prism_dataset = xr.merge(prism_arrays)
+	clipped_dataset = prism_dataset.rio.clip(user_geom, crs = user_crs)
+	time_to_csv("3.1", years)
 
 ## TEST 3.2 Daymet: concatenate time, then merge variables into Dataset
-if years < 10:	
+if 2 in args.datasets::	
 	start_time = time.time()
 	daymet_arrays = []
 	for var in varnames["daymet"]:
@@ -328,28 +337,30 @@ if years < 10:
 	time_to_csv("3.2", years)
 
 ## TEST 3.3 CRU: merge variables
-start_time = time.time()
-cru_datasets = []
-for var in varnames["cru"]:
-	fpath = cru_files[var]
-	data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
-	cru_datasets.append(data_stack)
-	print("TEST 3.3 CRU", var)
+if 3 in args.datasets:
+	start_time = time.time()
+	cru_datasets = []
+	for var in varnames["cru"]:
+		fpath = cru_files[var]
+		data_stack = rioxarray.open_rasterio(fpath, masked=True)[var].sel(time=time_coords, method = 'nearest')
+		cru_datasets.append(data_stack)
+		print("TEST 3.3 CRU", var)
 
-cru_dataset = xr.merge(cru_datasets)
-cru_dataset.rio.write_crs("epsg:4326", inplace=True)
-clipped_dataset = cru_dataset.rio.clip(user_geom, crs = user_crs)
-time_to_csv("3.3", years)
+	cru_dataset = xr.merge(cru_datasets)
+	cru_dataset.rio.write_crs("epsg:4326", inplace=True)
+	clipped_dataset = cru_dataset.rio.clip(user_geom, crs = user_crs)
+	time_to_csv("3.3", years)
 
 
 ## TEST 3.4 CRU2: no steps needed besidess subsetting time
-start_time = time.time()
-cru_datasets = []
-fpath = cru_files['pre']
-cru_dataset = rioxarray.open_rasterio(fpath, masked=True).sel(time=time_coords, method = 'nearest')
-cru_dataset.rio.write_crs("epsg:4326", inplace=True)
-clipped_dataset = cru_dataset.rio.clip(user_geom, crs = user_crs)
-print("TEST 3.4 CRU2", fpath)
-time_to_csv("3.4", years)
+if 4 in args.datasets:
+	start_time = time.time()
+	cru_datasets = []
+	fpath = cru_files['pre']
+	cru_dataset = rioxarray.open_rasterio(fpath, masked=True).sel(time=time_coords, method = 'nearest')
+	cru_dataset.rio.write_crs("epsg:4326", inplace=True)
+	clipped_dataset = cru_dataset.rio.clip(user_geom, crs = user_crs)
+	print("TEST 3.4 CRU2", fpath)
+	time_to_csv("3.4", years)
 
-print(f'{"timing finished in "}{round(time.time() - begin_time, 1)}{" seconds"}')
+	print(f'{"timing finished in "}{round(time.time() - begin_time, 1)}{" seconds"}')
