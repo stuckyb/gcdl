@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ggthemes)
 
-#setwd('Documents/GitHub/gcdl/documentation/multilayer_timings/')
+#setwd('~/Documents/GitHub/gcdl/documentation/multilayer_timings/')
 
 datasets <- c("PRISM",
               "Daymet V4", 
@@ -19,7 +19,9 @@ all_timings <- tibble()
 for(file in tfiles){
   timings <- read_csv(file) %>%
     separate(test_id, c("approach","dataset","version"), fill='right') %>%
-    mutate(dataset = factor(dataset, levels=1:4,
+    mutate(remote = dataset == 5,
+           dataset = ifelse(dataset == 5, 2, dataset),
+           dataset = factor(dataset, levels=1:4,
                             labels = datasets),
            version = ifelse(is.na(version),1,version)) %>%
     rowwise() %>%
@@ -27,7 +29,7 @@ for(file in tfiles){
            approach = factor(approach,
                              levels = c("1.1","1.2","2.1","3.1"),
                              labels = approaches)) %>%
-    group_by(approach,dataset,num_years) %>%
+    group_by(approach,dataset,num_years,remote) %>%
     summarise(time_sec_mean = mean(time_sec),
               time_sec_sd = sd(time_sec),
               N = n())
@@ -39,8 +41,8 @@ for(file in tfiles){
 
 all_timings %>%
   ggplot(aes(num_years,time_sec_mean/60,color=approach)) +
-  geom_line(aes(linetype=approach)) +
-  geom_point() +
+  geom_line(aes(linetype=approach,group=paste(approach,remote))) +
+  geom_point(aes(shape=remote)) +
   geom_errorbar(aes(ymin = (time_sec_mean-time_sec_sd)/60,
                     ymax = (time_sec_mean+time_sec_sd)/60),
                 width = 0.25) +
@@ -64,8 +66,8 @@ ggsave("xarray_timings.jpg",
 all_timings %>%
   mutate(time_sec = time_sec_mean/num_years) %>%
   ggplot(aes(num_years,time_sec,color=approach)) +
-  geom_line(aes(linetype=approach)) +
-  geom_point() +
+  geom_line(aes(linetype=approach,group=paste(approach,remote))) +
+  geom_point(aes(shape=remote)) +
   geom_errorbar(aes(ymin = (time_sec_mean-time_sec_sd)/num_years,
                     ymax = (time_sec_mean+time_sec_sd)/num_years),
                 width = 0.25) +
