@@ -5,6 +5,10 @@ from pathlib import Path
 import xarray as xr
 import rioxarray
 import pandas as pd
+import xarray as xr
+from pydap.client import open_url
+import geopandas as gpd
+import shapely.geometry as sg
 
 ##################
 ####	
@@ -53,6 +57,11 @@ user_geom = [{
             }]
 user_crs = 4326 
 
+sh_poly = sg.Polygon(user_geom[0]['coordinates'][0])
+user_gs = gpd.GeoSeries([sh_poly], crs=user_crs)
+daymet_proj = "+proj=lcc +ellps=WGS84 +a=6378137 +b=6356752.314245 +lat_1=25 +lat_2=60 +lon_0=-100 +lat_0=42.5 +x_0=0 +y_0=0 +units=m +no_defs" 
+lccbounds = user_gs.to_crs(daymet_proj).bounds
+
 # Set variables
 varnames = {
 	"prism": ["ppt", "tmax"],
@@ -84,26 +93,35 @@ def time_to_csv(testid, years, file=output):
     print(timing)
 
 # List filenames by dataset and variable
-#PRISM
+# PRISM
 prism_time = [t.strftime('%Y%m') for t in time_coords]
 prism_fpattern = 'prism/PRISM_{0}_stable_4kmM3_{1}_bil.bil'
 prism_files = {}
 for v in varnames["prism"]:
 	prism_files[v] = [local_data_path/prism_fpattern.format(v,t) for t in prism_time] 
 
-#Daymet
-if years < 10:
-	daymet_time = [t.strftime('%Y %m') for t in time_coords]
-	daymet_years = set([dt.split()[0] for dt in daymet_time])
-	daymet_fpattern = {
-    		'prcp': 'daymetv4/daymet_v4_prcp_monttl_na_{0}.tif',
-    		'tmax': 'daymetv4/daymet_v4_tmax_monavg_na_{0}.tif',
-	}		
-	daymet_files = {}
-	for v in varnames["daymet"]:
-		daymet_files[v] = [local_data_path/daymet_fpattern[v].format(y) for y in daymet_years]
+# Daymet
+daymet_time = [t.strftime('%Y %m') for t in time_coords]
+daymet_years = set([dt.split()[0] for dt in daymet_time])
+daymet_fpattern = {
+		'prcp': 'daymetv4/daymet_v4_prcp_monttl_na_{0}.tif',
+		'tmax': 'daymetv4/daymet_v4_tmax_monavg_na_{0}.tif',
+}		
+daymet_files = {}
+for v in varnames["daymet"]:
+	daymet_files[v] = [local_data_path/daymet_fpattern[v].format(y) for y in daymet_years]
 
-#CRU
+# Remote Daymet
+thredds_url = 'https://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1855/'
+daymet_upattern = {
+		'prcp': 'daymet_v4_prcp_monttl_na_{0}.nc',
+		'tmax': 'daymet_v4_tmax_monavg_na_{0}.nc',
+}
+daymet_urls = {}
+for v in varnames["daymet"]:
+	daymet_urls[v] = [thredds_url + daymet_upattern[v].format(y) for y in daymet_years]
+
+# CRU
 cru_times = [t.strftime('%Y-%m') for t in time_coords]
 cru_files = {
 	'pre': local_data_path / 'cru/cru_ts4.05.1901.2020.pre.dat.nc', 
@@ -180,8 +198,6 @@ for var in varnames["cru"]:
 		print("TEST 1.3.2 CRU", var, t)
 time_to_csv("1.3.2", years)
 
-
-
 ## TEST 1.4.1 CRU2: opening per variable and month combination
 if years < 10:
 	start_time = time.time()
@@ -193,7 +209,6 @@ if years < 10:
 			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
 			print("TEST 1.4.1 CRU2", var, t)
 	time_to_csv("1.4.1", years)
-
 
 ## TEST 1.4.2 CRU2: opening per variable
 start_time = time.time() 
@@ -255,6 +270,34 @@ for var in varnames["cru2"]:
 	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
 	print("TEST 2.4 CRU2", var)
 time_to_csv("2.4", years)
+
+## TEST 2.5 Remote Daymet: concatenate each year file
+start_time = time.time()
+for var in varnames["daymet"]:
+	var_nc = Path('../src/output') / (var + '_tdssubset.nc')
+	cnt = 0
+	for fpath in daymet_urls[var]:
+		thredds_ds = open_url(fpath)
+		ds = xr.open_dataset(xr.backends.PydapDataStore(thredds_ds), decode_coords="all")
+		ds_slice = ds[var].sel(
+			x=slice(lccbounds.minx[0],lccbounds.maxx[0]), 
+			y=slice(lccbounds.maxy[0],lccbounds.miny[0])
+		)
+    
+	    if cnt==0:
+	        ds_stack = ds_slice
+	    else:
+	        ds_stack = xr.concat([ds_stack, ds_slice], dim="time")
+	    
+	    cnt += 1
+
+	ds_stack.to_netcdf(var_nc)
+
+	# Create list of DataArrays from files 
+	data_stack = rioxarray.open_rasterio(var_nc, masked=True).squeeze(drop=True)
+	clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
+	print("TEST 2.5 Remote Daymet", var)
+time_to_csv("2.5", years)
 
 #########
 ### Approach 3: combining all time increments and variables into one dataset
