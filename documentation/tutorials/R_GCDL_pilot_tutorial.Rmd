@@ -19,20 +19,21 @@ header:
 ---
 --> 
 
-**Last Update:** 04 February 2022 <br />
+**Last Update:** 09 February 2022 <br />
 **Download RMarkdown**: [R_GCDL_pilot_tutorial.Rmd](https://geospatial.101workbook.org/tutorials/R_GCDL_pilot_tutorial.Rmd)
 
 <!-- ToDo: would be great to have an R binder badge here -->
 
 ## Overview
 
-This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a project from the Geospatial Working Group to reduce the time and  effort to access commonly used spatial datasets. This example covers the pilot features implemented in the GeoCDL web API and R package. For more details on the development of the web API, see [https://github.com/stuckyb/gcdl/](https://github.com/stuckyb/gcdl/).
+This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a community project from the Geospatial Working Group to reduce the time and effort to access commonly used spatial datasets. This example covers the pilot features implemented in the GeoCDL web API and R package. For more details on the development of the web API, see [https://github.com/stuckyb/gcdl/](https://github.com/stuckyb/gcdl/).
+
+**Update to SCINet org link when migrated.**
 
 **Also link to r package when it exists.**
 
-**Insert figure of archiitecture.**
+**Insert figure of architecture.**
 
-**Assuming running on CERES?**
 
 *Language:* `R`
 
@@ -48,7 +49,6 @@ This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a proje
 * *Web API:* < Description >
 * *Data access protocol:* < Description >
 * *Coordinate Reference System (CRS):* < Description >
-* *Name:* < Description >
 
 ## Data Details
 
@@ -79,6 +79,8 @@ This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a proje
 library(raster)
 library(sf)
 library(jsonlite)
+library(tidyverse)
+library(ggthemes)
 #library(rgcdl) # ours
 ```
 
@@ -90,17 +92,27 @@ gcdl_url <- 'http://127.0.0.1:8000/'
 ```
 
 
-## Step 2: Specify area of interest
+## Step 2: Specify area and date range of interest 
 
 We will focus on the USDA-ARS Jornada Experimental Range in southern New Mexico. We will showcase returning both gridded data overlapping the site and point data at experiment locations. These shapefiles are in UTM 13N CRS.
 
 
 ```{r step2}
 # Read in Jornada boundary shapefile and format for GeoCDL
-jer_bounds <- st_read('')  
+jer_bounds <- st_read('assets/R_GCDL_pilot_tutorial/Boundary.shp')  
+jer_bbox <- st_bbox(jer_bounds)[c(1,4,3,2)] %>%
+  paste(collapse = ',')
+
+# Extract EPSG code 
+jer_crs <- st_crs(jer_bounds)$input
 
 # Read in study location shapefile
-jer_locs <- st_read('')  
+#jer_locs <- st_read('')  
+
+# Date range
+start_month = '2019-06'
+end_month = '2019-08'
+
 
 ```
 
@@ -111,13 +123,15 @@ We can see that our MODIS NDVI dataset has a ... CRS, different from our area of
 ```{r step3}
 # 1, Query the GeoCDL to list all datasets
 all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets')))
+all_datasets
 my_ds <- 'PRISM' # not really, MODIS product once it's supported
 
 # 2. View a dataset's metadata
 fromJSON(url(paste0(gcdl_url,'ds_info?id=',my_ds)))
 my_vars <- c('ppt') # to be NDVI
 
-
+# 3. Format dataset and variable
+dv_str <- paste0(my_ds,':',paste(my_vars,collapse = ','))
 
 
 ```
@@ -127,7 +141,25 @@ my_vars <- c('ppt') # to be NDVI
 ### Step 4.1: Web API
 
 ```{r step4.1}
-# 
+#  Prepare query
+q_str <- paste0(gcdl_url,
+                'subset?',
+                paste0(
+                  'date_start=',start_month,
+                  '&date_end=',end_month,
+                  '&crs=',jer_crs,
+                  '&datasets=',URLencode(dv_str, reserved = TRUE),
+                  '&bbox=',URLencode(jer_bbox, reserved = TRUE)))  
+
+outpath <- 'assets/tmp'
+
+download.file(q_str, paste0(outpath,'.zip'))
+unzip('assets/tmp.zip')
+
+list.files(paste0(outpath,'.zip'))
+
+
+
 
 ```
 
@@ -141,6 +173,21 @@ my_vars <- c('ppt') # to be NDVI
 
 ```{r step5}
 # Put Your code below - be sure to include comments
+prism_2019 <- list.files('assets/tmp','.tif',full.names = TRUE) %>%
+  stack() 
+
+prism_2019 %>%
+  as.data.frame(xy = TRUE) %>%
+  pivot_longer(contains('PRISM'),
+               names_to = c(NA,'var','year','month'),
+               names_sep = c('[_.]')) %>%
+  ggplot() +
+  geom_tile(aes(x,y,fill=value)) +
+  geom_sf(fill = NA,
+          data=jer_bounds) +
+  facet_grid(var~month) +
+  scale_fill_distiller(palette = "Blues", direction = 1) +
+  theme_few(base_size = 8)
 ```
 
 

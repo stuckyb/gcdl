@@ -371,7 +371,7 @@ class GSDataSet:
         if user_geom is None:
             data.rio.to_raster(output_path)
         elif user_geom[0]['type'] == 'Polygon':
-            clipped = data.rio.clip(user_geom, crs = user_crs)
+            clipped = data.rio.clip(user_geom, crs = 'EPSG:' + user_crs)
             clipped.rio.to_raster(output_path)
         else:
             pt_transformer = Transformer.from_crs(user_crs, data.rio.crs, always_xy=True)
