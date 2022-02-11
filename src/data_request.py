@@ -21,7 +21,8 @@ class DataRequest:
     Encapsulates a single API data request.
     """
     def __init__(
-        self, dsvars, date_start, date_end, clip_poly, target_crs
+        self, dsvars, date_start, date_end, clip_poly, target_crs,
+        req_metadata
     ):
         """
         dsc: The DatasetCatalog to use.
@@ -34,11 +35,13 @@ class DataRequest:
         clip_poly: A ClipPolygon representing the clipping region to use or
             None.
         target_crs: A string specifying the target CRS.
+        req_metadata: A dictionary of metadata associated with the request.
         """
         self.dsvars = dsvars
         self.dates, self.date_grain = self._parse_dates(date_start, date_end)
         self.clip_poly = clip_poly
         self.target_crs = CRS(target_crs)
+        self.metadata = req_metadata
 
     def _parse_dates(self, date_start, date_end):
         """

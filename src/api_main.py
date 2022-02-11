@@ -20,7 +20,7 @@ dsc.addDatasetsByClass(PRISM, DAYMET, GTOPO)
 # Directory for serving output files.
 output_dir = Path('output')
 
-def check_dsid(dsid, ds_catalog):
+def _check_dsid(dsid, ds_catalog):
     """
     Raises an exception if a given dataset ID is invalid.
     """
@@ -29,41 +29,7 @@ def check_dsid(dsid, ds_catalog):
             status_code=404, detail=f'Invalid dataset ID: {dsid}'
         )
 
-
-app = FastAPI(
-    title='Geospatial Common Data Library REST API',
-    description='Welcome to the interactive documentation for USDA-ARS\'s '
-    'Geospatial Common Data Library (GeoCDL) REST API! Here, you can see all '
-    'available API endpoints and directly experiment with GeoCDL API calls. '
-    'Note that most users will find it easier to access the GeoCDL via one of '
-    'our higher-level interfaces, including a web GUI interface and packages '
-    'for Python and R.'
-)
-
-@app.get(
-    '/list_datasets', tags=['Library catalog operations'],
-    summary='Returns a list with the ID and name of each dataset in the '
-    'library.'
-)
-async def list_datasets():
-    return dsc.getCatalogEntries()
-
-
-@app.get(
-    '/ds_info', tags=['Dataset operations'],
-    summary='Returns metadata for the geospatial dataset with the provided ID.'
-)
-async def ds_info(
-    dsid: str = Query(
-        ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
-    )
-):
-    check_dsid(dsid, dsc)
-
-    return dsc[dsid].getDatasetMetadata()
-
-
-def parse_datasets(
+def _parse_datasets(
     datasets: str = Query(
         ..., title='Datasets and variables', description='The datasets and '
         'variables to include, specified as '
@@ -88,11 +54,13 @@ def parse_datasets(
                 status_code=400, detail='Incorrect dataset specification.'
             )
 
+        _check_dsid(parts[0], dsc)
+
         ds_vars[parts[0]] = varnames
 
     return ds_vars
 
-def parse_rect_bounds(
+def _parse_rect_bounds(
     bbox: str = Query(
         None, title='Bounding box', description='The upper left and lower '
         'right corners of the bounding box for subsetting the data, specifed '
@@ -128,7 +96,7 @@ def parse_rect_bounds(
 
     return coords
 
-def parse_points(
+def _parse_points(
     points: str = Query(
         None, title='Point Extraction', description='The x and y coordinates '
         'of point locations for extracting from the data, specified '
@@ -166,6 +134,51 @@ def parse_points(
 
     return pt_coords
 
+def _get_request_metadata(req):
+    """
+    Generates a dictionary of metadata for an API request.
+    """
+    req_md = OrderedDict()
+
+    req_md['request'] = {}
+    req_md['request']['url'] = str(req.url)
+    req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
+
+    return req_md
+
+
+app = FastAPI(
+    title='Geospatial Common Data Library REST API',
+    description='Welcome to the interactive documentation for USDA-ARS\'s '
+    'Geospatial Common Data Library (GeoCDL) REST API! Here, you can see all '
+    'available API endpoints and directly experiment with GeoCDL API calls. '
+    'Note that most users will find it easier to access the GeoCDL via one of '
+    'our higher-level interfaces, including a web GUI interface and packages '
+    'for Python and R.'
+)
+
+@app.get(
+    '/list_datasets', tags=['Library catalog operations'],
+    summary='Returns a list with the ID and name of each dataset in the '
+    'library.'
+)
+async def list_datasets():
+    return dsc.getCatalogEntries()
+
+
+@app.get(
+    '/ds_info', tags=['Dataset operations'],
+    summary='Returns metadata for the geospatial dataset with the provided ID.'
+)
+async def ds_info(
+    dsid: str = Query(
+        ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
+    )
+):
+    _check_dsid(dsid, dsc)
+
+    return dsc[dsid].getDatasetMetadata()
+
 
 @app.get(
     '/subset', tags=['Dataset operations'],
@@ -174,7 +187,7 @@ def parse_points(
 )
 async def subset(
     req: Request,
-    datasets: str = Depends(parse_datasets),
+    datasets: str = Depends(_parse_datasets),
     date_start: str = Query(
         None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
@@ -189,8 +202,8 @@ async def subset(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    bbox: list = Depends(parse_rect_bounds),
-    points: list = Depends(parse_points),
+    bbox: list = Depends(_parse_rect_bounds),
+    points: list = Depends(_parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -216,14 +229,7 @@ async def subset(
         'resolution are provided. '
     )
 ):
-    req_md = OrderedDict()
-    ds_metadata = []
-    out_paths = []
-
-    # Generate the request metadata.
-    req_md['request'] = {}
-    req_md['request']['url'] = str(req.url)
-    req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
+    req_md = _get_request_metadata(req)
 
     # Define user geometry and create ClipPolygon.
     user_geom = None
@@ -255,7 +261,9 @@ async def subset(
 
     clip = ClipPolygon(user_geom, target_crs)
 
-    request = DataRequest(datasets, date_start, date_end, clip, target_crs)
+    request = DataRequest(
+        datasets, date_start, date_end, clip, target_crs, req_md
+    )
 
     req_handler = DataRequestHandler(dsc)
     res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
@@ -269,9 +277,9 @@ async def subset(
     summary='Requests a geographic subset (which can be the full dataset) of '
     'one or more variables from one or more geospatial datasets.'
 )
-async def subset(
+async def subset_old(
     req: Request,
-    datasets: str = Depends(parse_datasets),
+    datasets: str = Depends(_parse_datasets),
     date_start: str = Query(
         None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
@@ -286,8 +294,8 @@ async def subset(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    bbox: list = Depends(parse_rect_bounds),
-    points: list = Depends(parse_points),
+    bbox: list = Depends(_parse_rect_bounds),
+    points: list = Depends(_parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '

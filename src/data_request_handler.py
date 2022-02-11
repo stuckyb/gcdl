@@ -1,6 +1,7 @@
 
 import random
 import zipfile
+import json
 import data_request as dr
 
 
@@ -61,6 +62,13 @@ class DataRequestHandler:
                     data.rio.to_raster(fout_path)
                     fout_paths.append(fout_path)
 
+        # Write the metadata file.
+        md_path = output_dir / (
+            ''.join(random.choices(fname_chars, k=16)) + '.json'
+        )
+        with open(md_path, 'w') as fout:
+            json.dump(request.metadata, fout, indent=4)
+
         # Generate the output ZIP archive.
         zfname = (
             'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8)) +
@@ -71,7 +79,7 @@ class DataRequestHandler:
             zfpath, mode='w', compression=zipfile.ZIP_DEFLATED
         )
 
-        #zfile.write(md_path, arcname='metadata.json')
+        zfile.write(md_path, arcname='metadata.json')
 
         for fout_path in fout_paths:
             zfile.write(fout_path, arcname=fout_path.name)
