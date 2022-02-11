@@ -208,7 +208,7 @@ async def subset_polygon(
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
     ),
-    resolution: str = Query(
+    resolution: float = Query(
         None, title='Target spatial resolution.',
         description='The target spatial resolution for the returned data, '
         'specified in units of the target CRS or of the CRS of the first '
@@ -257,7 +257,8 @@ async def subset_polygon(
     clip = ClipPolygon(user_geom, target_crs)
 
     request = DataRequest(
-        datasets, date_start, date_end, clip, target_crs, req_md
+        datasets, date_start, date_end, clip, target_crs, resolution,
+        resample_method, req_md
     )
 
     req_handler = DataRequestHandler(dsc)

@@ -2,6 +2,7 @@
 import random
 import zipfile
 import json
+from rasterio.enums import Resampling
 import data_request as dr
 
 
@@ -53,6 +54,16 @@ class DataRequestHandler:
                     data = self.dsc[dsid].getData(
                         varname, request.date_grain, rdate, request.clip_poly
                     )
+
+                    if (
+                        not(request.target_crs.equals(self.dsc[dsid].crs)) or
+                        request.target_resolution is not None
+                    ):
+                        data = data.rio.reproject(
+                            dst_crs=request.target_crs,
+                            resampling=Resampling[request.resample_method],
+                            resolution=request.target_resolution
+                        )
 
                     fout_path = (
                         output_dir / self._getSingleLayerOutputFileName(

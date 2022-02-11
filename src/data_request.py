@@ -2,6 +2,7 @@
 import datetime as dt
 from collections import namedtuple
 from pyproj.crs import CRS
+from rasterio.enums import Resampling
 
 
 # Date granularity constants.
@@ -22,7 +23,7 @@ class DataRequest:
     """
     def __init__(
         self, dsvars, date_start, date_end, clip_poly, target_crs,
-        req_metadata
+        target_resolution, resample_method, req_metadata
     ):
         """
         dsc: The DatasetCatalog to use.
@@ -35,12 +36,29 @@ class DataRequest:
         clip_poly: A ClipPolygon representing the clipping region to use or
             None.
         target_crs: A string specifying the target CRS.
+        target_resolution: A float specifying the target spatial resolution in
+            units of the target CRS.
+        resample_method: The resampling algorithm to use for reprojection.
         req_metadata: A dictionary of metadata associated with the request.
         """
         self.dsvars = dsvars
         self.dates, self.date_grain = self._parse_dates(date_start, date_end)
         self.clip_poly = clip_poly
         self.target_crs = CRS(target_crs)
+        self.target_resolution = target_resolution
+
+        if resample_method is None:
+            resample_method = 'nearest'
+
+        self.resample_method = resample_method
+        if (
+            self.resample_method is not None and
+            self.resample_method not in Resampling.__members__
+        ):
+            raise ValueError(
+                f'Invalid resampling method: "{self.resample_method}".'
+            )
+
         self.metadata = req_metadata
 
     def _parse_dates(self, date_start, date_end):

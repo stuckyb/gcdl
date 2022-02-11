@@ -32,9 +32,7 @@ class GSDataSet:
         self.provider_url = ''
 
         # CRS information.
-        self.epsg_code = None
-        self.proj4_str = None
-        self.wkt_str = None
+        self.crs = None
 
         # The grid size
         self.grid_size = None
