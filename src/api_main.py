@@ -181,11 +181,11 @@ async def ds_info(
 
 
 @app.get(
-    '/subset', tags=['Dataset operations'],
+    '/subset_polygon', tags=['Dataset operations'],
     summary='Requests a geographic subset (which can be the full dataset) of '
     'one or more variables from one or more geospatial datasets.'
 )
-async def subset(
+async def subset_polygon(
     req: Request,
     datasets: str = Depends(_parse_datasets),
     date_start: str = Query(
@@ -203,7 +203,6 @@ async def subset(
         'data requests.'
     ),
     bbox: list = Depends(_parse_rect_bounds),
-    points: list = Depends(_parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -211,22 +210,16 @@ async def subset(
     ),
     resolution: str = Query(
         None, title='Target spatial resolution.',
-        description='The target spatial resolution for the '
-        'returned data, specified in units of target crs or the CRS of '
-        'the first dataset.'
-    ),
-    point_method: str = Query(
-        None, title='Point extraction method.',
-        description='The method used in extracting point values. Available '
-        'methods: nearest or bilinear. Default is nearest. '
-        'Only used if point coordinates are provided.'
+        description='The target spatial resolution for the returned data, '
+        'specified in units of the target CRS or of the CRS of the first '
+        'dataset if no target CRS is provided.'
     ),
     resample_method: str = Query(
-        None, title='Resample method.',
-        description='The resampling method used in reprojection. Available '
-        'methods: nearest, bilinear, cubic, cubic-spline, lanczos, average, '
-        'or mode. Default is nearest. Only used if target crs and/or spatial '
-        'resolution are provided. '
+        None, title='Resampling method.',
+        description='The resampling method used for reprojection. Available '
+        'methods: "nearest", "bilinear", "cubic", "cubic-spline", "lanczos", '
+        '"average", or "mode". Default is "nearest".  Only used if target CRS '
+        'and/or spatial resolution are provided. '
     )
 ):
     req_md = _get_request_metadata(req)
@@ -257,6 +250,87 @@ async def subset(
 
     target_crs = crs
     if target_crs is None:
+        # Use the CRS of the first dataset in the request as the target CRS if
+        # none was specified.
+        target_crs = dsc[list(datasets.keys())[0]].crs
+
+    clip = ClipPolygon(user_geom, target_crs)
+
+    request = DataRequest(
+        datasets, date_start, date_end, clip, target_crs, req_md
+    )
+
+    req_handler = DataRequestHandler(dsc)
+    res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
+
+    return FileResponse(res_path, filename=res_path.name)
+
+
+@app.get(
+    '/subset_points', tags=['Dataset operations'],
+    summary='Requests a geographic subset of specific geographic points '
+    'extracted for one or more variables from one or more geospatial datasets.'
+)
+async def subset_points(
+    req: Request,
+    datasets: str = Depends(_parse_datasets),
+    date_start: str = Query(
+        None, title='Start date (inclusive)', description='The starting date '
+        'for which to request data. Dates must be specified as strings, where '
+        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
+    ),
+    date_end: str = Query(
+        None, title='End date (inclusive)', description='The ending date '
+        'for which to request data. Dates must be specified as strings, where '
+        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
+        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
+        'data requests.'
+    ),
+    points: list = Depends(_parse_points),
+    crs: str = Query(
+        None, title='Target coordinate reference system.',
+        description='The target coordinate reference system (CRS) for the '
+        'returned data, specified as an EPSG code.'
+    ),
+    point_method: str = Query(
+        None, title='Point extraction method.',
+        description='The method used in extracting point values. Available '
+        'methods: nearest or bilinear. Default is nearest. '
+        'Only used if point coordinates are provided.'
+    )
+):
+    req_md = _get_request_metadata(req)
+
+    # Define user geometry and create ClipPolygon.
+    user_geom = None
+    if bbox is not None:
+        user_geom = {
+                'type': 'Polygon',
+                'coordinates': [[
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]],
+                    # Top right.
+                    [bbox[1][0], bbox[0][1]],
+                    # Bottom right.
+                    [bbox[1][0], bbox[1][1]],
+                    # Bottom left.
+                    [bbox[0][0], bbox[1][1]],
+                    # Top left.
+                    [bbox[0][0], bbox[0][1]]
+                ]]
+            }
+    elif points is not None:
+        user_geom = [{
+            'type': 'Point',
+            'coordinates': points
+        }]
+
+    target_crs = crs
+    if target_crs is None:
+        # Use the CRS of the first dataset in the request as the target CRS if
+        # none was specified.
         target_crs = dsc[list(datasets.keys())[0]].crs
 
     clip = ClipPolygon(user_geom, target_crs)
