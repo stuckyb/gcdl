@@ -43,13 +43,10 @@ class DataRequest:
     def _parse_dates(self, date_start, date_end):
         """
         Parses the starting and ending date strings and returns a list of
-        DRDate instances that specifies all dates included in the request.  We
-        represent request dates this way because it supports sparse date
+        RequestDate instances that specifies all dates included in the request.
+        We represent request dates this way because it supports sparse date
         ranges.
         """
-        # Note: We assume here that this is running under at least Python 3.7,
-        # which is the point at which dict insertion order preservation became
-        # an official feature.
         dates = []
 
         if len(date_start) == 4 and len(date_end) == 4:

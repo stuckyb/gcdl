@@ -44,7 +44,6 @@ class TestClipPolygon(unittest.TestCase):
             ]]}"""
         cp = ClipPolygon(geom_str, 'NAD83')
         r = cp.crs
-        print(type(r))
         self.assertIsInstance(r, pyproj.crs.CRS)
         self.assertEqual(('EPSG', '4269'), r.to_authority())
 

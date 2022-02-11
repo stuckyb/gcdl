@@ -10,10 +10,6 @@ class TestDataRequest(unittest.TestCase):
     def test_parse_dates(self):
         dr = data_request.DataRequest(None, '1980', '1980', None, 'NAD83')
 
-        # Note: We assume here that this is running under at least Python 3.7,
-        # which is the point at which dict insertion order preservation became
-        # an official feature.
-
         # Test annual data request ranges.
         exp = [RD(1980, None, None)]
         r, dg = dr._parse_dates('1980', '1980')
