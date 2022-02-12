@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import random
 import json
 from pathlib import Path
-from clip_poly import ClipPolygon
+from subset_geom import SubsetGeom
 from data_request import DataRequest
 from data_request_handler import DataRequestHandler
 
@@ -254,7 +254,7 @@ async def subset_polygon(
         # none was specified.
         target_crs = dsc[list(datasets.keys())[0]].crs
 
-    clip = ClipPolygon(user_geom, target_crs)
+    clip = SubsetGeom(user_geom, target_crs)
 
     request = DataRequest(
         datasets, date_start, date_end, clip, target_crs, resolution,

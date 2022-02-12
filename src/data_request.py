@@ -22,7 +22,7 @@ class DataRequest:
     Encapsulates a single API data request.
     """
     def __init__(
-        self, dsvars, date_start, date_end, clip_poly, target_crs,
+        self, dsvars, date_start, date_end, subset_geom, target_crs,
         target_resolution, resample_method, req_metadata
     ):
         """
@@ -33,7 +33,7 @@ class DataRequest:
             'YYYY-MM-DD'.
         date_end: Inclusive end date, specied as 'YYYY', 'YYYY-MM', or
             'YYYY-MM-DD'.
-        clip_poly: A ClipPolygon representing the clipping region to use or
+        subset_geom: A ClipPolygon representing the clipping region to use or
             None.
         target_crs: A string specifying the target CRS.
         target_resolution: A float specifying the target spatial resolution in
@@ -43,7 +43,7 @@ class DataRequest:
         """
         self.dsvars = dsvars
         self.dates, self.date_grain = self._parse_dates(date_start, date_end)
-        self.clip_poly = clip_poly
+        self.subset_geom = subset_geom
         self.target_crs = CRS(target_crs)
         self.target_resolution = target_resolution
 

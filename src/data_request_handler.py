@@ -52,7 +52,7 @@ class DataRequestHandler:
             for varname in request.dsvars[dsid]:
                 for rdate in request.dates:
                     data = self.dsc[dsid].getData(
-                        varname, request.date_grain, rdate, request.clip_poly
+                        varname, request.date_grain, rdate, request.subset_geom
                     )
 
                     if (
