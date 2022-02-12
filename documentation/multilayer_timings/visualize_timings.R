@@ -52,7 +52,7 @@ all_timings %>%
   ylab("Processing time (minutes)") +
   xlab("No. data years processed") +
   theme_few(base_size = 8) +
-  theme(legend.position = c(0.15,0.9),
+  theme(legend.position = c(0.15,0.91),
         legend.text = element_text(size = 4),
         legend.title = element_text(size = 4),
         legend.background = element_blank(),
@@ -87,7 +87,7 @@ all_timings %>%
   ylab("Processing time (seconds/data year)") +
   xlab("No. data years processed") +
   theme_few(base_size = 8) +
-  theme(legend.position = c(0.25,0.92),
+  theme(legend.position = c(0.15,0.91),
         legend.text = element_text(size = 4),
         legend.title = element_text(size = 4),
         legend.background = element_blank(),
