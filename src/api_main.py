@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import random
 import json
 from pathlib import Path
+import pyproj
 from subset_geom import SubsetGeom
 from data_request import DataRequest
 from data_request_handler import DataRequestHandler
@@ -206,7 +207,9 @@ async def subset_polygon(
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
-        'returned data, specified as an EPSG code.'
+        'returned data.  Can be specified as a PROJ string, CRS WKT string,'
+        'authority string (e.g., "EPSG:4269"), or PROJ object name '
+        '(e.g., "NAD83").'
     ),
     resolution: float = Query(
         None, title='Target spatial resolution.',
@@ -248,11 +251,20 @@ async def subset_polygon(
             'coordinates': points
         }]
 
-    target_crs = crs
-    if target_crs is None:
+    # For complete information about all accepted crs_str formats, see the
+    # documentation for the CRS constructor:
+    # https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS.__init__
+    # The CRS constructor calls proj_create() from the PROJ library for some
+    # CRS strings.  The documentation for proj_create() provides more
+    # information about accepted strings:
+    # https://proj.org/development/reference/functions.html#c.proj_create.
+
+    if crs is None:
         # Use the CRS of the first dataset in the request as the target CRS if
         # none was specified.
         target_crs = dsc[list(datasets.keys())[0]].crs
+    else:
+        target_crs = pyproj.crs.CRS(crs)
 
     clip = SubsetGeom(user_geom, target_crs)
 
