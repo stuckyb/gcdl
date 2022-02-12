@@ -61,8 +61,40 @@ class TestSubsetGeom(unittest.TestCase):
         self.assertEqual(self.geom_dict_multi, r)
 
     def test_crs(self):
-        cp = SubsetGeom(self.geom_str_poly, 'NAD83')
-        r = cp.crs
+        sg = SubsetGeom(self.geom_str_poly, 'NAD83')
+        r = sg.crs
         self.assertIsInstance(r, pyproj.crs.CRS)
         self.assertEqual(('EPSG', '4269'), r.to_authority())
+
+    def test_reproject(self):
+        geom_multi = {
+            'type': 'MultiPoint',
+            'coordinates': [
+                [-105, 40], [-80, 40]
+            ]
+        }
+
+        sg = SubsetGeom(geom_multi, 'NAD83')
+
+        # The expected reprojected values in Web Mercator (Pseudo-Mercator),
+        # rounded to the nearest integer.
+        exp = {
+            'type': 'MultiPoint',
+            'coordinates': [
+                [-11688547, 4865942], [-8905559, 4865942]
+            ]
+        }
+
+        tr_sg = sg.reproject(pyproj.crs.CRS('EPSG:3857'))
+        tr_sg_gj = tr_sg.gj_dict
+        self.assertEqual('MultiPoint', tr_sg_gj['type'])
+        coords_rounded = [
+            [round(c[0]), round(c[1])] for c in tr_sg_gj['coordinates']
+        ]
+        self.assertEqual(exp['coordinates'], coords_rounded)
+        self.assertEqual(('EPSG', '3857'), tr_sg.crs.to_authority())
+        
+        # Verify that the source SubsetGeom has not changed.
+        self.assertEqual(geom_multi, sg.gj_dict)
+        self.assertEqual(('EPSG', '4269'), sg.crs.to_authority())
 

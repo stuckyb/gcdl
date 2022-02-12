@@ -14,12 +14,26 @@ class SubsetGeom:
     Provides a CRS-aware geometry object (either a polygon or set of points)
     for use in dataset operations.
     """
-    def __init__(self, geom_spec, crs_str):
+    def __init__(self, geom_spec=None, crs_str=None):
         """
+        Creates a new SubsetGeom.  Although the arguments are optional, empty
+        SubsetGeoms should not be created by client code.
+
         geom_spec: A GeoJSON string, dictionary, or geojson object
             representing a polygon or multi-point geometry.
         crs_str: A string representing the CRS of the geometry.
         """
+        self.geom = None
+        self.geom_type = None
+
+        if geom_spec is None and crs_str is None:
+            return
+
+        if geom_spec is None or crs_str is None:
+            raise Exception(
+                'SubsetGeom requires both a geometry specification and a CRS.'
+            )
+
         if isinstance(geom_spec, str):
             geom_dict = geojson.loads(geom_spec)
         else:
@@ -62,4 +76,17 @@ class SubsetGeom:
         Returns a pyproj CRS object representing the CRS of this polygon.
         """
         return self.geom.crs
+
+    def reproject(self, target_crs):
+        """
+        Returns a new SubsetGeom with the geometric feature(s) transformed to
+        the target CRS.  The source SubsetGeom is not modified.
+
+        target_crs: A pyproj CRS object representing the target CRS.
+        """
+        transformed_sg = SubsetGeom()
+        transformed_sg.geom = self.geom.to_crs(target_crs)
+        transformed_sg.geom_type = self.geom_type
+
+        return transformed_sg
 
