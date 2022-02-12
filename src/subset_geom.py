@@ -39,6 +39,15 @@ class SubsetGeom:
         else:
             geom_dict = geom_spec
 
+        # For complete information about all accepted crs_str formats, see the
+        # documentation for CRS.from_user_input():
+        # https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS.from_user_input
+        # CRS.from_user_input() in turn calls the CRS constructor, which then
+        # calls proj_create() from the PROJ library for some CRS strings.  The
+        # documentation for proj_create() provides more information about
+        # accepted strings:
+        # https://proj.org/development/reference/functions.html#c.proj_create.
+
         if geom_dict['type'] == 'Polygon':
             sh_poly = sg.Polygon(geom_dict['coordinates'][0])
             self.geom = gpd.GeoSeries([sh_poly], crs=crs_str)

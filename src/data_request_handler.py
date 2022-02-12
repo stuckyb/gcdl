@@ -46,15 +46,31 @@ class DataRequestHandler:
         request: A DataRequest instance.
         output_dir: A Path instance for the output location.
         """
+        # Build a set of subset geometries, reprojected as needed, that match
+        # the source dataset CRSs.  We precompute these to avoid redundant
+        # reprojections when looping through the data retrievals.
+        ds_subset_geoms = {}
+        for dsid in request.dsvars:
+            if request.subset_geom.crs.equals(self.dsc[dsid].crs):
+                ds_subset_geoms[dsid] = request.subset_geom
+            else:
+                ds_subset_geoms[dsid] = request.subset_geom.reproject(
+                    self.dsc[dsid].crs
+                )
+
         fout_paths = []
 
         for dsid in request.dsvars:
             for varname in request.dsvars[dsid]:
                 for rdate in request.dates:
+                    # Retrieve the (subsetted) data layer.
                     data = self.dsc[dsid].getData(
-                        varname, request.date_grain, rdate, request.subset_geom
+                        varname, request.date_grain, rdate,
+                        ds_subset_geoms[dsid]
                     )
 
+                    # Reproject to the target resolution, target projection, or
+                    # both, if needed.
                     if (
                         not(request.target_crs.equals(self.dsc[dsid].crs)) or
                         request.target_resolution is not None
@@ -65,6 +81,7 @@ class DataRequestHandler:
                             resolution=request.target_resolution
                         )
 
+                    # Output the result.
                     fout_path = (
                         output_dir / self._getSingleLayerOutputFileName(
                             dsid, varname, request.date_grain, rdate
