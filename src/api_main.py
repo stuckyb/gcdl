@@ -10,7 +10,7 @@ import random
 import json
 from pathlib import Path
 import pyproj
-from subset_geom import SubsetGeom
+from subset_geom import SubsetPolygon, SubsetMultiPoint
 from data_request import DataRequest
 from data_request_handler import DataRequestHandler
 
@@ -61,41 +61,87 @@ def _parse_datasets(
 
     return ds_vars
 
-def _parse_rect_bounds(
-    bbox: str = Query(
-        None, title='Bounding box', description='The upper left and lower '
-        'right corners of the bounding box for subsetting the data, specifed '
-        'as a comma-separated list of the form '
-        '"UPPER_LEFT_X_COORD,UPPER_LEFT_Y_COORD,'
-        'LOWER_RIGHT_X_COORD,LOWER_RIGHT_Y_COORD." If no bounding box is '
-        'specified, the full spatial extent will be returned. '
-        'If both bbox and points are specified, the bbox will be used. '
-        'Coordinates are assumed to match the target CRS or the CRS of the '
-        'first requested dataset if no target CRS is specified.'
+def _parse_coords_list(coords_str):
+    """
+    Parses a comma-separated list of coordinates.
+    """
+    if coords_str[0] != '(':
+        raise ValueError('Incorrect coordinate specification.')
+
+    coord_strs = coords_str.split('),')
+    coord_strs = [c[1:] for c in coord_strs]
+    # Remove the trailing ')' from the last coordinate string.
+    if coord_strs[-1][-1] == ')':
+        coord_strs[-1] = coord_strs[-1][:-1]
+    else:
+        raise ValueError('Incorrect coordinate specification.')
+
+    coords = []
+    for coord_str in coord_strs:
+        parts = coord_str.split(',')
+
+        try:
+            parts = [float(part) for part in parts]
+        except:
+            raise ValueError('Incorrect coordinate specification.')
+
+        coords.append(parts)
+
+    return coords
+
+def _parse_clip_bounds(
+    clip: str = Query(
+        None, title='Clip boundary', description='Specifies the clip boundary '
+        'for the subset operation.  The boundary can be specified in one of '
+        'two ways: 1) The upper left and lower right corners of a '
+        'bounding box for subsetting the data, specifed as a comma-separated '
+        'list of the form "(UPPER_LEFT_X,UPPER_LEFT_Y),'
+        '(LOWER_RIGHT_X,LOWER_RIGHT_Y)."; 2) A comma-separated '
+        'list of coordinates defining the vertices of a clip polygon as in '
+        '"(X1,Y1),(X2,Y2)...".'
     )
 ):
     """
-    Parses comma-separated rectangular bounding box coordinates.
+    Parses a clip boundary specification.
     """
-    if bbox is None:
+    if clip is None:
         return None
 
-    parts = bbox.split(',')
-    if len(parts) != 4:
-        raise HTTPException(
-            status_code=400, detail='Incorrect bounding box specification.'
-        )
-
     try:
-        parts = [float(part) for part in parts]
-    except:
+        coords = _parse_coords_list(clip)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if len(coords) < 2:
         raise HTTPException(
-            status_code=400, detail='Incorrect bounding box specification.'
+            status_code=400,
+            detail='Invalid clip geometry specification.'
         )
 
-    coords = [[parts[0], parts[1]], [parts[2], parts[3]]]
+    if len(coords) == 2:
+        # Interpret 2 coordinates as the top left and lower right corners
+        # of a bounding box.
+        clip_coords = [
+            # Top left.
+            [coords[0][0], coords[0][1]],
+            # Top right.
+            [coords[1][0], coords[0][1]],
+            # Bottom right.
+            [coords[1][0], coords[1][1]],
+            # Bottom left.
+            [coords[0][0], coords[1][1]],
+            # Top left.
+            [coords[0][0], coords[0][1]]
+        ]
+    else:
+        # Interpret more than 2 coordinates as the vertices of a polygon.
+        # Close the polygon, if needed.
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
 
-    return coords
+        clip_coords = coords
+
+    return clip_coords
 
 def _parse_points(
     points: str = Query(
@@ -203,7 +249,7 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    bbox: list = Depends(_parse_rect_bounds),
+    clip: list = Depends(_parse_clip_bounds),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -227,30 +273,6 @@ async def subset_polygon(
 ):
     req_md = _get_request_metadata(req)
 
-    # Define user geometry and create ClipPolygon.
-    user_geom = None
-    if bbox is not None:
-        user_geom = {
-                'type': 'Polygon',
-                'coordinates': [[
-                    # Top left.
-                    [bbox[0][0], bbox[0][1]],
-                    # Top right.
-                    [bbox[1][0], bbox[0][1]],
-                    # Bottom right.
-                    [bbox[1][0], bbox[1][1]],
-                    # Bottom left.
-                    [bbox[0][0], bbox[1][1]],
-                    # Top left.
-                    [bbox[0][0], bbox[0][1]]
-                ]]
-            }
-    elif points is not None:
-        user_geom = [{
-            'type': 'Point',
-            'coordinates': points
-        }]
-
     # For complete information about all accepted crs_str formats, see the
     # documentation for the CRS constructor:
     # https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS.__init__
@@ -266,10 +288,10 @@ async def subset_polygon(
     else:
         target_crs = pyproj.crs.CRS(crs)
 
-    clip = SubsetGeom(user_geom, target_crs)
+    clip_geom = SubsetPolygon(clip, target_crs)
 
     request = DataRequest(
-        datasets, date_start, date_end, clip, target_crs, resolution,
+        datasets, date_start, date_end, clip_geom, target_crs, resolution,
         resample_method, req_md
     )
 
@@ -381,7 +403,6 @@ async def subset_old(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    bbox: list = Depends(_parse_rect_bounds),
     points: list = Depends(_parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',

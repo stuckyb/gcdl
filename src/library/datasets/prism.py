@@ -78,7 +78,7 @@ class PRISM(GSDataSet):
                     'Clip polygon CRS does not match dataset CRS.'
                 )
 
-            data = data.rio.clip([clip_poly.gj_dict])
+            data = data.rio.clip([clip_poly.json])
 
         return data
 
