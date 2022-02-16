@@ -2,12 +2,12 @@
 import unittest
 import geojson
 import pyproj
-from subset_geom import SubsetGeom
+from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 
-class TestSubsetGeom(unittest.TestCase):
+class TestSubsetPolygon(unittest.TestCase):
     # Define test data.
-    geom_dict_poly = {
+    geom_dict = {
         'type': 'Polygon',
         'coordinates': [[
             # Top left.
@@ -23,45 +23,109 @@ class TestSubsetGeom(unittest.TestCase):
         ]]
     }
 
-    geom_str_poly = """{
+    geom_str = """{
             "type": "Polygon", "coordinates": [[
             [-105, 40],[-80, 40],[-80, 20],[-105, 20],[-105, 40]
         ]]}"""
 
-    geom_dict_multi = {
+    geom_coords = [ [-105, 40],[-80, 40],[-80, 20],[-105, 20],[-105, 40] ]
+
+    def test_json(self):
+        # Test initialization from dictionary.
+        sg = SubsetPolygon(self.geom_dict, 'NAD83')
+        r = sg.json
+        self.assertIsInstance(r, geojson.Polygon)
+        self.assertEqual(self.geom_dict, r)
+
+        # Test initialization from string.
+        sg = SubsetPolygon(self.geom_str, 'NAD83')
+        r = sg.json
+        self.assertIsInstance(r, geojson.Polygon)
+        self.assertEqual(self.geom_dict, r)
+
+        # Test initialization from coordinates list.
+        sg = SubsetPolygon(self.geom_coords, 'NAD83')
+        r = sg.json
+        self.assertIsInstance(r, geojson.Polygon)
+        self.assertEqual(self.geom_dict, r)
+
+    def test_crs(self):
+        sg = SubsetPolygon(self.geom_str, 'NAD83')
+        r = sg.crs
+        self.assertIsInstance(r, pyproj.crs.CRS)
+        self.assertEqual(('EPSG', '4269'), r.to_authority())
+
+    def test_reproject(self):
+        sg = SubsetPolygon(self.geom_dict, 'NAD83')
+
+        # The expected reprojected values in Web Mercator (Pseudo-Mercator),
+        # rounded to the nearest integer.
+        exp = {
+            'type': 'Polygon',
+            'coordinates': [[
+                [-11688547, 4865942],
+                [-8905559, 4865942],
+                [-8905559, 2273031],
+                [-11688547, 2273031],
+                [-11688547, 4865942]
+            ]]
+        }
+
+        tr_sg = sg.reproject(pyproj.crs.CRS('EPSG:3857'))
+        tr_sg_gj = tr_sg.json
+        self.assertEqual('Polygon', tr_sg_gj['type'])
+        coords_rounded = [
+            [round(c[0]), round(c[1])] for c in tr_sg_gj['coordinates'][0]
+        ]
+        self.assertEqual(exp['coordinates'][0], coords_rounded)
+        self.assertEqual(('EPSG', '3857'), tr_sg.crs.to_authority())
+        self.assertIsInstance(tr_sg, SubsetPolygon)
+        
+        # Verify that the source SubsetPolygon has not changed.
+        self.assertEqual(self.geom_dict, sg.json)
+        self.assertEqual(('EPSG', '4269'), sg.crs.to_authority())
+
+
+class TestSubsetMultiPoint(unittest.TestCase):
+    # Define test data.
+    geom_dict = {
         'type': 'MultiPoint',
         'coordinates': [
             [-105, 40],
             [-80, 40],
             [-80, 20],
             [-105, 20],
-            [-105, 40]
         ]
     }
 
-    def test_gj_dict(self):
-        # Test polygon geometries.
+    geom_str = """{
+            "type": "MultiPoint", "coordinates": [
+            [-105, 40],[-80, 40],[-80, 20],[-105, 20]
+        ]}"""
+
+    geom_coords = [ [-105, 40],[-80, 40],[-80, 20],[-105, 20] ]
+
+    def test_json(self):
         # Test initialization from dictionary.
-        sg = SubsetGeom(self.geom_dict_poly, 'NAD83')
-        r = sg.gj_dict
-        self.assertIsInstance(r, geojson.Polygon)
-        self.assertEqual(self.geom_dict_poly, r)
+        sg = SubsetMultiPoint(self.geom_dict, 'NAD83')
+        r = sg.json
+        self.assertIsInstance(r, geojson.MultiPoint)
+        self.assertEqual(self.geom_dict, r)
 
         # Test initialization from string.
-        sg = SubsetGeom(self.geom_str_poly, 'NAD83')
-        r = sg.gj_dict
-        self.assertIsInstance(r, geojson.Polygon)
-        self.assertEqual(self.geom_dict_poly, r)
-
-        # Test multi-point geometries.
-        # Test initialization from dictionary.
-        sg = SubsetGeom(self.geom_dict_multi, 'NAD83')
-        r = sg.gj_dict
+        sg = SubsetMultiPoint(self.geom_str, 'NAD83')
+        r = sg.json
         self.assertIsInstance(r, geojson.MultiPoint)
-        self.assertEqual(self.geom_dict_multi, r)
+        self.assertEqual(self.geom_dict, r)
+
+        # Test initialization from coordinates list.
+        sg = SubsetMultiPoint(self.geom_coords, 'NAD83')
+        r = sg.json
+        self.assertIsInstance(r, geojson.MultiPoint)
+        self.assertEqual(self.geom_dict, r)
 
     def test_crs(self):
-        sg = SubsetGeom(self.geom_str_poly, 'NAD83')
+        sg = SubsetMultiPoint(self.geom_str, 'NAD83')
         r = sg.crs
         self.assertIsInstance(r, pyproj.crs.CRS)
         self.assertEqual(('EPSG', '4269'), r.to_authority())
@@ -74,7 +138,7 @@ class TestSubsetGeom(unittest.TestCase):
             ]
         }
 
-        sg = SubsetGeom(geom_multi, 'NAD83')
+        sg = SubsetMultiPoint(geom_multi, 'NAD83')
 
         # The expected reprojected values in Web Mercator (Pseudo-Mercator),
         # rounded to the nearest integer.
@@ -86,15 +150,16 @@ class TestSubsetGeom(unittest.TestCase):
         }
 
         tr_sg = sg.reproject(pyproj.crs.CRS('EPSG:3857'))
-        tr_sg_gj = tr_sg.gj_dict
+        tr_sg_gj = tr_sg.json
         self.assertEqual('MultiPoint', tr_sg_gj['type'])
         coords_rounded = [
             [round(c[0]), round(c[1])] for c in tr_sg_gj['coordinates']
         ]
         self.assertEqual(exp['coordinates'], coords_rounded)
         self.assertEqual(('EPSG', '3857'), tr_sg.crs.to_authority())
+        self.assertIsInstance(tr_sg, SubsetMultiPoint)
         
         # Verify that the source SubsetGeom has not changed.
-        self.assertEqual(geom_multi, sg.gj_dict)
+        self.assertEqual(geom_multi, sg.json)
         self.assertEqual(('EPSG', '4269'), sg.crs.to_authority())
 
