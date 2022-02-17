@@ -114,9 +114,7 @@ class GSDataSet:
             ]
 
         # Generate CRS metadata.
-        resp['crs'] = self._getCRSMetadata(
-            self.epsg_code, self.wkt_str, self.proj4_str
-        )
+        resp['crs'] = self._getCRSMetadata()
 
         return resp
 
