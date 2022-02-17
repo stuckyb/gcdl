@@ -20,7 +20,7 @@ RESAMPLE_METHODS = (
     'nearest', 'bilinear', 'cubic', 'cubic-spline', 'lanczos', 'average',
     'mode'
 )
-POINT_METHODS = ('nearest', 'bilinear')
+POINT_METHODS = ('nearest', 'linear')
 
 
 # A simple struct-like class for capturing data request date information.  We

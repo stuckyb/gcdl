@@ -290,10 +290,13 @@ async def subset_polygon(
 
     clip_geom = SubsetPolygon(clip, target_crs)
 
-    request = DataRequest(
-        datasets, date_start, date_end, clip_geom, target_crs, resolution,
-        resample_method, req_md, REQ_RASTER
-    )
+    try:
+        request = DataRequest(
+            datasets, date_start, date_end, clip_geom, target_crs, resolution,
+            resample_method, req_md, REQ_RASTER
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     req_handler = DataRequestHandler(dsc)
     res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
@@ -329,10 +332,11 @@ async def subset_points(
         description='The target coordinate reference system (CRS) for the '
         'returned data, specified as an EPSG code.'
     ),
-    point_method: str = Query(
-        None, title='Point extraction method.',
-        description='The method used in extracting point values. Available '
-        'methods: "nearest" or "bilinear". Default is "nearest".'
+    interp_method: str = Query(
+        None, title='Point interpolation method.',
+        description='The interpolation method used for extracting point '
+        'values. Available methods: "nearest" or "linear". Default is '
+        '"nearest".'
     )
 ):
     req_md = _get_request_metadata(req)
@@ -354,16 +358,18 @@ async def subset_points(
 
     sub_points = SubsetMultiPoint(points, target_crs)
 
-    request = DataRequest(
-        datasets, date_start, date_end, sub_points, target_crs, resolution,
-        resample_method, req_md, REQ_POINT
-    )
+    try:
+        request = DataRequest(
+            datasets, date_start, date_end, sub_points, target_crs, None,
+            interp_method, req_md, REQ_POINT
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     req_handler = DataRequestHandler(dsc)
     res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
 
     return FileResponse(res_path, filename=res_path.name)
-
 
 
 @app.get(

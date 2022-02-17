@@ -5,6 +5,7 @@ from pyproj.crs import CRS
 import datetime
 import rioxarray
 import data_request as dr
+from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 
 class PRISM(GSDataSet):
@@ -48,13 +49,16 @@ class PRISM(GSDataSet):
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
         }
 
-    def getData(self, varname, date_grain, request_date, clip_poly=None):
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
         """
         varname: The variable to return.
         date_grain: The date granularity to return, specified as a constant in
             data_request.
         request_date: A data_request.RequestDate instance.
-        clip_poly: An instance of ClipPolygon.  If the CRS does not match the
+        ri_method: The resample/interpolation method to use, if needed.
+        subset_geom: An instance of SubsetGeom.  If the CRS does not match the
             dataset, an exception is raised.
         """
         # Get the path to the required data file.
@@ -72,13 +76,22 @@ class PRISM(GSDataSet):
 
         data = rioxarray.open_rasterio(fpath, masked=True)
 
-        if clip_poly is not None:
-            if not(self.crs.equals(clip_poly.crs)):
-                raise ValueError(
-                    'Clip polygon CRS does not match dataset CRS.'
-                )
+        if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
+            raise ValueError(
+                'Subset geometry CRS does not match dataset CRS.'
+            )
 
-            data = data.rio.clip([clip_poly.json])
+        if isinstance(subset_geom, SubsetPolygon):
+            data = data.rio.clip([subset_geom.json])
+        elif isinstance(subset_geom, SubsetMultiPoint):
+            # Interpolate all (x,y) points in the subset geometry.  For more
+            # information about how/why this works, see
+            # https://xarray.pydata.org/en/stable/user-guide/interpolation.html#advanced-interpolation.
+            res = data.interp(
+                x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
+                method=ri_method
+            )
+            data = res.values[0]
 
         return data
 

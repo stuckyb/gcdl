@@ -4,6 +4,7 @@ import zipfile
 import json
 from rasterio.enums import Resampling
 import data_request as dr
+import geopandas as gpd
 
 
 # Characters for generating random file names.
@@ -23,21 +24,82 @@ class DataRequestHandler:
 
     def _getSingleLayerOutputFileName(self, dsid, varname, grain, rdate):
         if grain == dr.ANNUAL:
-            fname = '{0}_{1}_{2}.tif'.format(
+            fname = '{0}_{1}_{2}'.format(
                 dsid, varname, rdate.year
             )
         elif grain == dr.MONTHLY:
-            fname = '{0}_{1}_{2}-{3:02}.tif'.format(
+            fname = '{0}_{1}_{2}-{3:02}'.format(
                 dsid, varname, rdate.year, rdate.month
             )
         elif grain == dr.DAILY:
-            fname = '{0}_{1}_{2}-{3:02}-{4:02}.tif'.format(
+            fname = '{0}_{1}_{2}-{3:02}-{4:02}'.format(
                 dsid, varname, rdate.year, rdate.month, rdate.day
             )
         else:
             raise ValueError('Invalid date granularity specification.')
 
         return fname
+
+    def _fulfillPointRequest(self, request, output_dir, ds_subset_geoms):
+        fout_paths = []
+        out_df = gpd.GeoDataFrame(
+            {'x': request.subset_geom.geom.x, 'y': request.subset_geom.geom.y}
+        )
+
+        for dsid in request.dsvars:
+            for varname in request.dsvars[dsid]:
+                for rdate in request.dates:
+                    # Retrieve the point data.
+                    data = self.dsc[dsid].getData(
+                        varname, request.date_grain, rdate, request.ri_method,
+                        ds_subset_geoms[dsid]
+                    )
+
+                    # Output the result.
+                    fout_path = (
+                        output_dir / (self._getSingleLayerOutputFileName(
+                            dsid, varname, request.date_grain, rdate
+                        ) + '.csv')
+                    )
+                    out_df.assign(value=data).to_csv(fout_path, index=False)
+                    fout_paths.append(fout_path)
+
+        return fout_paths
+
+    def _fulfillRasterRequest(self, request, output_dir, ds_subset_geoms):
+        fout_paths = []
+
+        for dsid in request.dsvars:
+            for varname in request.dsvars[dsid]:
+                for rdate in request.dates:
+                    # Retrieve the (subsetted) data layer.
+                    data = self.dsc[dsid].getData(
+                        varname, request.date_grain, rdate, request.ri_method,
+                        ds_subset_geoms[dsid]
+                    )
+
+                    # Reproject to the target resolution, target projection, or
+                    # both, if needed.
+                    if (
+                        not(request.target_crs.equals(self.dsc[dsid].crs)) or
+                        request.target_resolution is not None
+                    ):
+                        data = data.rio.reproject(
+                            dst_crs=request.target_crs,
+                            resampling=Resampling[request.ri_method],
+                            resolution=request.target_resolution
+                        )
+
+                    # Output the result.
+                    fout_path = (
+                        output_dir / (self._getSingleLayerOutputFileName(
+                            dsid, varname, request.date_grain, rdate
+                        ) + '.tif')
+                    )
+                    data.rio.to_raster(fout_path)
+                    fout_paths.append(fout_path)
+
+        return fout_paths
 
     def fulfillRequestSynchronous(self, request, output_dir):
         """
@@ -58,37 +120,17 @@ class DataRequestHandler:
                     self.dsc[dsid].crs
                 )
 
-        fout_paths = []
-
-        for dsid in request.dsvars:
-            for varname in request.dsvars[dsid]:
-                for rdate in request.dates:
-                    # Retrieve the (subsetted) data layer.
-                    data = self.dsc[dsid].getData(
-                        varname, request.date_grain, rdate,
-                        ds_subset_geoms[dsid]
-                    )
-
-                    # Reproject to the target resolution, target projection, or
-                    # both, if needed.
-                    if (
-                        not(request.target_crs.equals(self.dsc[dsid].crs)) or
-                        request.target_resolution is not None
-                    ):
-                        data = data.rio.reproject(
-                            dst_crs=request.target_crs,
-                            resampling=Resampling[request.resample_method],
-                            resolution=request.target_resolution
-                        )
-
-                    # Output the result.
-                    fout_path = (
-                        output_dir / self._getSingleLayerOutputFileName(
-                            dsid, varname, request.date_grain, rdate
-                        )
-                    )
-                    data.rio.to_raster(fout_path)
-                    fout_paths.append(fout_path)
+        # Get the requested data.
+        if request.request_type == dr.REQ_RASTER:
+            fout_paths = self._fulfillRasterRequest(
+                request, output_dir, ds_subset_geoms
+            )
+        elif request.request_type == dr.REQ_POINT:
+            fout_paths = self._fulfillPointRequest(
+                request, output_dir, ds_subset_geoms
+            )
+        else:
+            raise ValueError('Unsupported request type.')
 
         # Write the metadata file.
         md_path = output_dir / (
