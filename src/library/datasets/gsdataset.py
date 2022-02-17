@@ -58,7 +58,7 @@ class GSDataSet:
     def id(self, idstr):
         self._id = idstr
 
-    def _getCRSMetadata(self, epsg_code=None, wkt_str=None, proj4_str=None):
+    def _getCRSMetadata(self):
         if self.crs is not None:
             crs_md = {}
             crs_md['name'] = self.crs.name
@@ -114,9 +114,7 @@ class GSDataSet:
             ]
 
         # Generate CRS metadata.
-        resp['crs'] = self._getCRSMetadata(
-            self.epsg_code, self.wkt_str, self.proj4_str
-        )
+        resp['crs'] = self._getCRSMetadata()
 
         return resp
 
