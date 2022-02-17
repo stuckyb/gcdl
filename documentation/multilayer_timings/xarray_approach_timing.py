@@ -105,8 +105,8 @@ for v in varnames["prism"]:
 daymet_time = [t.strftime('%Y %m') for t in time_coords]
 daymet_years = set([dt.split()[0] for dt in daymet_time])
 daymet_fpattern = {
-		'prcp': 'daymetv4/daymet_v4_prcp_monttl_na_{0}.tif',
-		'tmax': 'daymetv4/daymet_v4_tmax_monavg_na_{0}.tif',
+		'prcp': 'daymetv4/daymet_v4_prcp_monttl_na_{0}.nc',
+		'tmax': 'daymetv4/daymet_v4_tmax_monavg_na_{0}.nc',
 }		
 daymet_files = {}
 for v in varnames["daymet"]:
@@ -150,10 +150,11 @@ if 2 in args.datasets:
 		for t in daymet_time: # Not looping over files since Daymet uses 12-bands for months
 			cur_y, cur_m = t.split()
 			fpath = local_data_path/daymet_fpattern[var].format(cur_y)
-			data_loop = rioxarray.open_rasterio(fpath, masked=True).isel(time=int(cur_m)-1)
+			data_loop = rioxarray.open_rasterio(fpath, masked=True,decode_coords="all")[1][var].isel(time=int(cur_m)-1)
+			data_loop.rio.write_crs(data_loop.lambert_conformal_conic.crs_wkt, inplace=True)
 			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
 			print("TEST 1.2.1 Daymet", var, cur_y, cur_m)
-	time_to_csv("1.2.1", years)
+	time_to_csv("1.2.1.2", years)
 
 ## TEST 1.2.2 Daymet: opening per year (small variation to current implementation)
 if 2 in args.datasets:
@@ -161,19 +162,20 @@ if 2 in args.datasets:
 	for var in varnames["daymet"]:
 		cur_y = list(daymet_years)[0]
 		fpath = local_data_path/daymet_fpattern[var].format(cur_y)
-		data_loop_all = rioxarray.open_rasterio(fpath, masked=True)
+		data_loop_all = rioxarray.open_rasterio(fpath, masked=True,decode_coords="all")[1][var]
+		data_loop_all.rio.write_crs(data_loop_all.lambert_conformal_conic.crs_wkt, inplace=True)
 		for t in daymet_time:
 			cur_yy, cur_m = t.split()
 			#Update current year and read in new file
 			if cur_yy > cur_y:
 				fpath = local_data_path/daymet_fpattern[var].format(cur_yy)
-				# fpath = local_data_path/daymet_fpattern.format(var,cur_yy)
-				data_loop_all = rioxarray.open_rasterio(fpath, masked=True)
+				data_loop_all = rioxarray.open_rasterio(fpath, masked=True,decode_coords="all")[1][var]
+				data_loop_all.rio.write_crs(data_loop_all.lambert_conformal_conic.crs_wkt, inplace=True)
 				cur_y = cur_yy
 			data_loop = data_loop_all.isel(time=int(cur_m)-1)
 			clipped_loop = data_loop.rio.clip(user_geom, crs = user_crs)
 			print("TEST 1.2.2 Daymet", var, cur_yy, cur_m)
-	time_to_csv("1.2.2", years)
+	time_to_csv("1.2.2.2", years)
 
 ## TEST 1.3.1 CRU: opening per variable and month combination
 if years < 10 and 3 in args.datasets:
@@ -249,12 +251,13 @@ if 2 in args.datasets:
 	start_time = time.time()
 	for var in varnames["daymet"]:
 		# Create list of DataArrays from files 
-		data_stack = [rioxarray.open_rasterio(fpath, masked=True).squeeze(drop=True) for fpath in daymet_files[var]]
+		data_stack = [rioxarray.open_rasterio(fpath, masked=True,decode_coords="all")[1][var].squeeze(drop=True) for fpath in daymet_files[var]]
 		# Concatenate files along time dimension (which already exist for daymet). 
 		data_stack = xr.concat(data_stack, dim="time") #takes longer than I'd expect
+		data_stack.rio.write_crs(data_stack.lambert_conformal_conic.crs_wkt, inplace=True)
 		clipped_stack = data_stack.rio.clip(user_geom, crs = user_crs)
 		print("TEST 2.2 Daymet", var)
-	time_to_csv("2.2", years)
+	time_to_csv("2.2.2", years)
 
 ## TEST 2.3 CRU: looping over vars only, don't need time concatenation
 if 3 in args.datasets:
@@ -326,15 +329,16 @@ if 2 in args.datasets:
 	daymet_arrays = []
 	for var in varnames["daymet"]:
 		# Create list of DataArrays from files 
-		data_stack = [rioxarray.open_rasterio(fpath, masked=True, default_name = var).squeeze(drop=True) for fpath in daymet_files[var]]
+		data_stack = [rioxarray.open_rasterio(fpath, masked=True, default_name = var,decode_coords="all")[1][var].squeeze(drop=True) for fpath in daymet_files[var]]
 		# Concatenate files along time dimension (which already exist for daymet). 
 		data_stack = xr.concat(data_stack, dim="time") #takes longer than I'd expect
+		data_stack.rio.write_crs(data_stack.lambert_conformal_conic.crs_wkt, inplace=True)
 		daymet_arrays.append(data_stack)
 		print("TEST 3.2 Daymet", var)
 
 	daymet_dataset = xr.merge(daymet_arrays)
 	clipped_dataset = daymet_dataset.rio.clip(user_geom, crs = user_crs)
-	time_to_csv("3.2", years)
+	time_to_csv("3.2.2", years)
 
 ## TEST 3.3 CRU: merge variables
 if 3 in args.datasets:
