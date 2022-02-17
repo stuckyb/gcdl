@@ -11,3 +11,11 @@ __pycache__/
 # Data input/output folders for testing
 src/local_data/*
 src/output/*
+
+# Rendered tutorials
+documentation/tutorials/*.html
+documentation/tutorials/assets/*
+
+# CERES output files
+slurm*
+

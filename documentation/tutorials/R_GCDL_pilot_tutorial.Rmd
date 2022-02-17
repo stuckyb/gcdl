@@ -1,0 +1,194 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "assets/R_GCDL_pilot_tutorial/"
+)
+```
+
+<!--
+---
+title: GeoCDL Pilot Tutorial
+layout: single
+author: Heather Savoy
+author_profile: true
+header:
+  overlay_color: "444444"
+  overlay_image: /assets/images/margaret-weir-GZyjbLNOaFg-unsplash_dark.jpg
+---
+--> 
+
+**Last Update:** 09 February 2022 <br />
+**Download RMarkdown**: [R_GCDL_pilot_tutorial.Rmd](https://geospatial.101workbook.org/tutorials/R_GCDL_pilot_tutorial.Rmd)
+
+<!-- ToDo: would be great to have an R binder badge here -->
+
+## Overview
+
+This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a community project from the [Geospatial Working Group](https://scinet.usda.gov/working-groups/geospatial) to reduce the time and effort to access commonly used spatial datasets. 
+
+![GeoCDL basic architecture. This tutorial covers how to access the central Web API with R. ](../basic_architecture.png){width=100%}
+
+This example covers the pilot features implemented in the GeoCDL web API v0.1.0. This tutorial assumes you are either on CERES or on a local machine connected to the [SCINet VPN](https://scinet.usda.gov/guide/vpn). For more details on the development of the web API, see [https://github.com/USDA-SCINet/geocdl/](https://github.com/USDA-SCINet/geocdl/) (request access from brian.stucky@usda.gov).
+
+To learn more about the `R` package `rgcdl` in development to streamline these requests, see [https://github.com/USDA-SCINet/rgcdl/](https://github.com/USDA-SCINet/rgcdl/)
+
+
+
+*Language:* `R`
+
+*Primary Libraries/Packages:*
+
+| Name | Description | Link |
+|:--|:--|:--|
+| raster | Geographic Data Analysis and Modeling | https://cran.r-project.org/web/packages/raster/index.html |
+| sf | Simple Features for R | https://cran.r-project.org/web/packages/sf/index.html |
+
+## Nomenclature
+
+* *Web API:* < Description >
+* *Data access protocol:* < Description >
+* *Coordinate Reference System (CRS):* < Description >
+* *EPSG code:* 
+
+## Data Details
+
+* Data: MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015
+* Link: [https://doi.org/10.3334/ORNLDAAC/1299](https://doi.org/10.3334/ORNLDAAC/1299)
+* Other Details: This dataset is acquired via the GeoCDL. It is 70.8 GB, but the GeoCDL leverages data access protocols to access the dataset remotely from online servers, use server-side functions for spatial and temporal filtering, and download the user requested subset of data. 
+
+
+* Repository: < Link to Repository >
+* Data: < Name of Dataset >
+* Link: < Link to the dataset >
+* Other Details: < other >
+
+## Analysis Steps
+
+* Specify desired data - Dataset, variables, temporal coverage, spatial coverage, spatial resolution, and CRS.
+* Title… - desc….
+  * desc..
+  * desc..
+  * desc..
+* Title… - desc…. - desc….
+
+## Step 0: Import Libraries/Packages
+
+**Will we have our R/python packages installed on CERES/ATLAS?**
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(raster)
+library(sf)
+library(jsonlite)
+library(tidyverse)
+library(ggthemes)
+```
+
+## Step 1: Point to Web API
+
+The GeoCDL Web API lives on a CERES service node that can be accessed by ... It has multiple endpoints, each of which will be showcased below. 
+
+```{r step1}
+# Current location during testing:
+gcdl_url <- 'http://127.0.0.1:8000/'
+
+```
+
+
+## Step 2: Specify area and date range of interest 
+
+We will focus on the USDA-ARS Jornada Experimental Range in southern New Mexico. We will showcase returning both gridded data overlapping the site and point data at experiment locations within it. To specify these areas, we will read in a shapefile of the site boundary and a shapefile of experiment locations. These shapefiles are in UTM 13N CRS. The package `sf` is used to read in the shapefiles and extract the necessary information for GeoCDL. 
+
+First, we will retrieve the bounding box around the site with the function `st_bbox`. Currently, GeoCDL v0.1.0 only supports bounding boxes for areas of interest. The expected format is `xmin,ymax,xmax,ymin`, so we will rearrange `st_bbox`'s returned value into that order and collapse the vector into a string.
+
+Next, we will extract the CRS information so we can tell GeoCDL the CRS of our area of interest. GeoCDL v0.1.0 only accepts EPSG codes. The output of `st_crs` contains this information. 
+
+For this example, we will request all months from 2000-2010. Since this data is monthly, we will format it in GeoCDL's expected monthly format of 'YYYY-MM'.  
+
+```{r step2}
+# Read in Jornada boundary shapefile and format bounding box for GeoCDL
+jer_bounds <- st_read('assets/R_GCDL_pilot_tutorial/Boundary.shp')  
+jer_bbox <- st_bbox(jer_bounds) # returns c(xmin,ymin,xmax,ymax)
+bbox_str <- paste(jer_bbox[c(1,4,3,2)], collapse = ',')
+
+# View CRS info
+st_crs(jer_bounds)
+# Extract EPSG code 
+jer_crs <- st_crs(jer_bounds)$input
+
+
+# Date range
+start_month = '2019-06'  ## testing locally
+end_month = '2019-08'    ## testing locally
+
+
+```
+
+## Step 3: Select datasets and their variables
+
+We can see that our MODIS NDVI dataset has a ... CRS, different from our area of interest objects. 
+
+```{r step3}
+# 1, Query the GeoCDL to list all datasets
+all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets')))
+all_datasets
+my_ds <- 'PRISM' # not really, MODIS product once it's supported
+
+# 2. View a dataset's metadata
+fromJSON(url(paste0(gcdl_url,'ds_info?id=',my_ds)))
+my_vars <- c('ppt') # to be NDVI
+
+# 3. Format dataset and variable
+dv_str <- paste0(my_ds,':',paste(my_vars,collapse = ','))
+
+
+```
+
+## Step 4: Build and submit request to GeoCDL
+
+```{r step4}
+#  Prepare query
+q_str <- paste0(gcdl_url,
+                'subset?',
+                paste0(
+                  'date_start=',start_month,
+                  '&date_end=',end_month,
+                  '&crs=',jer_crs,
+                  '&datasets=',URLencode(dv_str, reserved = TRUE),
+                  '&bbox=',URLencode(bbox_str, reserved = TRUE)))  
+
+outpath <- 'assets/tmp'
+
+download.file(q_str, paste0(outpath,'.zip'))
+unzip('assets/tmp.zip')
+
+list.files(paste0(outpath,'.zip'))
+
+
+
+
+```
+
+## Step 5: Read in and visualize results from GeoCDL
+
+```{r step5, out.width="100%"}
+# Create a raster stack of returned GeoTIFFs
+prism_2019 <- list.files('assets/tmp','.tif',full.names = TRUE) %>%
+  stack() 
+
+prism_2019 %>%
+  as.data.frame(xy = TRUE) %>%
+  pivot_longer(contains('PRISM'),
+               names_to = c(NA,'var','year','month'),
+               names_sep = c('[_.]')) %>%
+  ggplot() +
+  geom_tile(aes(x,y,fill=value)) +
+  geom_sf(fill = NA,
+          data=jer_bounds) +
+  facet_grid(var~month) +
+  scale_fill_distiller(palette = "Blues", direction = 1) +
+  theme_few(base_size = 8)
+```
+
+
