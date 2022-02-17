@@ -4,9 +4,10 @@ library(ggthemes)
 #setwd('~/Documents/GitHub/gcdl/documentation/multilayer_timings/')
 
 datasets <- c("PRISM",
-              "Daymet V4", 
+              "Daymet V4 (.tif)",
               "CRU (multiple .nc)", 
-              "CRU (single .nc)")
+              "CRU (single .nc)",
+              "Daymet V4 (.nc)")
 approaches <- c("Per month and variable",
                 "Per month and variable (point to file once)",
                 "Per variable",
@@ -18,10 +19,12 @@ tfiles <- list.files(".",
 all_timings <- tibble()
 for(file in tfiles){
   timings <- read_csv(file) %>%
-    separate(test_id, c("approach","dataset","version"), fill='right') %>%
+    separate(test_id, c("approach","dataset","version","f_ext"), fill='right') %>%
     mutate(remote = ifelse(dataset == 5,"Remote","Local"),
-           dataset = ifelse(dataset == 5, 2, dataset),
-           dataset = factor(dataset, levels=1:4,
+           f_ext = ifelse(approach %in% 2:3 & !is.na(version), version, f_ext),
+           version = ifelse(approach %in% 2:3 & !is.na(version), NA, version),
+           dataset = ifelse(!is.na(f_ext), 5, dataset),
+           dataset = factor(dataset, levels=1:5,
                             labels = datasets),
            version = ifelse(is.na(version),1,version)) %>%
     rowwise() %>%
@@ -43,11 +46,11 @@ all_timings %>%
   ggplot(aes(num_years,time_sec_mean/60,color=approach)) +
   geom_line(aes(linetype=approach,group=paste(approach,remote)),
             size = 0.25) +
-  geom_point(aes(shape=remote),
-             size = 1) +
-  geom_errorbar(aes(ymin = (time_sec_mean-time_sec_sd)/60,
-                    ymax = (time_sec_mean+time_sec_sd)/60),
-                size = 0.25,
+  geom_pointrange(aes(ymin = (time_sec_mean-time_sec_sd)/60,
+                    ymax = (time_sec_mean+time_sec_sd)/60,
+                    shape=remote),
+                  #position = position_jitter(),
+                size = 0.1,
                 width = 0.25) +
   ylab("Processing time (minutes)") +
   xlab("No. data years processed") +
@@ -102,6 +105,32 @@ all_timings %>%
          linetype = guide_legend(order = 1),
          col = guide_legend(order = 1))
 ggsave("xarray_timings_peryear.jpg",
+       dpi = 300,
+       units = 'in',
+       height = 4,
+       width = 6)
+
+
+### Daymet comparison : .tif vs .nc
+all_timings %>%
+  filter(grepl("Daymet",dataset) & remote == "Local") %>%
+  dplyr::select(-c(N,time_sec_sd)) %>%
+  pivot_wider(names_from = dataset,
+              values_from = time_sec_mean) %>%
+  ggplot(aes(`Daymet V4 (.tif)`,`Daymet V4 (.nc)`)) +
+  geom_abline() +
+  geom_point(aes(color=approach),
+             size = 1) +
+  theme_few(base_size = 8) +
+  theme(legend.position = c(0.35,0.65),
+        legend.text = element_text(size = 4),
+        legend.title = element_text(size = 4),
+        legend.background = element_blank(),
+        legend.key.height = unit(0.1,'cm'),
+        legend.spacing = unit(0,'cm')) +
+  facet_wrap(~approach) +
+  scale_color_colorblind(name="Approach") 
+ggsave("xarray_timings_localDaymet.jpg",
        dpi = 300,
        units = 'in',
        height = 4,
