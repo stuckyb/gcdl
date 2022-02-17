@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import pyproj
 from subset_geom import SubsetPolygon, SubsetMultiPoint
-from data_request import DataRequest
+from data_request import DataRequest, REQ_RASTER, REQ_POINT
 from data_request_handler import DataRequestHandler
 
 
@@ -145,7 +145,7 @@ def _parse_clip_bounds(
 
 def _parse_points(
     points: str = Query(
-        None, title='Point Extraction', description='The x and y coordinates '
+        ..., title='Point Extraction', description='The x and y coordinates '
         'of point locations for extracting from the data, specified '
         'as x1,y1;x2,y2;... If no point coordinates are specified, the full '
         'spatial extent will be returned. If both bbox and points are '
@@ -292,7 +292,7 @@ async def subset_polygon(
 
     request = DataRequest(
         datasets, date_start, date_end, clip_geom, target_crs, resolution,
-        resample_method, req_md
+        resample_method, req_md, REQ_RASTER
     )
 
     req_handler = DataRequestHandler(dsc)
@@ -332,46 +332,31 @@ async def subset_points(
     point_method: str = Query(
         None, title='Point extraction method.',
         description='The method used in extracting point values. Available '
-        'methods: nearest or bilinear. Default is nearest. '
-        'Only used if point coordinates are provided.'
+        'methods: "nearest" or "bilinear". Default is "nearest".'
     )
 ):
     req_md = _get_request_metadata(req)
 
-    # Define user geometry and create ClipPolygon.
-    user_geom = None
-    if bbox is not None:
-        user_geom = {
-                'type': 'Polygon',
-                'coordinates': [[
-                    # Top left.
-                    [bbox[0][0], bbox[0][1]],
-                    # Top right.
-                    [bbox[1][0], bbox[0][1]],
-                    # Bottom right.
-                    [bbox[1][0], bbox[1][1]],
-                    # Bottom left.
-                    [bbox[0][0], bbox[1][1]],
-                    # Top left.
-                    [bbox[0][0], bbox[0][1]]
-                ]]
-            }
-    elif points is not None:
-        user_geom = [{
-            'type': 'Point',
-            'coordinates': points
-        }]
+    # For complete information about all accepted crs_str formats, see the
+    # documentation for the CRS constructor:
+    # https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS.__init__
+    # The CRS constructor calls proj_create() from the PROJ library for some
+    # CRS strings.  The documentation for proj_create() provides more
+    # information about accepted strings:
+    # https://proj.org/development/reference/functions.html#c.proj_create.
 
-    target_crs = crs
-    if target_crs is None:
+    if crs is None:
         # Use the CRS of the first dataset in the request as the target CRS if
         # none was specified.
         target_crs = dsc[list(datasets.keys())[0]].crs
+    else:
+        target_crs = pyproj.crs.CRS(crs)
 
-    clip = ClipPolygon(user_geom, target_crs)
+    sub_points = SubsetMultiPoint(points, target_crs)
 
     request = DataRequest(
-        datasets, date_start, date_end, clip, target_crs, req_md
+        datasets, date_start, date_end, sub_points, target_crs, resolution,
+        resample_method, req_md, REQ_POINT
     )
 
     req_handler = DataRequestHandler(dsc)

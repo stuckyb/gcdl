@@ -3,12 +3,24 @@ import datetime as dt
 from collections import namedtuple
 from pyproj.crs import CRS
 from rasterio.enums import Resampling
+from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 
 # Date granularity constants.
 ANNUAL = 0
 MONTHLY = 1
 DAILY = 2
+
+# Request type constants.
+REQ_RASTER = 0
+REQ_POINT = 1
+
+# Define valid resampling/interpolation algorithms.
+RESAMPLE_METHODS = (
+    'nearest', 'bilinear', 'cubic', 'cubic-spline', 'lanczos', 'average',
+    'mode'
+)
+POINT_METHODS = ('nearest', 'bilinear')
 
 
 # A simple struct-like class for capturing data request date information.  We
@@ -23,23 +35,24 @@ class DataRequest:
     """
     def __init__(
         self, dsvars, date_start, date_end, subset_geom, target_crs,
-        target_resolution, resample_method, req_metadata
+        target_resolution, ri_method, req_metadata, request_type
     ):
         """
-        dsc: The DatasetCatalog to use.
         dsvars: A dict of lists of variables to include for each dataset with
             dataset IDs as keys.
         date_start: Inclusive start date, specied as 'YYYY', 'YYYY-MM', or
             'YYYY-MM-DD'.
         date_end: Inclusive end date, specied as 'YYYY', 'YYYY-MM', or
             'YYYY-MM-DD'.
-        subset_geom: A ClipPolygon representing the clipping region to use or
-            None.
+        subset_geom: A SubsetGeom representing the clipping region or points to
+            use or None.
         target_crs: A string specifying the target CRS.
         target_resolution: A float specifying the target spatial resolution in
             units of the target CRS.
-        resample_method: The resampling algorithm to use for reprojection.
+        ri_method: The resampling/interpolation algorithm to use for
+            reprojection or extracting point data.
         req_metadata: A dictionary of metadata associated with the request.
+        request_type: A constant specifying the output type.
         """
         self.dsvars = dsvars
         self.dates, self.date_grain = self._parse_dates(date_start, date_end)
@@ -47,18 +60,39 @@ class DataRequest:
         self.target_crs = CRS(target_crs)
         self.target_resolution = target_resolution
 
-        if resample_method is None:
-            resample_method = 'nearest'
+        if request_type not in (REQ_RASTER, REQ_POINT):
+            raise ValueError(f'Invalid request type.')
 
-        self.resample_method = resample_method
+        self.request_type = request_type
+
+        if ri_method is None:
+            ri_method = 'nearest'
+
         if (
-            self.resample_method is not None and
-            self.resample_method not in Resampling.__members__
+            request_type == REQ_RASTER and
+            ri_method not in RESAMPLE_METHODS
         ):
             raise ValueError(
-                f'Invalid resampling method: "{self.resample_method}".'
+                f'Invalid resampling method: "{ri_method}".'
             )
 
+        if (
+            request_type == REQ_POINT and
+            ri_method not in POINT_METHODS
+        ):
+            raise ValueError(
+                f'Invalid point interpolation method: "{ri_method}".'
+            )
+
+        if (
+            request_type == REQ_POINT and
+            not(isinstance(subset_geom, SubsetMultiPoint))
+        ):
+            raise ValueError(
+                f'No points provided for output.'
+            )
+
+        self.ri_method = ri_method
         self.metadata = req_metadata
 
     def _parse_dates(self, date_start, date_end):

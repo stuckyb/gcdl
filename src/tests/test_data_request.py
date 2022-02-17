@@ -3,12 +3,35 @@ import unittest
 import geojson
 import pyproj
 import data_request
-from data_request import RequestDate as RD
+from data_request import RequestDate as RD, DataRequest
 
 
 class TestDataRequest(unittest.TestCase):
+    def test_init(self):
+        # Test a variety of misconfigurations.
+        with self.assertRaises(ValueError):
+            dr = DataRequest(
+                {}, '1980', '1980', None, 'NAD83', None, 'fakemethod', {},
+                data_request.REQ_RASTER
+            )
+
+        with self.assertRaises(ValueError):
+            dr = DataRequest(
+                {}, '1980', '1980', None, 'NAD83', None, 'fakemethod', {},
+                data_request.REQ_POINT
+            )
+
+        with self.assertRaises(ValueError):
+            dr = DataRequest(
+                {}, '1980', '1980', None, 'NAD83', None, 'cubic', {},
+                data_request.REQ_POINT
+            )
+
     def test_parse_dates(self):
-        dr = data_request.DataRequest(None, '1980', '1980', None, 'NAD83')
+        dr = DataRequest(
+            {}, '1980', '1980', None, 'NAD83', None, None, {},
+            data_request.REQ_RASTER
+        )
 
         # Test annual data request ranges.
         exp = [RD(1980, None, None)]
