@@ -2,8 +2,7 @@
 import datetime as dt
 from collections import namedtuple
 from pyproj.crs import CRS
-from rasterio.enums import Resampling
-from subset_geom import SubsetPolygon, SubsetMultiPoint
+from subset_geom import SubsetMultiPoint
 
 
 # Date granularity constants.
@@ -61,7 +60,7 @@ class DataRequest:
         self.target_resolution = target_resolution
 
         if request_type not in (REQ_RASTER, REQ_POINT):
-            raise ValueError(f'Invalid request type.')
+            raise ValueError('Invalid request type.')
 
         self.request_type = request_type
 
@@ -88,9 +87,7 @@ class DataRequest:
             request_type == REQ_POINT and
             not(isinstance(subset_geom, SubsetMultiPoint))
         ):
-            raise ValueError(
-                f'No points provided for output.'
-            )
+            raise ValueError('No points provided for output.')
 
         self.ri_method = ri_method
         self.metadata = req_metadata

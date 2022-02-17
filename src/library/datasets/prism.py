@@ -1,6 +1,5 @@
 
 from .gsdataset import GSDataSet
-from pathlib import Path
 from pyproj.crs import CRS
 import datetime
 import rioxarray
