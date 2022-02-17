@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 aiofiles
 cftime
+geopandas
+rioxarray
