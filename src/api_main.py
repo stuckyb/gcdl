@@ -181,13 +181,12 @@ def _parse_points(
 
 def _get_request_metadata(req):
     """
-    Generates a dictionary of metadata for an API request.
+    Generates a dictionary of basic metadata for an API request.
     """
-    req_md = OrderedDict()
-
-    req_md['request'] = {}
-    req_md['request']['url'] = str(req.url)
-    req_md['request']['datetime'] = datetime.now(timezone.utc).isoformat()
+    req_md = {
+        'url': str(req.url),
+        'datetime': datetime.now(timezone.utc).isoformat()
+    }
 
     return req_md
 
@@ -290,13 +289,13 @@ async def subset_polygon(
 
     try:
         request = DataRequest(
-            datasets, date_start, date_end, clip_geom, target_crs, resolution,
-            resample_method, req_md, REQ_RASTER
+            dsc, datasets, date_start, date_end, clip_geom, target_crs,
+            resolution, resample_method, REQ_RASTER, req_md
         )
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    req_handler = DataRequestHandler(dsc)
+    req_handler = DataRequestHandler()
     res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
 
     return FileResponse(res_path, filename=res_path.name)
@@ -358,13 +357,13 @@ async def subset_points(
 
     try:
         request = DataRequest(
-            datasets, date_start, date_end, sub_points, target_crs, None,
-            interp_method, req_md, REQ_POINT
+            dsc, datasets, date_start, date_end, sub_points, target_crs, None,
+            interp_method, REQ_POINT, req_md
         )
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    req_handler = DataRequestHandler(dsc)
+    req_handler = DataRequestHandler()
     res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
 
     return FileResponse(res_path, filename=res_path.name)

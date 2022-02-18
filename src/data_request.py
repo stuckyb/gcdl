@@ -3,6 +3,7 @@ import datetime as dt
 from collections import namedtuple
 from pyproj.crs import CRS
 from subset_geom import SubsetMultiPoint
+from library.datasets.gsdataset import getCRSMetadata
 
 
 # Date granularity constants.
@@ -30,13 +31,14 @@ RequestDate = namedtuple('RequestDate', ['year', 'month', 'day'])
 
 class DataRequest:
     """
-    Encapsulates a single API data request.
+    Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dsvars, date_start, date_end, subset_geom, target_crs,
-        target_resolution, ri_method, req_metadata, request_type
+        self, dataset_catalog, dsvars, date_start, date_end, subset_geom,
+        target_crs, target_resolution, ri_method, request_type, req_metadata
     ):
         """
+        dataset_catalog: The DatasetCatalog associated with this request.
         dsvars: A dict of lists of variables to include for each dataset with
             dataset IDs as keys.
         date_start: Inclusive start date, specied as 'YYYY', 'YYYY-MM', or
@@ -50,11 +52,15 @@ class DataRequest:
             units of the target CRS.
         ri_method: The resampling/interpolation algorithm to use for
             reprojection or extracting point data.
-        req_metadata: A dictionary of metadata associated with the request.
         request_type: A constant specifying the output type.
+        req_metadata: A key/value mapping of metadata associated with the
+            request.
         """
+        self.dsc = dataset_catalog
         self.dsvars = dsvars
-        self.dates, self.date_grain = self._parse_dates(date_start, date_end)
+        self.date_start_raw = date_start
+        self.date_end_raw = date_end
+        self.dates, self.date_grain = self._parseDates(date_start, date_end)
         self.subset_geom = subset_geom
         self.target_crs = CRS(target_crs)
         self.target_resolution = target_resolution
@@ -90,9 +96,36 @@ class DataRequest:
             raise ValueError('No points provided for output.')
 
         self.ri_method = ri_method
-        self.metadata = req_metadata
+        self.metadata = self._getMetadata(req_metadata)
 
-    def _parse_dates(self, date_start, date_end):
+    def _getMetadata(self, req_vals):
+        req_md = {}
+        req_md.update(req_vals)
+
+        req_md['target_date_range'] = [self.date_start_raw, self.date_end_raw]
+        req_md['target_crs'] = getCRSMetadata(self.target_crs)
+
+        if self.request_type == REQ_RASTER:
+            req_md['request_type'] = 'raster'
+            req_md['target_resolution'] = self.target_resolution
+            req_md['resample_method'] = self.ri_method
+        elif self.request_type == REQ_POINT:
+            req_md['request_type'] = 'points'
+            req_md['interpolation_method'] = self.ri_method
+
+        md = {'request': req_md}
+
+        ds_md = []
+        for dsid in self.dsvars:
+            dsd = self.dsc[dsid].getMetadata()
+            dsd['requested_vars'] = self.dsvars[dsid]
+            ds_md.append(dsd)
+
+        md['datasets'] = ds_md
+
+        return md
+
+    def _parseDates(self, date_start, date_end):
         """
         Parses the starting and ending date strings and returns a list of
         RequestDate instances that specifies all dates included in the request.

@@ -2,6 +2,26 @@
 from pathlib import Path
 
 
+def getCRSMetadata(crs):
+    """
+    A utility function to generate a dictionary of metadata to describe a
+    PyProj CRS object.
+    """
+    if crs is not None:
+        crs_md = {}
+        crs_md['name'] = crs.name
+        crs_md['epsg'] = crs.to_epsg()
+        crs_md['proj4'] = crs.to_proj4()
+        crs_md['wkt'] = crs.to_wkt('WKT2_2019')
+        crs_md['datum'] = crs.datum.name
+        crs_md['is_geographic'] = crs.is_geographic
+        crs_md['is_projected'] = crs.is_projected
+    else:
+        crs_md = None
+
+    return crs_md
+
+
 class GSDataSet:
     """
     Base class for all geospatial catalog data sets.
@@ -58,22 +78,7 @@ class GSDataSet:
     def id(self, idstr):
         self._id = idstr
 
-    def _getCRSMetadata(self):
-        if self.crs is not None:
-            crs_md = {}
-            crs_md['name'] = self.crs.name
-            crs_md['epsg'] = self.crs.to_epsg()
-            crs_md['proj4'] = self.crs.to_proj4()
-            crs_md['wkt'] = self.crs.to_wkt('WKT2_2019')
-            crs_md['datum'] = self.crs.datum.name
-            crs_md['is_geographic'] = self.crs.is_geographic
-            crs_md['is_projected'] = self.crs.is_projected
-        else:
-            crs_md = None
-
-        return crs_md
-
-    def getDatasetMetadata(self):
+    def getMetadata(self):
         """
         Returns a data structure containing the dataset's metadata.
         """
@@ -114,27 +119,7 @@ class GSDataSet:
             ]
 
         # Generate CRS metadata.
-        resp['crs'] = self._getCRSMetadata()
+        resp['crs'] = getCRSMetadata(self.crs)
 
         return resp
-
-    def getSubsetMetadata(
-        self, date_start, date_end, varnames, user_crs, user_geom, crs, 
-        resolution, resample_method, point_method
-    ):
-        md = {}
-
-        md['dataset'] = self.getDatasetMetadata()
-
-        req_md = {}
-        req_md['requested_vars'] = varnames
-        req_md['target_date_range'] = [date_start, date_end]
-        req_md['target_crs'] = self._getCRSMetadata(epsg_code=crs)
-        req_md['target_resolution'] = resolution
-        req_md['resample_method'] = resample_method
-        req_md['point_method'] = point_method
-
-        md['subset'] = req_md
-
-        return md
 

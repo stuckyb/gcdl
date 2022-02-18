@@ -16,11 +16,8 @@ class DataRequestHandler:
     Manages data request fulfillment, including dataset interactions, data
     harmonization/post-processing, and output.
     """
-    def __init__(self, dsc):
-        """
-        dsc: The DatasetCatalog to use.
-        """
-        self.dsc = dsc
+    def __init__(self):
+        pass
 
     def _getSingleLayerOutputFileName(self, dsid, varname, grain, rdate):
         if grain == dr.ANNUAL:
@@ -50,7 +47,7 @@ class DataRequestHandler:
             for varname in request.dsvars[dsid]:
                 for rdate in request.dates:
                     # Retrieve the point data.
-                    data = self.dsc[dsid].getData(
+                    data = request.dsc[dsid].getData(
                         varname, request.date_grain, rdate, request.ri_method,
                         ds_subset_geoms[dsid]
                     )
@@ -73,7 +70,7 @@ class DataRequestHandler:
             for varname in request.dsvars[dsid]:
                 for rdate in request.dates:
                     # Retrieve the (subsetted) data layer.
-                    data = self.dsc[dsid].getData(
+                    data = request.dsc[dsid].getData(
                         varname, request.date_grain, rdate, request.ri_method,
                         ds_subset_geoms[dsid]
                     )
@@ -81,7 +78,7 @@ class DataRequestHandler:
                     # Reproject to the target resolution, target projection, or
                     # both, if needed.
                     if (
-                        not(request.target_crs.equals(self.dsc[dsid].crs)) or
+                        not(request.target_crs.equals(request.dsc[dsid].crs)) or
                         request.target_resolution is not None
                     ):
                         data = data.rio.reproject(
@@ -108,16 +105,18 @@ class DataRequestHandler:
         request: A DataRequest instance.
         output_dir: A Path instance for the output location.
         """
+        dsc = request.dsc
+
         # Build a set of subset geometries, reprojected as needed, that match
         # the source dataset CRSs.  We precompute these to avoid redundant
         # reprojections when looping through the data retrievals.
         ds_subset_geoms = {}
         for dsid in request.dsvars:
-            if request.subset_geom.crs.equals(self.dsc[dsid].crs):
+            if request.subset_geom.crs.equals(dsc[dsid].crs):
                 ds_subset_geoms[dsid] = request.subset_geom
             else:
                 ds_subset_geoms[dsid] = request.subset_geom.reproject(
-                    self.dsc[dsid].crs
+                    dsc[dsid].crs
                 )
 
         # Get the requested data.
