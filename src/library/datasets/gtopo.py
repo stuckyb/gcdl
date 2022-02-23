@@ -23,7 +23,7 @@ class GTOPO(GSDataSet):
         self.crs = CRS.from_epsg(4326)
 
         # The grid size.
-        self.grid_size = 0.008333333333333
+        self.grid_size = 25.0 / 3000
         self.grid_unit = 'degrees'
 
         # The variables/layers/bands in the dataset.
