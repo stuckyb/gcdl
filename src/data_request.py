@@ -7,9 +7,10 @@ from library.datasets.gsdataset import getCRSMetadata
 
 
 # Date granularity constants.
-ANNUAL = 0
-MONTHLY = 1
-DAILY = 2
+NONE = 0
+ANNUAL = 1
+MONTHLY = 2
+DAILY = 3
 
 # Request type constants.
 REQ_RASTER = 0
@@ -134,7 +135,15 @@ class DataRequest:
         """
         dates = []
 
-        if len(date_start) == 4 and len(date_end) == 4:
+        if date_start is None:
+            date_start = ''
+        if date_end is None:
+            date_end = ''
+            
+        if len(date_start) == 0 and len(date_end) == 0:
+            date_grain = NONE
+
+        elif len(date_start) == 4 and len(date_end) == 4:
             # Annual data request.
             date_grain = ANNUAL
 
