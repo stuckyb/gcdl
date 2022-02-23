@@ -21,7 +21,7 @@ class PRISM(GSDataSet):
         # CRS information.
         self.crs = CRS.from_epsg(4269)
 
-        # The grid size
+        # The grid size.
         self.grid_size = 4000
         self.grid_unit = 'meters'
 

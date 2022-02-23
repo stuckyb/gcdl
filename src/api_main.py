@@ -221,7 +221,7 @@ async def ds_info(
 ):
     _check_dsid(dsid, dsc)
 
-    return dsc[dsid].getDatasetMetadata()
+    return dsc[dsid].getMetadata()
 
 
 @app.get(

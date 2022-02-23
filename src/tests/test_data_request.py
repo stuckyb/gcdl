@@ -37,6 +37,20 @@ class TestDataRequest(unittest.TestCase):
             data_request.REQ_RASTER, {}
         )
 
+        # Test non-temporal (static) requests.
+        exp = []
+        r, dg = dr._parseDates(None, None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.NONE, dg)
+
+        exp = []
+        r, dg = dr._parseDates('', '')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.NONE, dg)
+
+        with self.assertRaises(ValueError):
+            dr._parseDates(None, '1980')
+
         # Test annual data request ranges.
         exp = [RD(1980, None, None)]
         r, dg = dr._parseDates('1980', '1980')

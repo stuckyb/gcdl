@@ -1,4 +1,5 @@
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 
@@ -22,7 +23,7 @@ def getCRSMetadata(crs):
     return crs_md
 
 
-class GSDataSet:
+class GSDataSet(ABC):
     """
     Base class for all geospatial catalog data sets.
     """
@@ -78,6 +79,19 @@ class GSDataSet:
     def id(self, idstr):
         self._id = idstr
 
+    @property
+    def nontemporal(self):
+        """
+        True if the dataset is non-temporal.
+        """
+        no_dates = True
+
+        for grain, drange in self.date_ranges.items():
+            if drange[0] is not None or drange[1] is not None:
+                no_dates = False
+
+        return no_dates
+
     def getMetadata(self):
         """
         Returns a data structure containing the dataset's metadata.
@@ -122,4 +136,22 @@ class GSDataSet:
         resp['crs'] = getCRSMetadata(self.crs)
 
         return resp
+
+    @abstractmethod
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        """
+        Returns an xarray.DataArray object containing the requested data.
+
+        varname: The variable to return.
+        date_grain: The date granularity to return, specified as a constant in
+            data_request.
+        request_date: A data_request.RequestDate instance.  Request dates
+            should be ignored by non-temporal datasets.
+        ri_method: The resample/interpolation method to use, if needed.
+        subset_geom: An instance of SubsetGeom.  If the CRS does not match the
+            dataset, an exception is raised.
+        """
+        pass
 
