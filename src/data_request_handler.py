@@ -20,7 +20,11 @@ class DataRequestHandler:
         pass
 
     def _getSingleLayerOutputFileName(self, dsid, varname, grain, rdate):
-        if grain == dr.ANNUAL:
+        if grain == dr.NONE or rdate is None:
+            fname = '{0}_{1}'.format(
+                dsid, varname
+            )
+        elif grain == dr.ANNUAL:
             fname = '{0}_{1}_{2}'.format(
                 dsid, varname, rdate.year
             )
@@ -37,66 +41,60 @@ class DataRequestHandler:
 
         return fname
 
-    def _fulfillPointRequest(self, request, output_dir, ds_subset_geoms):
-        fout_paths = []
+    def _getPointLayer(
+        self, dataset, varname, rdate, subset_geom, request, output_dir
+    ):
+        # Not a great solution to be creating a new base dataframe on every
+        # call, but multi-format output handling will eventually take care of
+        # this.
         out_df = gpd.GeoDataFrame(
             {'x': request.subset_geom.geom.x, 'y': request.subset_geom.geom.y}
         )
 
-        for dsid in request.dsvars:
-            for varname in request.dsvars[dsid]:
-                for rdate in request.dates:
-                    # Retrieve the point data.
-                    data = request.dsc[dsid].getData(
-                        varname, request.date_grain, rdate, request.ri_method,
-                        ds_subset_geoms[dsid]
-                    )
+        # Retrieve the point data.
+        data = dataset.getData(
+            varname, request.date_grain, rdate, request.ri_method, subset_geom
+        )
 
-                    # Output the result.
-                    fout_path = (
-                        output_dir / (self._getSingleLayerOutputFileName(
-                            dsid, varname, request.date_grain, rdate
-                        ) + '.csv')
-                    )
-                    out_df.assign(value=data).to_csv(fout_path, index=False)
-                    fout_paths.append(fout_path)
+        # Output the result.
+        fout_path = (
+            output_dir / (self._getSingleLayerOutputFileName(
+                dataset.id, varname, request.date_grain, rdate
+            ) + '.csv')
+        )
+        out_df.assign(value=data).to_csv(fout_path, index=False)
 
-        return fout_paths
+        return fout_path
 
-    def _fulfillRasterRequest(self, request, output_dir, ds_subset_geoms):
-        fout_paths = []
+    def _getRasterLayer(
+        self, dataset, varname, rdate, subset_geom, request, output_dir
+    ):
+        # Retrieve the (subsetted) data layer.
+        data = dataset.getData(
+            varname, request.date_grain, rdate, request.ri_method, subset_geom
+        )
 
-        for dsid in request.dsvars:
-            for varname in request.dsvars[dsid]:
-                for rdate in request.dates:
-                    # Retrieve the (subsetted) data layer.
-                    data = request.dsc[dsid].getData(
-                        varname, request.date_grain, rdate, request.ri_method,
-                        ds_subset_geoms[dsid]
-                    )
+        # Reproject to the target resolution, target projection, or both, if
+        # needed.
+        if (
+            not(request.target_crs.equals(dataset.crs)) or
+            request.target_resolution is not None
+        ):
+            data = data.rio.reproject(
+                dst_crs=request.target_crs,
+                resampling=Resampling[request.ri_method],
+                resolution=request.target_resolution
+            )
 
-                    # Reproject to the target resolution, target projection, or
-                    # both, if needed.
-                    if (
-                        not(request.target_crs.equals(request.dsc[dsid].crs)) or
-                        request.target_resolution is not None
-                    ):
-                        data = data.rio.reproject(
-                            dst_crs=request.target_crs,
-                            resampling=Resampling[request.ri_method],
-                            resolution=request.target_resolution
-                        )
+        # Output the result.
+        fout_path = (
+            output_dir / (self._getSingleLayerOutputFileName(
+                dataset.id, varname, request.date_grain, rdate
+            ) + '.tif')
+        )
+        data.rio.to_raster(fout_path)
 
-                    # Output the result.
-                    fout_path = (
-                        output_dir / (self._getSingleLayerOutputFileName(
-                            dsid, varname, request.date_grain, rdate
-                        ) + '.tif')
-                    )
-                    data.rio.to_raster(fout_path)
-                    fout_paths.append(fout_path)
-
-        return fout_paths
+        return fout_path
 
     def fulfillRequestSynchronous(self, request, output_dir):
         """
@@ -109,7 +107,7 @@ class DataRequestHandler:
 
         # Build a set of subset geometries, reprojected as needed, that match
         # the source dataset CRSs.  We precompute these to avoid redundant
-        # reprojections when looping through the data retrievals.
+        # reprojections when processing the data retrievals.
         ds_subset_geoms = {}
         for dsid in request.dsvars:
             if request.subset_geom.crs.equals(dsc[dsid].crs):
@@ -120,16 +118,30 @@ class DataRequestHandler:
                 )
 
         # Get the requested data.
-        if request.request_type == dr.REQ_RASTER:
-            fout_paths = self._fulfillRasterRequest(
-                request, output_dir, ds_subset_geoms
-            )
-        elif request.request_type == dr.REQ_POINT:
-            fout_paths = self._fulfillPointRequest(
-                request, output_dir, ds_subset_geoms
-            )
-        else:
-            raise ValueError('Unsupported request type.')
+        fout_paths = []
+
+        for dsid in request.dsvars:
+            # If the dataset is non-temporal, we don't need to iterate over the
+            # request dates.
+            if dsc[dsid].nontemporal:
+                date_list = [None]
+            else:
+                date_list = request.dates
+
+            for varname in request.dsvars[dsid]:
+                for rdate in date_list:
+                    if request.request_type == dr.REQ_RASTER:
+                        fout_paths.append(self._getRasterLayer(
+                            dsc[dsid], varname, rdate, ds_subset_geoms[dsid],
+                            request, output_dir
+                        ))
+                    elif request.request_type == dr.REQ_POINT:
+                        fout_paths.append(self._getPointLayer(
+                            dsc[dsid], varname, rdate, ds_subset_geoms[dsid],
+                            request, output_dir
+                        ))
+                    else:
+                        raise ValueError('Unsupported request type.')
 
         # Write the metadata file.
         md_path = output_dir / (
