@@ -1,7 +1,10 @@
 
 from .gsdataset import GSDataSet
+from pyproj.crs import CRS
 from pathlib import Path
 import datetime
+import rioxarray
+from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 
 class GTOPO(GSDataSet):
@@ -17,9 +20,9 @@ class GTOPO(GSDataSet):
         self.url = 'https://www.usgs.gov/centers/eros/science/usgs-eros-archive-digital-elevation-global-30-arc-second-elevation-gtopo30'
 
         # CRS information.
-        self.epsg_code = 4326
+        self.crs = CRS.from_epsg(4326)
 
-        # The grid size
+        # The grid size.
         self.grid_size = 0.008333333333333
         self.grid_unit = 'degrees'
 
@@ -39,13 +42,44 @@ class GTOPO(GSDataSet):
             None, None
         ]
 
-        # File name patterns for each GTOPO variable.
-        self.fpatterns = {
-            'elev': 'GTOPO_elevation0.tif'  #temporary
-        }
+        # Name of the data file.  For now, this is only one tile of the
+        # dataset.  This needs to be implemented as a tiled dataset.
+        self.fname = 'gt30w100n40.dem'
 
-    def _getDataFile(self, varname, year=None, month=None, day=None):
-        print(varname)
-        return self.fpatterns[varname]
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        """
+        varname: The variable to return.
+        date_grain: The date granularity to return, specified as a constant in
+            data_request.
+        request_date: A data_request.RequestDate instance.  Since this is a
+            non-temporal dataset, request dates are ignored.
+        ri_method: The resample/interpolation method to use, if needed.
+        subset_geom: An instance of SubsetGeom.  If the CRS does not match the
+            dataset, an exception is raised.
+        """
+        # Get the path to the data file.
+        fpath = self.ds_path / self.fname
 
+        data = rioxarray.open_rasterio(fpath, masked=True)
+
+        if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
+            raise ValueError(
+                'Subset geometry CRS does not match dataset CRS.'
+            )
+
+        if isinstance(subset_geom, SubsetPolygon):
+            data = data.rio.clip([subset_geom.json])
+        elif isinstance(subset_geom, SubsetMultiPoint):
+            # Interpolate all (x,y) points in the subset geometry.  For more
+            # information about how/why this works, see
+            # https://xarray.pydata.org/en/stable/user-guide/interpolation.html#advanced-interpolation.
+            res = data.interp(
+                x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
+                method=ri_method
+            )
+            data = res.values[0]
+
+        return data
 
