@@ -79,6 +79,19 @@ class GSDataSet(ABC):
     def id(self, idstr):
         self._id = idstr
 
+    @property
+    def nontemporal(self):
+        """
+        True if the dataset is non-temporal.
+        """
+        no_dates = True
+
+        for grain, drange in self.date_ranges.items():
+            if drange[0] is not None or drange[1] is not None:
+                no_dates = False
+
+        return no_dates
+
     def getMetadata(self):
         """
         Returns a data structure containing the dataset's metadata.
@@ -129,6 +142,8 @@ class GSDataSet(ABC):
         self, varname, date_grain, request_date, ri_method, subset_geom=None
     ):
         """
+        Returns an xarray.DataArray object containing the requested data.
+
         varname: The variable to return.
         date_grain: The date granularity to return, specified as a constant in
             data_request.
