@@ -1,0 +1,41 @@
+<VRTDataset rasterXSize="4" rasterYSize="4">
+  <SRS dataAxisToSRSAxisMapping="2,1">GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]</SRS>
+  <GeoTransform> -1.0000000000000000e+02,  5.0000000000000000e-01,  0.0000000000000000e+00,  4.0000000000000000e+01,  0.0000000000000000e+00, -5.0000000000000000e-01</GeoTransform>
+  <VRTRasterBand dataType="Int16" band="1">
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">8</MDI>
+      <MDI key="STATISTICS_MEAN">5</MDI>
+      <MDI key="STATISTICS_MINIMUM">3</MDI>
+      <MDI key="STATISTICS_STDDEV">1.870828693387</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">100</MDI>
+    </Metadata>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">tile_0.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="2" RasterYSize="2" DataType="Byte" BlockXSize="2" BlockYSize="2" />
+      <SrcRect xOff="0" yOff="0" xSize="2" ySize="2" />
+      <DstRect xOff="0" yOff="0" xSize="2" ySize="2" />
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">tile_1.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="2" RasterYSize="2" DataType="Byte" BlockXSize="2" BlockYSize="2" />
+      <SrcRect xOff="0" yOff="0" xSize="2" ySize="2" />
+      <DstRect xOff="2" yOff="0" xSize="2" ySize="2" />
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">tile_2.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="2" RasterYSize="2" DataType="Byte" BlockXSize="2" BlockYSize="2" />
+      <SrcRect xOff="0" yOff="0" xSize="2" ySize="2" />
+      <DstRect xOff="0" yOff="2" xSize="2" ySize="2" />
+    </SimpleSource>
+    <SimpleSource>
+      <SourceFilename relativeToVRT="1">tile_3.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="2" RasterYSize="2" DataType="Byte" BlockXSize="2" BlockYSize="2" />
+      <SrcRect xOff="0" yOff="0" xSize="2" ySize="2" />
+      <DstRect xOff="2" yOff="2" xSize="2" ySize="2" />
+    </SimpleSource>
+  </VRTRasterBand>
+</VRTDataset>
