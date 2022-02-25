@@ -37,6 +37,11 @@ class TestTileSet(unittest.TestCase):
             self.assertEqual(4.0, poly.length)
             self.assertEqual(exp[i], list(poly.exterior.coords))
 
+    def test_bounds(self):
+        ts = self.ts
+
+        self.assertEqual([-100, 38, -98, 40], list(ts.bounds))
+
     def test_getTilePaths(self):
         ts = self.ts
 

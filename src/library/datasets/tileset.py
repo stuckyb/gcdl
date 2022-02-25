@@ -44,6 +44,14 @@ class TileSet:
         """
         return self.polys.crs
 
+    @property
+    def bounds(self):
+        """
+        Returns a sequence containing the geographic bounding box of the entire
+        tile set as (minx, miny, maxx, maxy).
+        """
+        return self.polys.total_bounds
+
     def getTilePaths(self, subset_geom):
         """
         Returns a Series containing the file paths of the tiles required to
