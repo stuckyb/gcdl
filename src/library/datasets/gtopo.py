@@ -5,6 +5,7 @@ from pathlib import Path
 import datetime
 import rioxarray
 from subset_geom import SubsetPolygon, SubsetMultiPoint
+from library.datasets.tileset import TileSet
 
 
 class GTOPO(GSDataSet):
@@ -42,9 +43,9 @@ class GTOPO(GSDataSet):
             None, None
         ]
 
-        # Name of the data file.  For now, this is only one tile of the
-        # dataset.  This needs to be implemented as a tiled dataset.
-        self.fname = 'gt30w100n40.dem'
+        # Initialize the TileSet for the GTOPO data.
+        tile_paths = sorted(self.ds_path.glob('gt30*.dem'))
+        self.tileset = TileSet(tile_paths, self.crs)
 
     def getData(
         self, varname, date_grain, request_date, ri_method, subset_geom=None
@@ -59,15 +60,17 @@ class GTOPO(GSDataSet):
         subset_geom: An instance of SubsetGeom.  If the CRS does not match the
             dataset, an exception is raised.
         """
-        # Get the path to the data file.
-        fpath = self.ds_path / self.fname
-
-        data = rioxarray.open_rasterio(fpath, masked=True)
-
-        if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
+        if subset_geom is None:
+            raise ValueError(
+                'A subset geometry is required for using GTOPO30 data.'
+            )
+        
+        if not(self.crs.equals(subset_geom.crs)):
             raise ValueError(
                 'Subset geometry CRS does not match dataset CRS.'
             )
+
+        data = self.tileset.getRaster(subset_geom)
 
         if isinstance(subset_geom, SubsetPolygon):
             data = data.rio.clip([subset_geom.json])
