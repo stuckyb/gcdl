@@ -3,6 +3,8 @@ import rasterio
 import pandas as pd
 import geopandas as gpd
 import shapely.geometry as sg
+from rioxarray import open_rasterio, merge
+import xarray
 
 
 class TileSet:
@@ -58,4 +60,26 @@ class TileSet:
         idxs = self.polys.intersects(subset_geom.geom.unary_union)
 
         return self.fpaths[idxs]
+
+    def getRaster(self, subset_geom):
+        """
+        Returns an xarray.DataArray containing a mosaic of the tiles required
+        to cover the given subset geometry.
+
+        subset_geom: An instance of SubsetGeom.
+        """
+        fpaths = self.getTilePaths(subset_geom)
+        tiles = []
+        
+        for fpath in fpaths:
+            tiles.append(open_rasterio(fpath, masked=True))
+
+        if len(tiles) > 0 and not(isinstance(tiles[0], xarray.DataArray)):
+            raise TypeError(
+                f'Expected xarray.DataArray; instead got {type(tiles[0])}.'
+            )
+
+        mosaic = merge.merge_arrays(tiles)
+
+        return mosaic
 

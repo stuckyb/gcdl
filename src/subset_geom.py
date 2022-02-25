@@ -16,8 +16,8 @@ class SubsetGeom(ABC):
         Creates a new SubsetGeom.  Although the arguments are optional, empty
         SubsetGeoms should not be created by client code.
 
-        geom_spec: A GeoJSON string, dictionary, or geojson object
-            representing a polygon or multi-point geometry.
+        geom_spec: A GeoJSON string, geojson dictionary, or sequence of
+            coordinates representing a polygon or multi-point geometry.
         crs_str: A string representing the CRS of the geometry.
         """
         self.geom = None

@@ -58,3 +58,43 @@ class TestTileSet(unittest.TestCase):
             [self.files[0], self.files[1]], list(ts.getTilePaths(sg))
         )
 
+        # Test a polygon (triangle, in this case) inside tile 2.
+        sg = SubsetPolygon(
+            [(-99.8,38.5), (-99.2,38.8), (-99.2,38.2), (-99.8,38.5)],
+            'EPSG:4326'
+        )
+        self.assertEqual(
+            [self.files[2]], list(ts.getTilePaths(sg))
+        )
+
+        # Test a polygon that intersects tiles 2 and 3.
+        sg = SubsetPolygon(
+            [(-99.5,38.5), (-98.5,38.8), (-98.5,38.2), (-99.5,38.5)],
+            'EPSG:4326'
+        )
+        self.assertEqual(
+            [self.files[2], self.files[3]], list(ts.getTilePaths(sg))
+        )
+
+    def test_getRaster(self):
+        ts = self.ts
+
+        # Test a polygon (triangle, in this case) inside tile 2.
+        sg = SubsetPolygon(
+            [(-99.8,38.5), (-99.2,38.8), (-99.2,38.2), (-99.8,38.5)],
+            'EPSG:4326'
+        )
+        mosaic = ts.getRaster(sg)
+        self.assertEqual((-100, 38, -99, 39), mosaic.rio.bounds())
+        self.assertEqual(5, mosaic.isel(band=0,x=0,y=0))
+
+        # Test a polygon that intersects tiles 2 and 3.
+        sg = SubsetPolygon(
+            [(-99.5,38.5), (-98.5,38.8), (-98.5,38.2), (-99.5,38.5)],
+            'EPSG:4326'
+        )
+        mosaic = ts.getRaster(sg)
+        self.assertEqual((-100, 38, -98, 39), mosaic.rio.bounds())
+        self.assertEqual(5, mosaic.isel(band=0,x=0,y=0))
+        self.assertEqual(8, mosaic.isel(band=0,x=2,y=0))
+
