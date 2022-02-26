@@ -1,6 +1,6 @@
 
 from library.catalog import DatasetCatalog
-from library.datasets import PRISM, DAYMET, GTOPO
+from library.datasets import PRISM, DAYMET, GTOPO, SRTM
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
@@ -14,7 +14,7 @@ from data_request_handler import DataRequestHandler
 
 
 dsc = DatasetCatalog('local_data')
-dsc.addDatasetsByClass(PRISM, DAYMET, GTOPO)
+dsc.addDatasetsByClass(PRISM, DAYMET, GTOPO, SRTM)
 
 # Directory for serving output files.
 output_dir = Path('output')
