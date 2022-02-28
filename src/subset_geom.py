@@ -95,6 +95,9 @@ class SubsetGeom(ABC):
         Two SubsetGeoms are considered equal if they contain the same geometry
         elements and have the same CRS.
         """
+        if not(isinstance(other, SubsetGeom)):
+            return False
+
         return self.geom.equals(other.geom) and self.crs.equals(other.crs)
 
     def reproject(self, target_crs):

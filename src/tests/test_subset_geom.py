@@ -63,6 +63,9 @@ class TestSubsetPolygon(unittest.TestCase):
         )
         self.assertFalse(sg1 == sg2)
 
+        # Comparison to non-SubsetGeom.
+        self.assertFalse(sg1 == 123)
+
     def test_json(self):
         # Test initialization from dictionary.
         sg = SubsetPolygon(self.geom_dict, 'NAD83')
