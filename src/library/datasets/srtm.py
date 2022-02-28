@@ -8,23 +8,23 @@ from subset_geom import SubsetPolygon, SubsetMultiPoint
 from library.datasets.tileset import TileSet
 
 
-class GTOPO(GSDataSet):
+class SRTM(GSDataSet):
     def __init__(self, store_path):
         """
         store_path (Path): The location of on-disk dataset storage.
         """
-        super().__init__(store_path, 'gtopo')
+        super().__init__(store_path, 'srtm')
 
         # Basic dataset information.
-        self.id = 'GTOPO30'
-        self.name = 'Global 30 Arc-Second Elevation'
-        self.url = 'https://www.usgs.gov/centers/eros/science/usgs-eros-archive-digital-elevation-global-30-arc-second-elevation-gtopo30'
+        self.id = 'SRTM'
+        self.name = 'SRTM 1 Arc-Second Global Digital Elevation Model'
+        self.url = 'https://doi.org/10.5066/F7PR7TFT'
 
         # CRS information.
         self.crs = CRS.from_epsg(4326)
 
         # The grid size.
-        self.grid_size = 25.0 / 3000
+        self.grid_size = 1.0 / 3600
         self.grid_unit = 'degrees'
 
         # The variables/layers/bands in the dataset.
@@ -44,7 +44,7 @@ class GTOPO(GSDataSet):
         ]
 
         # Initialize the TileSet for the GTOPO data.
-        tile_paths = sorted(self.ds_path.glob('gt30*.dem'))
+        tile_paths = sorted(self.ds_path.glob('n*_1arc_v3.bil'))
         self.tileset = TileSet(tile_paths, self.crs)
 
     def getData(

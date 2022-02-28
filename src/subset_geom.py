@@ -16,8 +16,8 @@ class SubsetGeom(ABC):
         Creates a new SubsetGeom.  Although the arguments are optional, empty
         SubsetGeoms should not be created by client code.
 
-        geom_spec: A GeoJSON string, dictionary, or geojson object
-            representing a polygon or multi-point geometry.
+        geom_spec: A GeoJSON string, geojson dictionary, or sequence of
+            coordinates representing a polygon or multi-point geometry.
         crs_str: A string representing the CRS of the geometry.
         """
         self.geom = None
@@ -89,6 +89,16 @@ class SubsetGeom(ABC):
         Returns a pyproj CRS object representing the CRS of this polygon.
         """
         return self.geom.crs
+
+    def __eq__(self, other):
+        """
+        Two SubsetGeoms are considered equal if they contain the same geometry
+        elements and have the same CRS.
+        """
+        if not(isinstance(other, SubsetGeom)):
+            return False
+
+        return self.geom.equals(other.geom) and self.crs.equals(other.crs)
 
     def reproject(self, target_crs):
         """
