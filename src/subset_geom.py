@@ -90,6 +90,13 @@ class SubsetGeom(ABC):
         """
         return self.geom.crs
 
+    def __eq__(self, other):
+        """
+        Two SubsetGeoms are considered equal if they contain the same geometry
+        elements and have the same CRS.
+        """
+        return self.geom.equals(other.geom) and self.crs.equals(other.crs)
+
     def reproject(self, target_crs):
         """
         Returns a new SubsetGeom with the geometric feature(s) transformed to

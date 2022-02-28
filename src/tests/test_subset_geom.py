@@ -30,6 +30,39 @@ class TestSubsetPolygon(unittest.TestCase):
 
     geom_coords = [ [-105, 40],[-80, 40],[-80, 20],[-105, 20],[-105, 40] ]
 
+    def test_equals(self):
+        sg1 = SubsetPolygon(self.geom_dict, 'NAD83')
+        sg2 = SubsetPolygon(self.geom_dict, 'NAD83')
+        self.assertTrue(sg1 == sg2)
+
+        # Polygons with different numbers of vertices.
+        sg2 = SubsetPolygon(
+            [ [-105, 40],[-80, 40],[-80, 20],[-105, 40] ], 'NAD83'
+        )
+        self.assertFalse(sg1 == sg2)
+
+        # Same number of vertices with one coordinate pair different.
+        sg1 = SubsetPolygon(
+            [ [-105, 40],[-80, 40],[-80, 20],[-105, 40] ], 'NAD83'
+        )
+        sg2 = SubsetPolygon(
+            [ [-105, 40],[-80, 39],[-80, 20],[-105, 40] ], 'NAD83'
+        )
+        self.assertFalse(sg1 == sg2)
+
+        # Polygons with the same coordinates but different CRSes.
+        sg2 = SubsetPolygon(self.geom_dict, 'EPSG:4326')
+        self.assertFalse(sg1 == sg2)
+
+        # Different geometry types.
+        sg1 = SubsetPolygon(
+            [ [-105, 40],[-80, 40],[-80, 20],[-105, 40] ], 'NAD83'
+        )
+        sg2 = SubsetMultiPoint(
+            [ [-105, 40],[-80, 40],[-80, 20],[-105, 20] ], 'NAD83'
+        )
+        self.assertFalse(sg1 == sg2)
+
     def test_json(self):
         # Test initialization from dictionary.
         sg = SubsetPolygon(self.geom_dict, 'NAD83')
@@ -104,6 +137,30 @@ class TestSubsetMultiPoint(unittest.TestCase):
         ]}"""
 
     geom_coords = [ [-105, 40],[-80, 40],[-80, 20],[-105, 20] ]
+
+    def test_equals(self):
+        sg1 = SubsetMultiPoint(self.geom_dict, 'NAD83')
+        sg2 = SubsetMultiPoint(self.geom_dict, 'NAD83')
+        self.assertTrue(sg1 == sg2)
+
+        # Different numbers of points.
+        sg2 = SubsetMultiPoint(
+            [ [-105, 40],[-80, 40],[-80, 20] ], 'NAD83'
+        )
+        self.assertFalse(sg1 == sg2)
+
+        # Same number of points with one coordinate pair different.
+        sg1 = SubsetMultiPoint(
+            [ [-105, 40],[-80, 40],[-80, 20],[-105, 20] ], 'NAD83'
+        )
+        sg2 = SubsetMultiPoint(
+            [ [-105, 39],[-80, 40],[-80, 20],[-105, 20] ], 'NAD83'
+        )
+        self.assertFalse(sg1 == sg2)
+
+        # Same coordinates but different CRSes.
+        sg2 = SubsetMultiPoint(self.geom_dict, 'EPSG:4326')
+        self.assertFalse(sg1 == sg2)
 
     def test_json(self):
         # Test initialization from dictionary.
