@@ -4,3 +4,7 @@ aiofiles
 cftime
 geopandas
 rioxarray
+geojson
+pydap
+requests
+
