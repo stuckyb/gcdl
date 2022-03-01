@@ -1,7 +1,7 @@
 
 import unittest
 import geojson
-import pyproj
+from pyproj.crs import CRS
 from api_core import data_request, RequestDate as RD, DataRequest
 from library.catalog import DatasetCatalog
 
@@ -14,25 +14,25 @@ class TestDataRequest(unittest.TestCase):
         # Test a variety of misconfigurations.
         with self.assertRaises(ValueError):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, 'NAD83', None,
+                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
                 'fakemethod', data_request.REQ_RASTER, {}
             )
 
         with self.assertRaises(ValueError):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, 'NAD83', None,
+                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
                 'fakemethod', data_request.REQ_POINT, {}
             )
 
         with self.assertRaises(ValueError):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, 'NAD83', None, 'cubic',
-                data_request.REQ_POINT, {}
+                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
+                'cubic', data_request.REQ_POINT, {}
             )
 
     def test_parseDates(self):
         dr = DataRequest(
-            self.dsc, {}, '1980', '1980', None, 'NAD83', None, None,
+            self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None, None,
             data_request.REQ_RASTER, {}
         )
 

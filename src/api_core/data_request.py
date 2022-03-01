@@ -48,7 +48,7 @@ class DataRequest:
             'YYYY-MM-DD'.
         subset_geom: A SubsetGeom representing the clipping region or points to
             use or None.
-        target_crs: A string specifying the target CRS.
+        target_crs: A CRS instance.
         target_resolution: A float specifying the target spatial resolution in
             units of the target CRS.
         ri_method: The resampling/interpolation algorithm to use for
@@ -63,7 +63,7 @@ class DataRequest:
         self.date_end_raw = date_end
         self.dates, self.date_grain = self._parseDates(date_start, date_end)
         self.subset_geom = subset_geom
-        self.target_crs = CRS(target_crs)
+        self.target_crs = target_crs
         self.target_resolution = target_resolution
 
         if request_type not in (REQ_RASTER, REQ_POINT):

@@ -118,19 +118,16 @@ async def subset_polygon(
 
     try:
         datasets = parse_datasets_str(datasets, dsc)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
-    if crs is None:
-        # Use the CRS of the first dataset in the request as the target CRS if
-        # none was specified.
-        target_crs = dsc[list(datasets.keys())[0]].crs
-    else:
-        target_crs = pyproj.crs.CRS(crs)
+        if crs is None:
+            # Use the CRS of the first dataset in the request as the target CRS
+            # if none was specified.
+            target_crs = dsc[list(datasets.keys())[0]].crs
+        else:
+            target_crs = pyproj.crs.CRS(crs)
 
-    clip_geom = SubsetPolygon(clip, target_crs)
+        clip_geom = SubsetPolygon(clip, target_crs)
 
-    try:
         request = DataRequest(
             dsc, datasets, date_start, date_end, clip_geom, target_crs,
             resolution, resample_method, REQ_RASTER, req_md
@@ -196,19 +193,16 @@ async def subset_points(
 
     try:
         datasets = parse_datasets_str(datasets, dsc)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
-    if crs is None:
-        # Use the CRS of the first dataset in the request as the target CRS if
-        # none was specified.
-        target_crs = dsc[list(datasets.keys())[0]].crs
-    else:
-        target_crs = pyproj.crs.CRS(crs)
+        if crs is None:
+            # Use the CRS of the first dataset in the request as the target CRS if
+            # none was specified.
+            target_crs = dsc[list(datasets.keys())[0]].crs
+        else:
+            target_crs = pyproj.crs.CRS(crs)
 
-    sub_points = SubsetMultiPoint(points, target_crs)
+        sub_points = SubsetMultiPoint(points, target_crs)
 
-    try:
         request = DataRequest(
             dsc, datasets, date_start, date_end, sub_points, target_crs, None,
             interp_method, REQ_POINT, req_md
