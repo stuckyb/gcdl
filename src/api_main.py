@@ -4,13 +4,14 @@ from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
-from collections import OrderedDict
-from datetime import datetime, timezone
 from pathlib import Path
 import pyproj
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
+from api_core.helpers import (
+    parse_datasets_str, parse_clip_bounds, parse_points, get_request_metadata
+)
 
 
 dsc = DatasetCatalog('local_data')
@@ -18,177 +19,6 @@ dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI)
 
 # Directory for serving output files.
 output_dir = Path('output')
-
-def _check_dsid(dsid, ds_catalog):
-    """
-    Raises an exception if a given dataset ID is invalid.
-    """
-    if dsid not in ds_catalog:
-        raise HTTPException(
-            status_code=404, detail=f'Invalid dataset ID: {dsid}'
-        )
-
-def _parse_datasets(
-    datasets: str = Query(
-        ..., title='Datasets and variables', description='The datasets and '
-        'variables to include, specified as '
-        '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...].  '
-        'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
-    )
-):
-    """
-    Parses a string specifying datasets and variables.
-    """
-    ds_vars = {}
-    for ds_spec in datasets.split(';'):
-        parts = ds_spec.split(':')
-        if len(parts) != 2:
-            raise HTTPException(
-                status_code=400, detail='Incorrect dataset specification.'
-            )
-
-        varnames = parts[1].split(',')
-        if varnames[0] == '':
-            raise HTTPException(
-                status_code=400, detail='Incorrect dataset specification.'
-            )
-
-        _check_dsid(parts[0], dsc)
-
-        ds_vars[parts[0]] = varnames
-
-    return ds_vars
-
-def _parse_coords_list(coords_str):
-    """
-    Parses a comma-separated list of coordinates.
-    """
-    if coords_str[0] != '(':
-        raise ValueError('Incorrect coordinate specification.')
-
-    coord_strs = coords_str.split('),')
-    coord_strs = [c[1:] for c in coord_strs]
-    # Remove the trailing ')' from the last coordinate string.
-    if coord_strs[-1][-1] == ')':
-        coord_strs[-1] = coord_strs[-1][:-1]
-    else:
-        raise ValueError('Incorrect coordinate specification.')
-
-    coords = []
-    for coord_str in coord_strs:
-        parts = coord_str.split(',')
-
-        try:
-            parts = [float(part) for part in parts]
-        except:
-            raise ValueError('Incorrect coordinate specification.')
-
-        coords.append(parts)
-
-    return coords
-
-def _parse_clip_bounds(
-    clip: str = Query(
-        None, title='Clip boundary', description='Specifies the clip boundary '
-        'for the subset operation.  The boundary can be specified in one of '
-        'two ways: 1) The upper left and lower right corners of a '
-        'bounding box for subsetting the data, specifed as a comma-separated '
-        'list of the form "(UPPER_LEFT_X,UPPER_LEFT_Y),'
-        '(LOWER_RIGHT_X,LOWER_RIGHT_Y)."; 2) A comma-separated '
-        'list of coordinates defining the vertices of a clip polygon as in '
-        '"(X1,Y1),(X2,Y2)...".'
-    )
-):
-    """
-    Parses a clip boundary specification.
-    """
-    if clip is None:
-        return None
-
-    try:
-        coords = _parse_coords_list(clip)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    if len(coords) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail='Invalid clip geometry specification.'
-        )
-
-    if len(coords) == 2:
-        # Interpret 2 coordinates as the top left and lower right corners
-        # of a bounding box.
-        clip_coords = [
-            # Top left.
-            [coords[0][0], coords[0][1]],
-            # Top right.
-            [coords[1][0], coords[0][1]],
-            # Bottom right.
-            [coords[1][0], coords[1][1]],
-            # Bottom left.
-            [coords[0][0], coords[1][1]],
-            # Top left.
-            [coords[0][0], coords[0][1]]
-        ]
-    else:
-        # Interpret more than 2 coordinates as the vertices of a polygon.
-        # Close the polygon, if needed.
-        if coords[0] != coords[-1]:
-            coords.append(coords[0])
-
-        clip_coords = coords
-
-    return clip_coords
-
-def _parse_points(
-    points: str = Query(
-        ..., title='Point Extraction', description='The x and y coordinates '
-        'of point locations for extracting from the data, specified '
-        'as x1,y1;x2,y2;... If no point coordinates are specified, the full '
-        'spatial extent will be returned. If both bbox and points are '
-        'specified, the bbox will be used. Coordinates are assumed to match '
-        'the target CRS or the CRS of the first requested dataset if no '
-        'target CRS is specified.'
-    )
-):
-    """
-    Parses comma-separated rectangular bounding box coordinates.
-    """
-    if points is None:
-        return None
-
-    pt_coords = []
-    for pt in points.split(';'):
-        parts = pt.split(',')
-        if len(parts) != 2:
-            raise HTTPException(
-                status_code=400,
-                detail='Incorrect point coordinate specification.'
-            )
-
-        try:
-            parts = [float(part) for part in parts]
-        except:
-            raise HTTPException(
-                status_code=400,
-                detail='Incorrect point coordinate specification.'
-            )
-
-        pt_coords.append(parts)
-
-    return pt_coords
-
-def _get_request_metadata(req):
-    """
-    Generates a dictionary of basic metadata for an API request.
-    """
-    req_md = {
-        'url': str(req.url),
-        'datetime': datetime.now(timezone.utc).isoformat()
-    }
-
-    return req_md
 
 
 app = FastAPI(
@@ -219,7 +49,10 @@ async def ds_info(
         ..., alias='id', title='Dataset ID', description='The ID of a dataset.'
     )
 ):
-    _check_dsid(dsid, dsc)
+    if dsid not in dsc:
+        raise HTTPException(
+            status_code=404, detail=f'Invalid dataset ID: {dsid}'
+        )
 
     return dsc[dsid].getMetadata()
 
@@ -231,7 +64,12 @@ async def ds_info(
 )
 async def subset_polygon(
     req: Request,
-    datasets: str = Depends(_parse_datasets),
+    datasets: str = Query(
+        ..., title='Datasets and variables', description='The datasets and '
+        'variables to include, specified as '
+        '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...]. '
+        'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
+    ),
     date_start: str = Query(
         None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
@@ -246,7 +84,7 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    clip: list = Depends(_parse_clip_bounds),
+    clip: list = Depends(parse_clip_bounds),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -268,7 +106,7 @@ async def subset_polygon(
         'and/or spatial resolution are provided. '
     )
 ):
-    req_md = _get_request_metadata(req)
+    req_md = get_request_metadata(req)
 
     # For complete information about all accepted crs_str formats, see the
     # documentation for the CRS constructor:
@@ -277,6 +115,11 @@ async def subset_polygon(
     # CRS strings.  The documentation for proj_create() provides more
     # information about accepted strings:
     # https://proj.org/development/reference/functions.html#c.proj_create.
+
+    try:
+        datasets = parse_datasets_str(datasets, dsc)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if crs is None:
         # Use the CRS of the first dataset in the request as the target CRS if
@@ -308,7 +151,12 @@ async def subset_polygon(
 )
 async def subset_points(
     req: Request,
-    datasets: str = Depends(_parse_datasets),
+    datasets: str = Query(
+        ..., title='Datasets and variables', description='The datasets and '
+        'variables to include, specified as '
+        '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...]. '
+        'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
+    ),
     date_start: str = Query(
         None, title='Start date (inclusive)', description='The starting date '
         'for which to request data. Dates must be specified as strings, where '
@@ -323,7 +171,7 @@ async def subset_points(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    points: list = Depends(_parse_points),
+    points: list = Depends(parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -336,7 +184,7 @@ async def subset_points(
         '"nearest".'
     )
 ):
-    req_md = _get_request_metadata(req)
+    req_md = get_request_metadata(req)
 
     # For complete information about all accepted crs_str formats, see the
     # documentation for the CRS constructor:
@@ -345,6 +193,11 @@ async def subset_points(
     # CRS strings.  The documentation for proj_create() provides more
     # information about accepted strings:
     # https://proj.org/development/reference/functions.html#c.proj_create.
+
+    try:
+        datasets = parse_datasets_str(datasets, dsc)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if crs is None:
         # Use the CRS of the first dataset in the request as the target CRS if
