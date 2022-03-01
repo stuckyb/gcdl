@@ -14,11 +14,11 @@ from api_core.helpers import (
 )
 
 
-dsc = DatasetCatalog('local_data')
+dsc = DatasetCatalog('../local_data')
 dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI)
 
 # Directory for serving output files.
-output_dir = Path('output')
+output_dir = Path('../output')
 
 
 app = FastAPI(

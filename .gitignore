@@ -9,8 +9,8 @@ __pycache__/
 .DS_Store
 
 # Data input/output folders for testing
-src/local_data/*
-src/output/*
+local_data/*
+output/*
 
 # Rendered tutorials
 documentation/tutorials/*.html
