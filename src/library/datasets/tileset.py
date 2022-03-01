@@ -77,6 +77,7 @@ class TileSet:
         subset_geom: An instance of SubsetGeom.
         """
         fpaths = self.getTilePaths(subset_geom)
+        print(fpaths)
         tiles = []
         
         for fpath in fpaths:
@@ -87,7 +88,19 @@ class TileSet:
                 f'Expected xarray.DataArray; instead got {type(tiles[0])}.'
             )
 
-        mosaic = merge.merge_arrays(tiles)
+        inter_merged = []
+        i = 0
+        while i < len(tiles):
+            j = i + 4
+            if j > len(tiles):
+                j = len(tiles)
+
+            print(i, j)
+            inter_merged.append(merge.merge_arrays(tiles[i:j]))
+
+            i += 4
+
+        mosaic = merge.merge_arrays(inter_merged)
 
         return mosaic
 

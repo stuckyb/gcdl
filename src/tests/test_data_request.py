@@ -2,8 +2,7 @@
 import unittest
 import geojson
 import pyproj
-import data_request
-from data_request import RequestDate as RD, DataRequest
+from api_core import data_request, RequestDate as RD, DataRequest
 from library.catalog import DatasetCatalog
 
 

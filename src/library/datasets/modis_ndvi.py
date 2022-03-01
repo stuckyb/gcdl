@@ -5,7 +5,7 @@ import datetime
 import rioxarray
 import xarray as xr
 from pydap.client import open_url
-import data_request as dr
+import api_core.data_request as dr
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 

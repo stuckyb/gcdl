@@ -3,7 +3,7 @@ from .gsdataset import GSDataSet
 from pyproj.crs import CRS
 import datetime
 import rioxarray
-import data_request as dr
+import api_core.data_request as dr
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 

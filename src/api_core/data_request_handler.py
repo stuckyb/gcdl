@@ -3,7 +3,7 @@ import random
 import zipfile
 import json
 from rasterio.enums import Resampling
-import data_request as dr
+import api_core.data_request as dr
 import geopandas as gpd
 
 

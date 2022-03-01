@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 import pyproj
 from subset_geom import SubsetPolygon, SubsetMultiPoint
-from data_request import DataRequest, REQ_RASTER, REQ_POINT
-from data_request_handler import DataRequestHandler
+from api_core import DataRequest, REQ_RASTER, REQ_POINT
+from api_core import DataRequestHandler
 
 
 dsc = DatasetCatalog('local_data')
