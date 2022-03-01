@@ -7,7 +7,7 @@ import api_core.data_request as dr
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 
 
-class DAYMET(GSDataSet):
+class DaymetV4(GSDataSet):
     def __init__(self, store_path):
         """
         store_path (Path): The location of on-disk dataset storage.
