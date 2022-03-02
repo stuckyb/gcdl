@@ -15,6 +15,15 @@
 1. API documentation will be available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
 
+## Running the GeoCDL as a Docker container
+
+1. First, build the Docker image.  From the main repo directory, run `docker build -t geocdl[:tag] .`.
+2. Next, run the GeoCDL in a Docker container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
+    ```
+    docker run --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro --mount type=bind,src=/path/to/output,dst=/geocdl/output --network host geocdl
+    ```
+
+
 ## Using the GeoCDL
 
 Results for different combinations of optional spatial parameters (output structure column is hypothetical at the moment):
