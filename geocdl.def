@@ -1,0 +1,15 @@
+
+Bootstrap: docker
+From: python:3.9-slim
+
+%files
+  requirements.txt /geocdl/
+  src /geocdl/
+
+%post
+  pip install -r /geocdl/requirements.txt
+
+%runscript
+  cd /geocdl/src
+  uvicorn api_main:app
+

@@ -15,10 +15,19 @@
 1. API documentation will be available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
 
-## Running the GeoCDL as a Docker container
+## Running the GeoCDL in a Singularity container
+
+1. First, build the Singularity image.  From the main repo directory, run `sudo singularity build geocdl.sif geocdl.def` or, if you do not have root privilegs, `sudo singularity build --fakeroot geocdl.sif geocdl.def`.
+1. Next, run the GeoCDL in a Singularity container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
+    ```
+    singularity run --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro --mount type=bind,src=/path/to/output,dst=/geocdl/output geocdl.sif
+    ```
+
+
+## Running the GeoCDL in a Docker container
 
 1. First, build the Docker image.  From the main repo directory, run `docker build -t geocdl[:tag] .`.
-2. Next, run the GeoCDL in a Docker container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
+1. Next, run the GeoCDL in a Docker container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
     ```
     docker run --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro --mount type=bind,src=/path/to/output,dst=/geocdl/output --network host geocdl
     ```
