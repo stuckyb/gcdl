@@ -30,7 +30,7 @@ This tutorial covers the SCINet Geospatial Common Data Library (GeoCDL), a commu
 
 ![GeoCDL basic architecture. This tutorial covers how to access the central Web API with R. ](../basic_architecture.png){width=100%}
 
-This example covers the pilot features implemented in the GeoCDL web API v0.1.0. This tutorial assumes you are either on CERES or on a local machine connected to the [SCINet VPN](https://scinet.usda.gov/guide/vpn). For more details on the development of the web API, see [https://github.com/USDA-SCINet/geocdl/](https://github.com/USDA-SCINet/geocdl/) (request access from brian.stucky@usda.gov).
+This example covers the pilot features implemented in the GeoCDL web API v0.1.0. The tutorial assumes you are either on CERES or a local machine connected to the [SCINet VPN](https://scinet.usda.gov/guide/vpn). For more details on the development of the web API, see [https://github.com/USDA-SCINet/geocdl/](https://github.com/USDA-SCINet/geocdl/) (request access from brian.stucky@usda.gov).
 
 To learn more about the `R` package `rgcdl` in development to streamline these requests, see [https://github.com/USDA-SCINet/rgcdl/](https://github.com/USDA-SCINet/rgcdl/)
 
@@ -44,6 +44,7 @@ To learn more about the `R` package `rgcdl` in development to streamline these r
 |:--|:--|:--|
 | raster | Geographic Data Analysis and Modeling | https://cran.r-project.org/web/packages/raster/index.html |
 | sf | Simple Features for R | https://cran.r-project.org/web/packages/sf/index.html |
+| jsonlite | jsonlite: A Simple and Robust JSON Parser and Generator for R | https://cran.r-project.org/web/packages/jsonlite/index.html |
 
 ## Nomenclature
 
@@ -56,7 +57,7 @@ To learn more about the `R` package `rgcdl` in development to streamline these r
 
 * Data: MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015
 * Link: [https://doi.org/10.3334/ORNLDAAC/1299](https://doi.org/10.3334/ORNLDAAC/1299)
-* Other Details: This dataset is acquired via the GeoCDL. It is 70.8 GB, but the GeoCDL leverages data access protocols to access the dataset remotely from online servers, use server-side functions for spatial and temporal filtering, and download the user requested subset of data. 
+* Other Details: This dataset is acquired via the GeoCDL. It is 70.8 GB, but the GeoCDL leverages data access protocols to access the dataset remotely from online servers, use server-side functions for basic spatial and temporal filtering, and download the user's requested subset of data. 
 
 
 * Repository: < Link to Repository >
@@ -64,18 +65,17 @@ To learn more about the `R` package `rgcdl` in development to streamline these r
 * Link: < Link to the dataset >
 * Other Details: < other >
 
-## Analysis Steps
+## Tutorial Steps
 
-* Specify desired data - Dataset, variables, temporal coverage, spatial coverage, spatial resolution, and CRS.
-* Title… - desc….
-  * desc..
-  * desc..
-  * desc..
-* Title… - desc…. - desc….
+* Specify desired data - Define the spatiotemporal scope of the user request:
+  * Dataset and variables
+  * Temporal coverage 
+  * Spatial coverage, spatial resolution, and CRS
+* Build GeoCDL query - desc….
+* Download requested data - desc….
+* Visualize results - desc...
 
 ## Step 0: Import Libraries/Packages
-
-**Will we have our R/python packages installed on CERES/ATLAS?**
 
 ```{r libraries, message=FALSE, warning=FALSE}
 library(raster)
@@ -90,8 +90,14 @@ library(ggthemes)
 The GeoCDL Web API lives on a CERES service node that can be accessed by ... It has multiple endpoints, each of which will be showcased below. 
 
 ```{r step1}
-# Current location during testing:
+# Web API address
 gcdl_url <- 'http://127.0.0.1:8000/'
+
+# Subset polygon endpoint: for requesting gridded data within an area
+polygon_ep <- 'subset_polygon/'
+
+# Point subset endpoint: for requesting point data
+point_ep <- 'subset_point/'
 
 ```
 
@@ -100,11 +106,11 @@ gcdl_url <- 'http://127.0.0.1:8000/'
 
 We will focus on the USDA-ARS Jornada Experimental Range in southern New Mexico. We will showcase returning both gridded data overlapping the site and point data at experiment locations within it. To specify these areas, we will read in a shapefile of the site boundary and a shapefile of experiment locations. These shapefiles are in UTM 13N CRS. The package `sf` is used to read in the shapefiles and extract the necessary information for GeoCDL. 
 
-First, we will retrieve the bounding box around the site with the function `st_bbox`. Currently, GeoCDL v0.1.0 only supports bounding boxes for areas of interest. The expected format is `xmin,ymax,xmax,ymin`, so we will rearrange `st_bbox`'s returned value into that order and collapse the vector into a string.
+First, we will retrieve the bounding box around the site with the function `st_bbox`. Currently, GeoCDL v0.1.0 only supports bounding boxes for areas of interest [not true anymore! show both? at leasst text general polygon]. The expected format is `xmin,ymax,xmax,ymin` [still true?], so we will rearrange `st_bbox`'s returned value into that order and collapse the vector into a string.
 
-Next, we will extract the CRS information so we can tell GeoCDL the CRS of our area of interest. GeoCDL v0.1.0 only accepts EPSG codes. The output of `st_crs` contains this information. 
+Next, we will extract the CRS information so we can tell GeoCDL the CRS of our area of interest. GeoCDL v0.1.0 only accepts EPSG codes [not true anymore!]. The output of `st_crs` contains this information. 
 
-For this example, we will request all months from 2000-2010. Since this data is monthly, we will format it in GeoCDL's expected monthly format of 'YYYY-MM'.  
+For this example, we will request all data from 2000-2010. Since this data is monthly, we will format it in GeoCDL's expected monthly format of 'YYYY-MM'.  
 
 ```{r step2}
 # Read in Jornada boundary shapefile and format bounding box for GeoCDL
@@ -127,13 +133,14 @@ end_month = '2019-08'    ## testing locally
 
 ## Step 3: Select datasets and their variables
 
-We can see that our MODIS NDVI dataset has a ... CRS, different from our area of interest objects. 
+The GeoCDL can be queried to return the currently available datasets and their metadata. We will be using the MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015 data product which is stored under the ID *MODIS_NDVI*.
+We can see from its metadata that this dataset has a ... CRS, different from our area of interest objects. The GeoCDL will accommodate the discrepancy. The metadata also indicates that there is just one variable: NDVI. We will format the dataset and variable list in the expected format of `DATASET_ID:VARNAME[,VARNAME...]`.
 
 ```{r step3}
 # 1, Query the GeoCDL to list all datasets
 all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets')))
 all_datasets
-my_ds <- 'PRISM' # not really, MODIS product once it's supported
+my_ds <- 'PRISM' # not really, MODIS_NDVI product once it's supported
 
 # 2. View a dataset's metadata
 fromJSON(url(paste0(gcdl_url,'ds_info?id=',my_ds)))
@@ -142,10 +149,11 @@ my_vars <- c('ppt') # to be NDVI
 # 3. Format dataset and variable
 dv_str <- paste0(my_ds,':',paste(my_vars,collapse = ','))
 
-
 ```
 
 ## Step 4: Build and submit request to GeoCDL
+
+Now that we've defined and formatted the pieces of the request, we can merge them into a request URL to communicate with the GeoCDL. The `download.file` function accepts this kind of URL and downloads the returned file to the specified path. GeoCDL returns a zipped folder of the requested data plus a metadata file. 
 
 ```{r step4}
 #  Prepare query
