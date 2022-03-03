@@ -22,9 +22,9 @@
     ```
     sudo singularity build geocdl.sif geocdl.def
     ```
-    or, if you do not have root privileges:
+    or, if you do not have root privileges,
     ```
-    singularity build --fakeroot geocdl.sif geocdl.def`
+    singularity build --fakeroot geocdl.sif geocdl.def
     ```
 1. Run the GeoCDL in a Singularity container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
     ```
