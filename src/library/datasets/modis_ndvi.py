@@ -49,6 +49,39 @@ class MODIS_NDVI(GSDataSet):
             'NDVI': 'MCD13.A{0}.unaccum.nc4'
         }
 
+        # Attributes for caching loaded and subsetted data.
+        self.data_loaded = None
+        self.cur_data = None
+
+    def _loadData(self, varname, date_grain, request_date):
+        """
+        Opens remote data store, if needed.  Will re-use already opened 
+        data store whenever possible.
+        """
+        # Get the file name of the requested data.
+        if date_grain == dr.ANNUAL:
+            raise NotImplementedError()
+        elif date_grain == dr.MONTHLY:
+            raise NotImplementedError()
+        elif date_grain == dr.DAILY:
+            fname = self.fpatterns[varname].format(request_date.year)
+        else:
+            raise ValueError('Invalid date grain specification.')
+
+        # Open the data store, if needed.
+        data_needed = (fname, varname)
+        if data_needed != self.data_loaded:
+            fpath = 'https://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1299/' + fname
+            data_store = open_url(fpath)
+            data = xr.open_dataset(xr.backends.PydapDataStore(data_store), decode_coords="all")
+
+            # Update the cache.
+            self.data_loaded = data_needed
+            self.cur_data = data
+
+        # Return the cached data. 
+        return self.cur_data
+
     def getData(
         self, varname, date_grain, request_date, ri_method, subset_geom=None
     ):
@@ -61,39 +94,26 @@ class MODIS_NDVI(GSDataSet):
         subset_geom: An instance of SubsetGeom.  If the CRS does not match the
             dataset, an exception is raised.
         """
-
-        # Get the path to the required data file.
-        if date_grain == dr.ANNUAL:
-            raise NotImplementedError()
-        elif date_grain == dr.MONTHLY:
-            raise NotImplementedError()
-        elif date_grain == dr.DAILY:
-            fname = self.fpatterns[varname].format(request_date.year)
-        else:
-            raise ValueError('Invalid date grain specification.')
-
-        #fpath = self.ds_path + fname
-        fpath = 'https://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1299/' + fname
-
-        data_store = open_url(fpath) 
-        data = xr.open_dataset(xr.backends.PydapDataStore(data_store), decode_coords="all")
-
-
         if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
             raise ValueError(
                 'Subset geometry CRS does not match dataset CRS.'
             )
 
+        data = self._loadData(varname, date_grain, request_date)
+
         # Limit download to bbox around user geom
         sg_bounds = subset_geom.geom.bounds
-        request_date = '{0}-{1:02d}-{2:02d}'.format(request_date.year,request_date.month,request_date.day)
+        req_date = '{0}-{1:02d}-{2:02d}'.format(request_date.year,request_date.month,request_date.day)
         data = data[varname].sel(
             x = slice(sg_bounds.minx[0],sg_bounds.maxx[0]), 
             y = slice(sg_bounds.miny[0],sg_bounds.maxy[0]),
-            time = slice(request_date,request_date)
+            time = slice(req_date,req_date)
         )
 
+
         if isinstance(subset_geom, SubsetPolygon):
+            # Clipping to user geometry here since only sliced to bounding
+            # box during download
             data = data.rio.clip([subset_geom.json])
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
