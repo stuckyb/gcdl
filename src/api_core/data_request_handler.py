@@ -74,27 +74,30 @@ class DataRequestHandler:
             varname, request.date_grain, rdate, request.ri_method, subset_geom
         )
 
-        # Reproject to the target resolution, target projection, or both, if
-        # needed.
-        if (
-            not(request.target_crs.equals(dataset.crs)) or
-            request.target_resolution is not None
-        ):
-            data = data.rio.reproject(
-                dst_crs=request.target_crs,
-                resampling=Resampling[request.ri_method],
-                resolution=request.target_resolution
+        if data is not None:
+            # Reproject to the target resolution, target projection, or both, if
+            # needed.
+            if (
+                not(request.target_crs.equals(dataset.crs)) or
+                request.target_resolution is not None
+            ):
+                data = data.rio.reproject(
+                    dst_crs=request.target_crs,
+                    resampling=Resampling[request.ri_method],
+                    resolution=request.target_resolution
+                )
+
+            # Output the result.
+            fout_path = (
+                output_dir / (self._getSingleLayerOutputFileName(
+                    dataset.id, varname, request.date_grain, rdate
+                ) + '.tif')
             )
+            data.rio.to_raster(fout_path)
 
-        # Output the result.
-        fout_path = (
-            output_dir / (self._getSingleLayerOutputFileName(
-                dataset.id, varname, request.date_grain, rdate
-            ) + '.tif')
-        )
-        data.rio.to_raster(fout_path)
-
-        return fout_path
+            return fout_path
+        else:
+            return None
 
     def fulfillRequestSynchronous(self, request, output_dir):
         """
@@ -131,15 +134,23 @@ class DataRequestHandler:
             for varname in request.dsvars[dsid]:
                 for rdate in date_list:
                     if request.request_type == dr.REQ_RASTER:
-                        fout_paths.append(self._getRasterLayer(
+                        raster_layer = self._getRasterLayer(
                             dsc[dsid], varname, rdate, ds_subset_geoms[dsid],
                             request, output_dir
-                        ))
+                        )
+                        # Check if data returned
+                        # (sparse daily data not always returned)
+                        if raster_layer is not None:
+                            fout_paths.append(raster_layer)
                     elif request.request_type == dr.REQ_POINT:
-                        fout_paths.append(self._getPointLayer(
+                        point_layer = self._getPointLayer(
                             dsc[dsid], varname, rdate, ds_subset_geoms[dsid],
                             request, output_dir
-                        ))
+                        )
+                        # Check if data returned
+                        # (sparse daily data not always returned)
+                        if point_layer is not None:
+                            fout_paths.append(point_layer)
                     else:
                         raise ValueError('Unsupported request type.')
 

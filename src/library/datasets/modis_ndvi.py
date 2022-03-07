@@ -52,6 +52,7 @@ class MODIS_NDVI(GSDataSet):
         # Attributes for caching loaded and subsetted data.
         self.data_loaded = None
         self.cur_data = None
+        self.cur_dates = None
 
     def _loadData(self, varname, date_grain, request_date):
         """
@@ -78,6 +79,7 @@ class MODIS_NDVI(GSDataSet):
             # Update the cache.
             self.data_loaded = data_needed
             self.cur_data = data
+            self.cur_dates = [str(d) for d in data.coords["time"].values.astype('datetime64[D]')]
 
         # Return the cached data. 
         return self.cur_data
@@ -101,30 +103,34 @@ class MODIS_NDVI(GSDataSet):
 
         data = self._loadData(varname, date_grain, request_date)
 
-        # Limit download to bbox around user geom
-        sg_bounds = subset_geom.geom.bounds
+        # Check if date is in data's sparse dates
         req_date = '{0}-{1:02d}-{2:02d}'.format(request_date.year,request_date.month,request_date.day)
-        data = data[varname].sel(
-            x = slice(sg_bounds.minx[0],sg_bounds.maxx[0]), 
-            y = slice(sg_bounds.miny[0],sg_bounds.maxy[0]),
-            time = slice(req_date,req_date)
-        )
+        if req_date in self.cur_dates:
 
-
-        if isinstance(subset_geom, SubsetPolygon):
-            # Clipping to user geometry here since only sliced to bounding
-            # box during download
-            data = data.rio.clip([subset_geom.json])
-        elif isinstance(subset_geom, SubsetMultiPoint):
-            # Interpolate all (x,y) points in the subset geometry.  For more
-            # information about how/why this works, see
-            # https://xarray.pydata.org/en/stable/user-guide/interpolation.html#advanced-interpolation.
-            res = data.interp(
-                x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
-                method=ri_method
+            # Limit download to bbox around user geom and rquseted date
+            sg_bounds = subset_geom.geom.bounds
+            data = data[varname].sel(
+                x = slice(sg_bounds.minx[0],sg_bounds.maxx[0]), 
+                y = slice(sg_bounds.miny[0],sg_bounds.maxy[0]),
+                time = slice(req_date,req_date)
             )
-            data = res.values[0]
 
-        return data
+            if isinstance(subset_geom, SubsetPolygon):
+                # Clipping to user geometry here since only sliced to bounding
+                # box during download
+                data = data.rio.clip([subset_geom.json])
+            elif isinstance(subset_geom, SubsetMultiPoint):
+                # Interpolate all (x,y) points in the subset geometry.  For more
+                # information about how/why this works, see
+                # https://xarray.pydata.org/en/stable/user-guide/interpolation.html#advanced-interpolation.
+                res = data.interp(
+                    x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
+                    method=ri_method
+                )
+                data = res.values[0]
+
+            return data
+        else:
+            return None
 
 
