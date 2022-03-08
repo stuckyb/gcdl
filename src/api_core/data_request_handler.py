@@ -56,15 +56,19 @@ class DataRequestHandler:
             varname, request.date_grain, rdate, request.ri_method, subset_geom
         )
 
-        # Output the result.
-        fout_path = (
-            output_dir / (self._getSingleLayerOutputFileName(
-                dataset.id, varname, request.date_grain, rdate
-            ) + '.csv')
-        )
-        out_df.assign(value=data).to_csv(fout_path, index=False)
+        if data is not None:
 
-        return fout_path
+            # Output the result.
+            fout_path = (
+                output_dir / (self._getSingleLayerOutputFileName(
+                    dataset.id, varname, request.date_grain, rdate
+                ) + '.csv')
+            )
+            out_df.assign(value=data).to_csv(fout_path, index=False)
+
+            return fout_path
+        else:
+            return None
 
     def _getRasterLayer(
         self, dataset, varname, rdate, subset_geom, request, output_dir
