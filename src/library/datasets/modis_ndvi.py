@@ -120,7 +120,7 @@ class MODIS_NDVI(GSDataSet):
             if isinstance(subset_geom, SubsetPolygon):
                 # Clipping to user geometry here since only sliced to bounding
                 # box during download
-                data = data.rio.clip([subset_geom.json])
+                data = data.rio.clip([subset_geom.json], all_touched = True)
             elif isinstance(subset_geom, SubsetMultiPoint):
                 # Interpolate all (x,y) points in the subset geometry.  For more
                 # information about how/why this works, see

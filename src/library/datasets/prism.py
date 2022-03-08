@@ -81,7 +81,7 @@ class PRISM(GSDataSet):
             )
 
         if isinstance(subset_geom, SubsetPolygon):
-            data = data.rio.clip([subset_geom.json])
+            data = data.rio.clip([subset_geom.json], all_touched = True)
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
             # information about how/why this works, see

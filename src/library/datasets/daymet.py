@@ -96,7 +96,10 @@ class DaymetV4(GSDataSet):
             # would in theory be faster but less flexible.
             if subset_geom != self.current_clip:
                 # Clip the data and update the cache.
-                self.cur_data_clipped = data.rio.clip([subset_geom.json])
+                self.cur_data_clipped = data.rio.clip(
+                    [subset_geom.json], 
+                    all_touched = True
+                )
                 self.current_clip = subset_geom
 
             # Return the cached, subsetted data.
