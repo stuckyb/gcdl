@@ -70,11 +70,13 @@ class MODIS_NDVI(GSDataSet):
             raise ValueError('Invalid date grain specification.')
 
         # Open the data store, if needed.
-        data_needed = (fname, varname)
+        data_needed = fname
         if data_needed != self.data_loaded:
             fpath = 'https://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1299/' + fname
             data_store = open_url(fpath)
             data = xr.open_dataset(xr.backends.PydapDataStore(data_store), decode_coords="all")
+            data = data.rio.write_crs("EPSG:2163") ## DATUM ISSUE IN WKT
+            data = data.drop("lat").drop("lon") ## AUXILLARY COORDS?
 
             # Update the cache.
             self.data_loaded = data_needed
@@ -108,11 +110,11 @@ class MODIS_NDVI(GSDataSet):
         if req_date in self.cur_dates:
 
             # Limit download to bbox around user geom and rquseted date
-            sg_bounds = subset_geom.geom.bounds
+            sg_bounds = subset_geom.geom.total_bounds
             data = data[varname].sel(
-                x = slice(sg_bounds.minx[0],sg_bounds.maxx[0]), 
-                y = slice(sg_bounds.miny[0],sg_bounds.maxy[0]),
-                time = slice(req_date,req_date)
+                x = slice(sg_bounds[0],sg_bounds[2]), 
+                y = slice(sg_bounds[1],sg_bounds[3]),
+                time = req_date
             )
 
             if isinstance(subset_geom, SubsetPolygon):
