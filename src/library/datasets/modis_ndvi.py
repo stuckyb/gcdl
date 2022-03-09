@@ -22,7 +22,7 @@ class MODIS_NDVI(GSDataSet):
         self.url = 'https://doi.org/10.3334/ORNLDAAC/1299'
 
         # CRS information.
-        self.crs = CRS.from_epsg(2163)
+        self.crs = CRS.from_proj4('+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +ellps=sphere +units=m +no_defs +type=crs')
 
         # The grid size
         self.grid_size = 250
@@ -75,7 +75,7 @@ class MODIS_NDVI(GSDataSet):
             fpath = 'https://thredds.daac.ornl.gov/thredds/dodsC/ornldaac/1299/' + fname
             data_store = open_url(fpath)
             data = xr.open_dataset(xr.backends.PydapDataStore(data_store), decode_coords="all")
-            data = data.rio.write_crs("EPSG:2163") ## DATUM ISSUE IN WKT
+            data = data.rio.write_crs("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +ellps=sphere +units=m +no_defs +type=crs") ## DATUM ISSUE IN WKT
             data = data.drop("lat").drop("lon") ## AUXILLARY COORDS?
 
             # Update the cache.
@@ -109,7 +109,7 @@ class MODIS_NDVI(GSDataSet):
         req_date = '{0}-{1:02d}-{2:02d}'.format(request_date.year,request_date.month,request_date.day)
         if req_date in self.cur_dates:
 
-            # Limit download to bbox around user geom and rquseted date
+            # Limit download to bbox around user geom and requested date
             sg_bounds = subset_geom.geom.total_bounds
             data = data[varname].sel(
                 x = slice(sg_bounds[0],sg_bounds[2]), 
@@ -117,11 +117,7 @@ class MODIS_NDVI(GSDataSet):
                 time = req_date
             )
 
-            if isinstance(subset_geom, SubsetPolygon):
-                # Clipping to user geometry here since only sliced to bounding
-                # box during download
-                data = data.rio.clip([subset_geom.json], all_touched = True)
-            elif isinstance(subset_geom, SubsetMultiPoint):
+            if isinstance(subset_geom, SubsetMultiPoint):
                 # Interpolate all (x,y) points in the subset geometry.  For more
                 # information about how/why this works, see
                 # https://xarray.pydata.org/en/stable/user-guide/interpolation.html#advanced-interpolation.
