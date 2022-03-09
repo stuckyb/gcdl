@@ -19,7 +19,7 @@ header:
 ---
 --> 
 
-**Last Update:** 09 February 2022 <br />
+**Last Update:** 09 March 2022 <br />
 **Download RMarkdown**: [R_GCDL_pilot_tutorial.Rmd](https://geospatial.101workbook.org/tutorials/R_GCDL_pilot_tutorial.Rmd)
 
 <!-- ToDo: would be great to have an R binder badge here -->
@@ -94,10 +94,10 @@ The GeoCDL Web API lives on a CERES service node that can be accessed by ... It 
 gcdl_url <- 'http://127.0.0.1:8000/'
 
 # Subset polygon endpoint: for requesting gridded data within an area
-polygon_ep <- 'subset_polygon/'
+polygon_ep <- 'subset_polygon'
 
 # Point subset endpoint: for requesting point data
-point_ep <- 'subset_point/'
+points_ep <- 'subset_points'
 
 ```
 
@@ -110,23 +110,47 @@ First, we will retrieve the bounding box around the site with the function `st_b
 
 Next, we will extract the CRS information so we can tell GeoCDL the CRS of our area of interest. GeoCDL v0.1.0 only accepts EPSG codes [not true anymore!]. The output of `st_crs` contains this information. 
 
-For this example, we will request all data from 2000-2010. Since this data is monthly, we will format it in GeoCDL's expected monthly format of 'YYYY-MM'.  
+For this example, we will request all data from 2000-2010. *Elaborate here on formatting dates after Mar 9 meeting discussing date support*
 
-```{r step2}
+```{r step2, warning=FALSE}
 # Read in Jornada boundary shapefile and format bounding box for GeoCDL
-jer_bounds <- st_read('assets/R_GCDL_pilot_tutorial/Boundary.shp')  
+jer_bounds <- st_read('assets/R_GCDL_pilot_tutorial/Boundary.shp')
 jer_bbox <- st_bbox(jer_bounds) # returns c(xmin,ymin,xmax,ymax)
-bbox_str <- paste(jer_bbox[c(1,4,3,2)], collapse = ',')
+bbox_str <- paste0("(",jer_bbox[1],",",jer_bbox[4],"),(",jer_bbox[3],",",jer_bbox[2],")")
 
-# View CRS info
-st_crs(jer_bounds)
-# Extract EPSG code 
-jer_crs <- st_crs(jer_bounds)$input
+# Read in Jornada NPP locations shapefile and format coordinates for GeoCDL
+jer_pts <- st_read('assets/R_GCDL_pilot_tutorial/NPP_sites.shp') 
+pts_str <- jer_pts  %>% 
+  st_coordinates() %>% 
+  as_tibble() %>% 
+  mutate_all(~round(.,2)) %>% 
+  rowwise() %>% 
+  mutate(coord = paste0("(",X,",",Y,")")) %>% 
+  ungroup() %>% 
+  pull(coord) %>% 
+  paste0(collapse = ",")
+
+# Extract EPSG code (same for both shapefiles)
+jer_crs <- paste0('EPSG:',
+                  st_crs(jer_bounds)$input)
 
 
-# Date range
-start_month = '2019-06'  ## testing locally
-end_month = '2019-08'    ## testing locally
+# Date range for NDVI
+start_date <- '2008-07-01' 
+end_date <- '2008-08-31'  
+
+# Month range for PRISM
+start_month <- '2008-07'
+end_month <- '2008-08'
+
+# To comment on mixed date grain issue:
+# For me, one format I'd want is to be able to request monthly PRISM 
+# and sparse daily NDVI at the same time by
+# 1. monthly format meaning all NDVI dates in those months, or
+#     '2008-04' and '2008-07' would be interpreted as '2008-04-01' and '2008-07-31' for NDVI.
+# 2. daily format meaning all PRISM months covered by those dates, 
+#     '2008-04-15' and '2008-07-15' would be interpreted as '2008-04' and '2008-07' for PRISM.
+# Either have this in web API, or have packages submit request per date grain
 
 
 ```
@@ -138,13 +162,14 @@ We can see from its metadata that this dataset has a ... CRS, different from our
 
 ```{r step3}
 # 1, Query the GeoCDL to list all datasets
-all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets')))
+all_datasets <- fromJSON(url(paste0(gcdl_url,'list_datasets'))) %>%
+  as_tibble()
 all_datasets
-my_ds <- 'PRISM' # not really, MODIS_NDVI product once it's supported
+my_ds <- 'MODIS_NDVI'
 
 # 2. View a dataset's metadata
 fromJSON(url(paste0(gcdl_url,'ds_info?id=',my_ds)))
-my_vars <- c('ppt') # to be NDVI
+my_vars <- c('NDVI')
 
 # 3. Format dataset and variable
 dv_str <- paste0(my_ds,':',paste(my_vars,collapse = ','))
@@ -155,48 +180,114 @@ dv_str <- paste0(my_ds,':',paste(my_vars,collapse = ','))
 
 Now that we've defined and formatted the pieces of the request, we can merge them into a request URL to communicate with the GeoCDL. The `download.file` function accepts this kind of URL and downloads the returned file to the specified path. GeoCDL returns a zipped folder of the requested data plus a metadata file. 
 
-```{r step4}
-#  Prepare query
+```{r step4a}
+#  Prepare polygon query
 q_str <- paste0(gcdl_url,
-                'subset?',
+                polygon_ep,
+                '?',
                 paste0(
-                  'date_start=',start_month,
-                  '&date_end=',end_month,
+                  'date_start=',start_date,
+                  '&date_end=',end_date,
                   '&crs=',jer_crs,
                   '&datasets=',URLencode(dv_str, reserved = TRUE),
-                  '&bbox=',URLencode(bbox_str, reserved = TRUE)))  
+                  '&clip=',URLencode(bbox_str, reserved = TRUE)))  
 
 outpath <- 'assets/tmp'
+out_z <- paste0(outpath,'.zip')
 
-download.file(q_str, paste0(outpath,'.zip'))
-unzip('assets/tmp.zip')
+start_clock <- Sys.time()
+download.file(q_str, out_z)
+end_clock <- Sys.time()
 
-list.files(paste0(outpath,'.zip'))
+# How long did the download take?
+end_clock - start_clock
 
-
-
-
+unzip(out_z, exdir = paste0(outpath,"/"))
 ```
+
+
 
 ## Step 5: Read in and visualize results from GeoCDL
 
 ```{r step5, out.width="100%"}
 # Create a raster stack of returned GeoTIFFs
-prism_2019 <- list.files('assets/tmp','.tif',full.names = TRUE) %>%
+NDVI_2008 <- list.files(outpath,'NDVI[[:graph:]]*.tif',full.names = TRUE) %>%
   stack() 
 
-prism_2019 %>%
+NDVI_2008 %>%
   as.data.frame(xy = TRUE) %>%
-  pivot_longer(contains('PRISM'),
-               names_to = c(NA,'var','year','month'),
-               names_sep = c('[_.]')) %>%
+  pivot_longer(contains('NDVI'),
+               names_to = c(NA,NA,'var','date'),
+               names_sep = c('[_]'),
+               values_to = 'NDVI') %>%
   ggplot() +
-  geom_tile(aes(x,y,fill=value)) +
+  geom_raster(aes(x,y,fill=NDVI)) +
+  geom_sf(fill = NA,
+          color = 'red',
+          data=jer_bounds %>%
+            st_bbox() %>%
+            st_as_sfc()) +
   geom_sf(fill = NA,
           data=jer_bounds) +
-  facet_grid(var~month) +
-  scale_fill_distiller(palette = "Blues", direction = 1) +
-  theme_few(base_size = 8)
+  facet_wrap(~date,
+             ncol=4) +
+  scale_fill_gradientn(colors = rev(terrain.colors(8)),
+                       na.value = 'white') +
+  theme_few(base_size = 8) +
+  theme(legend.position = c(0.875,0.25),
+        axis.text = element_text(size = 4)) +
+  ylab(NULL) +
+  xlab(NULL)
 ```
+
+
+```{r step4b}
+#  Prepare point query
+q_str <- paste0(gcdl_url,
+                points_ep,
+                '?',
+                paste0(
+                  'date_start=',start_date,
+                  '&date_end=',end_date,
+                  '&crs=',jer_crs,
+                  '&datasets=',URLencode(dv_str, reserved = TRUE),
+                  '&points=',URLencode(pts_str, reserved = TRUE)))  
+
+outpath <- 'assets/tmp'
+out_z <- paste0(outpath,'.zip')
+
+start_clock <- Sys.time()
+download.file(q_str, out_z)
+end_clock <- Sys.time()
+
+# How long did the download take?
+end_clock - start_clock
+
+unzip(out_z)
+```
+
+```{r step5b, message=FALSE, warning=FALSE, out.width="100%"}
+# Create a raster stack of returned GeoTIFFs
+NDVI_2008_pts <- list.files('.','.csv',full.names = TRUE) %>%
+  sapply(list) %>%
+  map_dfr(read_csv, .id='filename') %>%
+  mutate(date = as.Date(str_extract(filename,'\\d{4}-\\d{2}-\\d{2}'))) %>%
+  rename(NDVI = value)
+
+NDVI_2008_pts %>%
+  ggplot(aes(date,NDVI)) +
+  geom_line(aes(group=paste(x,y)),
+            color = "gray50",
+            size = 0.25) +
+  geom_point(aes(color=NDVI),
+             size = 2) + 
+  scale_color_gradientn(colors = rev(terrain.colors(8)),
+                       na.value = 'white') +
+  theme_few(base_size = 8) +
+  theme(legend.position = c(0.1,0.8)) 
+```
+
+
+
 
 
