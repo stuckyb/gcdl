@@ -84,6 +84,13 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
+    strict_granularity: str = Query(
+        None, title='Require specified date grain.',
+        description='If a requested dataset should be returned even if the '
+        'dataset does not have data in the requested date grain. If False '
+        '(default), the next available date grain will be returned. '
+        'If True, datasets without the requested date grain will be skipped. ' 
+    ),
     clip: list = Depends(parse_clip_bounds),
     crs: str = Query(
         None, title='Target coordinate reference system.',
@@ -129,8 +136,9 @@ async def subset_polygon(
         clip_geom = SubsetPolygon(clip, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, clip_geom, target_crs,
-            resolution, resample_method, REQ_RASTER, req_md
+            dsc, datasets, date_start, date_end, strict_granularity, 
+            clip_geom, target_crs, resolution, resample_method, 
+            REQ_RASTER, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

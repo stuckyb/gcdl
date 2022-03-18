@@ -2,6 +2,11 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+# Date granularity constants.
+NONE = 0
+ANNUAL = 1
+MONTHLY = 2
+DAILY = 3
 
 def getCRSMetadata(crs):
     """
@@ -91,6 +96,26 @@ class GSDataSet(ABC):
                 no_dates = False
 
         return no_dates
+
+    @property
+    def supported_grains(self):
+        """
+        Lists supported date grains
+        """
+        grains = []
+
+        # Translate dataset grain to request grain format
+        ds_to_request = {
+            'year': ANNUAL,
+            'month': MONTHLY,
+            'day': DAILY
+        }
+
+        for grain, drange in self.date_ranges.items():
+            if drange[0] is not None or drange[1] is not None:
+                grains.append(ds_to_request[grain])
+
+        return grains
 
     def getMetadata(self):
         """

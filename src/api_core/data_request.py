@@ -35,8 +35,9 @@ class DataRequest:
     Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dataset_catalog, dsvars, date_start, date_end, subset_geom,
-        target_crs, target_resolution, ri_method, request_type, req_metadata
+        self, dataset_catalog, dsvars, date_start, date_end, strict_granularity, 
+        subset_geom, target_crs, target_resolution, ri_method, request_type, 
+        req_metadata
     ):
         """
         dataset_catalog: The DatasetCatalog associated with this request.
@@ -65,6 +66,7 @@ class DataRequest:
         self.subset_geom = subset_geom
         self.target_crs = target_crs
         self.target_resolution = target_resolution
+        self.strict_granularity = strict_granularity
 
         if request_type not in (REQ_RASTER, REQ_POINT):
             raise ValueError('Invalid request type.')
