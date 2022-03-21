@@ -6,6 +6,7 @@ from rasterio.enums import Resampling
 import api_core.data_request as dr
 import geopandas as gpd
 import datetime as dt
+import rioxarray
 
 
 # Characters for generating random file names.
@@ -71,7 +72,8 @@ class DataRequestHandler:
             return None
 
     def _getRasterLayer(
-        self, dataset, varname, grain, rdate, subset_geom, request, output_dir
+        self, dataset, varname, grain, rdate, subset_geom, request, output_dir,
+        target_path = None
     ):
         # Retrieve the (subsetted) data layer.
         data = dataset.getData(
@@ -85,11 +87,18 @@ class DataRequestHandler:
                 not(request.target_crs.equals(dataset.crs)) or
                 request.target_resolution is not None
             ):
-                data = data.rio.reproject(
-                    dst_crs=request.target_crs,
-                    resampling=Resampling[request.ri_method],
-                    resolution=request.target_resolution
-                )
+                # Check if we need to match a reprojection
+                if target_path is None:
+                    data = data.rio.reproject(
+                        dst_crs=request.target_crs,
+                        resampling=Resampling[request.ri_method],
+                        resolution=request.target_resolution
+                    )
+                else:
+                    #Inefficient - but testing if harmonization works for now
+                    target_layer = rioxarray.open_rasterio(target_path, masked=True)
+                    data = data.rio.reproject_match(target_layer)
+
                 # Clip to the non-modified requested geometry
                 data = data.rio.clip([request.subset_geom.json], all_touched = True)
 
@@ -143,14 +152,18 @@ class DataRequestHandler:
         # Get the requested data.
         fout_paths = []
 
+        # Check if there needs to be a target layer for harmonization
+        harmonization = False
+        target_path = None
+        if(request.target_resolution is not None and request.subset_geom is not None):
+            harmonization = True
+
         for dsid in request.dsvars:
             # If the dataset is non-temporal, we don't need to iterate over the
             # request dates.
             # If the request's date grain is available in the dataset,
             # use that date grain. Otherwise, use next closest date
             # grain, unless request includes strict granularity.
-
-            print(dsc[dsid].supported_grains)
 
             if dsc[dsid].nontemporal:
                 date_list = [None]
@@ -234,16 +247,15 @@ class DataRequestHandler:
                 else:
                     raise NotImplementedError()
 
-
-
-
             for varname in request.dsvars[dsid]:
                 for rdate in date_list:
                     if request.request_type == dr.REQ_RASTER:
                         raster_layer = self._getRasterLayer(
                             dsc[dsid], varname, ds_grain, rdate, ds_subset_geoms[dsid],
-                            request, output_dir
+                            request, output_dir, target_path
                         )
+                        if harmonization and target_path is None:
+                            target_path = raster_layer
                         # Check if data returned
                         # (sparse daily data not always returned)
                         if raster_layer is not None:
