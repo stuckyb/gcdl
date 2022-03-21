@@ -90,6 +90,8 @@ class DataRequestHandler:
                     resampling=Resampling[request.ri_method],
                     resolution=request.target_resolution
                 )
+                # Clip to the non-modified requested geometry
+                data = data.rio.clip([request.subset_geom.json], all_touched = True)
 
             # Output the result.
             fout_path = (
@@ -113,14 +115,28 @@ class DataRequestHandler:
         dsc = request.dsc
 
         # Build a set of subset geometries, reprojected as needed, that match
-        # the source dataset CRSs.  We precompute these to avoid redundant
-        # reprojections when processing the data retrievals.
+        # the source dataset CRSs. A buffer width of the coarsest grid size 
+        # is added to each to handle boundary discrepancies. We precompute 
+        # these geometries to avoid redundant reprojections when processing 
+        # the data retrievals.
+        if request.subset_geom.geom.crs.axis_info[0].unit_name == 'metre':
+            grid_sizes = [
+                dsc[dsid].grid_size if dsc[dsid].grid_unit == 'meters' 
+                else dsc[dsid].grid_size*111000 for dsid in request.dsvars
+            ]
+        else:
+            grid_sizes = [
+                dsc[dsid].grid_size/111000 if dsc[dsid].grid_unit == 'meters' 
+                else dsc[dsid].grid_size for dsid in request.dsvars
+            ]
+        buffered_rsg = request.subset_geom.buffer(max(grid_sizes))
+
         ds_subset_geoms = {}
         for dsid in request.dsvars:
             if request.subset_geom.crs.equals(dsc[dsid].crs):
-                ds_subset_geoms[dsid] = request.subset_geom
+                ds_subset_geoms[dsid] = buffered_rsg
             else:
-                ds_subset_geoms[dsid] = request.subset_geom.reproject(
+                ds_subset_geoms[dsid] = buffered_rsg.reproject(
                     dsc[dsid].crs
                 )
 

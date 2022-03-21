@@ -112,6 +112,17 @@ class SubsetGeom(ABC):
 
         return transformed_sg
 
+    def buffer(self, distance):
+        """
+        Returns a new SubsetGeom with an added buffer of consistent width in 
+        all directions. The source SubsetGeom is not modified.
+
+        distance: The buffer width in units of the source SubsetGeom's CRS.
+        """
+        buffered_sg = type(self)()
+        buffered_sg.geom = self.geom.buffer(distance)
+
+        return buffered_sg
 
 class SubsetPolygon(SubsetGeom):
     def __init__(self, geom_spec=None, crs_str=None):

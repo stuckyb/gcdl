@@ -22,8 +22,8 @@ class PRISM(GSDataSet):
         self.crs = CRS.from_epsg(4269)
 
         # The grid size.
-        self.grid_size = 4000
-        self.grid_unit = 'meters'
+        self.grid_size = 150.0 / 3600
+        self.grid_unit = 'degrees'
 
         # The variables/layers/bands in the dataset.
         self.vars = {
@@ -44,7 +44,7 @@ class PRISM(GSDataSet):
 
         # File name patterns for each PRISM variable.
         self.fpatterns = {
-            'ppt': 'PRISM_ppt_stable_4kmM2_{0}_bil.bil',
+            'ppt': 'PRISM_ppt_stable_4kmM3_{0}_bil.bil',
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
         }
 
