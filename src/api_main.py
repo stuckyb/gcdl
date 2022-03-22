@@ -84,12 +84,15 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    strict_granularity: str = Query(
-        None, title='Require specified date grain.',
-        description='If a requested dataset should be returned even if the '
-        'dataset does not have data in the requested date grain. If False '
-        '(default), the next available date grain will be returned. '
-        'If True, datasets without the requested date grain will be skipped. ' 
+    grain_method: str = Query(
+        None, title='Matching specified date grain to dataset date grains.',
+        description='How to handle scenario of requested date grains not '
+        'matching date grains of each requested dataset. If "strict" (default), '
+        'an error will be returned. If "skip", the dataset will be skipped. '
+        'If "coarser", then only coarser grains will be returned. If "finer", ' 
+        'then only finer grains will be returned. If "any", then any available '
+        'grain will be returned, with coarser having higher priority over finer.'
+        'Non-temporal datasets are always returned.'
     ),
     clip: list = Depends(parse_clip_bounds),
     crs: str = Query(
@@ -136,7 +139,7 @@ async def subset_polygon(
         clip_geom = SubsetPolygon(clip, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, strict_granularity, 
+            dsc, datasets, date_start, date_end, grain_method, 
             clip_geom, target_crs, resolution, resample_method, 
             REQ_RASTER, req_md
         )

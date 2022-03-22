@@ -23,6 +23,9 @@ RESAMPLE_METHODS = (
 )
 POINT_METHODS = ('nearest', 'linear')
 
+# Define supported strings for handling mixed date grains
+GRAIN_METHODS = ('strict', 'skip', 'coarser', 'finer', 'any')
+
 
 # A simple struct-like class for capturing data request date information.  We
 # need this instead of the standard datetime.date class because the latter does
@@ -35,7 +38,7 @@ class DataRequest:
     Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dataset_catalog, dsvars, date_start, date_end, strict_granularity, 
+        self, dataset_catalog, dsvars, date_start, date_end, grain_method, 
         subset_geom, target_crs, target_resolution, ri_method, request_type, 
         req_metadata
     ):
@@ -66,7 +69,6 @@ class DataRequest:
         self.subset_geom = subset_geom
         self.target_crs = target_crs
         self.target_resolution = target_resolution
-        self.strict_granularity = strict_granularity
 
         if request_type not in (REQ_RASTER, REQ_POINT):
             raise ValueError('Invalid request type.')
@@ -100,6 +102,17 @@ class DataRequest:
 
         self.ri_method = ri_method
         self.metadata = self._getMetadata(req_metadata)
+
+        if grain_method is None:
+            grain_method = 'strict'
+
+        if grain_method not in GRAIN_METHODS:
+            raise ValueError(
+                f'Invalid date grain matching method: "{grain_method}".'
+            )
+
+        self.grain_method = grain_method
+
 
     def _getMetadata(self, req_vals):
         req_md = {}
