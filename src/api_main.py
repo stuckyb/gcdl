@@ -84,6 +84,18 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
+    julian_range: str = Query(
+        None, title='Julian days of year date subset', 
+        description='Julian days of year to subset date_start and date_end. '
+        'Accepts values 1-366. Can be expressed as ranges and sequences such '
+        'as "1-100,200-230,266-366". Defaults to 1-366. '
+    ), 
+    month_range: str = Query(
+        None, title='Month date subset', description='Months '
+        'to subset date_start and date_end. Accepts values 1-12. Can be '
+        'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
+        '1-12. Ignored if julian_range specified.'
+    ),
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
         description='How to handle scenario of requested date grains not '
@@ -139,8 +151,8 @@ async def subset_polygon(
         clip_geom = SubsetPolygon(clip, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, grain_method, 
-            clip_geom, target_crs, resolution, resample_method, 
+            dsc, datasets, date_start, date_end, julian_range, month_range,
+            grain_method, clip_geom, target_crs, resolution, resample_method, 
             REQ_RASTER, req_md
         )
     except ValueError as e:
