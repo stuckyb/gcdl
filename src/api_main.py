@@ -126,6 +126,12 @@ async def subset_polygon(
         'methods: "nearest", "bilinear", "cubic", "cubic-spline", "lanczos", '
         '"average", or "mode". Default is "nearest".  Only used if target CRS '
         'and/or spatial resolution are provided. '
+    ),
+    output_format: str = Query(
+        None, title='Output file format.',
+        description='The file format of the gridded output. Available options '
+        'are: "geotiff" which will be one file per variable and time or "netcdf" '
+        'which will be one file with a time dimension per variable. '
     )
 ):
     req_md = get_request_metadata(req)
@@ -153,7 +159,7 @@ async def subset_polygon(
         request = DataRequest(
             dsc, datasets, date_start, date_end, julian_range, month_range,
             grain_method, clip_geom, target_crs, resolution, resample_method, 
-            REQ_RASTER, req_md
+            output_format, REQ_RASTER, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -202,6 +208,11 @@ async def subset_points(
         description='The interpolation method used for extracting point '
         'values. Available methods: "nearest" or "linear". Default is '
         '"nearest".'
+    ),
+    output_format: str = Query(
+        None, title='Output file format.',
+        description='The file format of the point output. Available options '
+        'are: "csv", "shapefile", or "netcdf". each option will rreturn one file. '
     )
 ):
     req_md = get_request_metadata(req)
@@ -228,7 +239,7 @@ async def subset_points(
 
         request = DataRequest(
             dsc, datasets, date_start, date_end, sub_points, target_crs, None,
-            interp_method, REQ_POINT, req_md
+            interp_method, output_format, REQ_POINT, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

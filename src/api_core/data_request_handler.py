@@ -106,7 +106,7 @@ class DataRequestHandler:
             fout_path = (
                 output_dir / (self._getSingleLayerOutputFileName(
                     dataset.id, varname, grain, rdate
-                ) + '.tif')
+                ) + request.file_extension)
             )
             data.rio.to_raster(fout_path)
 

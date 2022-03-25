@@ -26,6 +26,15 @@ POINT_METHODS = ('nearest', 'linear')
 # Define supported strings for handling mixed date grains
 GRAIN_METHODS = ('strict', 'skip', 'coarser', 'finer', 'any')
 
+# Define supported strings for output formats
+GRID_OUTPUT = ('geotiff','netcdf')
+POINT_OUTPUT = ('csv','shapefile','netcdf')
+FILE_EXT = {
+    'geotiff': '.tif',
+    'netcdf': '.nc',
+    'csv': '.csv',
+    'shapefile': '.shp'
+    }
 
 # A simple struct-like class for capturing data request date information.  We
 # need this instead of the standard datetime.date class because the latter does
@@ -40,7 +49,7 @@ class DataRequest:
     def __init__(
         self, dataset_catalog, dsvars, date_start, date_end, julian_range,
         month_range, grain_method, subset_geom, target_crs, target_resolution, 
-        ri_method, request_type, req_metadata
+        ri_method, output_format, request_type, req_metadata
     ):
         """
         dataset_catalog: The DatasetCatalog associated with this request.
@@ -115,6 +124,29 @@ class DataRequest:
 
         self.grain_method = grain_method
 
+        if output_format is None:
+            if request_type == REQ_RASTER:
+                output_format = 'geotiff'
+            else:
+                output_format = 'csv'
+
+        if (
+            request_type == REQ_RASTER and
+            output_format not in GRID_OUTPUT
+        ):
+            raise ValueError(
+                f'Invalid output format: "{output_format}".'
+            )
+
+        if (
+            request_type == REQ_POINT and
+            output_format not in POINT_OUTPUT
+        ):
+            raise ValueError(
+                f'Invalid output format: "{output_format}".'
+            )
+
+        self.file_extension = FILE_EXT[output_format]
 
     def _getMetadata(self, req_vals):
         req_md = {}
