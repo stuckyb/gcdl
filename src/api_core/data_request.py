@@ -198,21 +198,22 @@ class DataRequest:
             for chunk in julian_chunks:
                 cur_range = [int(val) for val in chunk.split('-')]
                 if len(cur_range) == 1:
-                    j_range.append(cur_range)
+                    j_range.append(cur_range[0])
                 else:
                     for j in range(cur_range[0],cur_range[1]+1):
                         j_range.append(j)
 
         # List out requested months
         if month_range is None:
-            month_range = [i+1 for i in range(12)]
+            m_range = [i+1 for i in range(12)]
         else:
             m_range = []
             month_chunks = month_range.split(',')
             for chunk in month_chunks:
                 cur_range = [int(val) for val in chunk.split('-')]
                 if len(cur_range) == 1:
-                    m_range.append(cur_range)
+                    print(cur_range)
+                    m_range.append(cur_range[0])
                 else:
                     for m in range(cur_range[0],cur_range[1]+1):
                         m_range.append(m)
