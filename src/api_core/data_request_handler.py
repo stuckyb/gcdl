@@ -128,24 +128,27 @@ class DataRequestHandler:
         # is added to each to handle boundary discrepancies. We precompute 
         # these geometries to avoid redundant reprojections when processing 
         # the data retrievals.
-        if request.subset_geom.geom.crs.axis_info[0].unit_name == 'metre':
-            grid_sizes = [
-                dsc[dsid].grid_size if dsc[dsid].grid_unit == 'meters' 
-                else dsc[dsid].grid_size*111000 for dsid in request.dsvars
-            ]
+        if request.request_type == dr.REQ_RASTER:
+            if request.subset_geom.geom.crs.axis_info[0].unit_name == 'metre':
+                grid_sizes = [
+                    dsc[dsid].grid_size if dsc[dsid].grid_unit == 'meters' 
+                    else dsc[dsid].grid_size*111000 for dsid in request.dsvars
+                ]
+            else:
+                grid_sizes = [
+                    dsc[dsid].grid_size/111000 if dsc[dsid].grid_unit == 'meters' 
+                    else dsc[dsid].grid_size for dsid in request.dsvars
+                ]
+            rsg = request.subset_geom.buffer(max(grid_sizes))
         else:
-            grid_sizes = [
-                dsc[dsid].grid_size/111000 if dsc[dsid].grid_unit == 'meters' 
-                else dsc[dsid].grid_size for dsid in request.dsvars
-            ]
-        buffered_rsg = request.subset_geom.buffer(max(grid_sizes))
+            rsg = request.subset_geom
 
         ds_subset_geoms = {}
         for dsid in request.dsvars:
             if request.subset_geom.crs.equals(dsc[dsid].crs):
-                ds_subset_geoms[dsid] = buffered_rsg
+                ds_subset_geoms[dsid] = rsg
             else:
-                ds_subset_geoms[dsid] = buffered_rsg.reproject(
+                ds_subset_geoms[dsid] = rsg.reproject(
                     dsc[dsid].crs
                 )
 
