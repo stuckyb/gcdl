@@ -197,6 +197,28 @@ async def subset_points(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
+    julian_range: str = Query(
+        None, title='Julian days of year date subset', 
+        description='Julian days of year to subset date_start and date_end. '
+        'Accepts values 1-366. Can be expressed as ranges and sequences such '
+        'as "1-100,200-230,266-366". Defaults to 1-366. '
+    ), 
+    month_range: str = Query(
+        None, title='Month date subset', description='Months '
+        'to subset date_start and date_end. Accepts values 1-12. Can be '
+        'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
+        '1-12. Ignored if julian_range specified.'
+    ),
+    grain_method: str = Query(
+        None, title='Matching specified date grain to dataset date grains.',
+        description='How to handle scenario of requested date grains not '
+        'matching date grains of each requested dataset. If "strict" (default), '
+        'an error will be returned. If "skip", the dataset will be skipped. '
+        'If "coarser", then only coarser grains will be returned. If "finer", ' 
+        'then only finer grains will be returned. If "any", then any available '
+        'grain will be returned, with coarser having higher priority over finer.'
+        'Non-temporal datasets are always returned.'
+    ),
     points: list = Depends(parse_points),
     crs: str = Query(
         None, title='Target coordinate reference system.',
@@ -238,7 +260,8 @@ async def subset_points(
         sub_points = SubsetMultiPoint(points, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, sub_points, target_crs, None,
+            dsc, datasets, date_start, date_end, julian_range,
+            month_range, grain_method, sub_points, target_crs, None,
             interp_method, output_format, REQ_POINT, req_md
         )
     except ValueError as e:

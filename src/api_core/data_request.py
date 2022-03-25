@@ -212,7 +212,6 @@ class DataRequest:
             for chunk in month_chunks:
                 cur_range = [int(val) for val in chunk.split('-')]
                 if len(cur_range) == 1:
-                    print(cur_range)
                     m_range.append(cur_range[0])
                 else:
                     for m in range(cur_range[0],cur_range[1]+1):
