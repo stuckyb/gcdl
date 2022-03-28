@@ -7,6 +7,7 @@ import api_core.data_request as dr
 import geopandas as gpd
 import datetime as dt
 import rioxarray
+from pathlib import Path
 
 
 # Characters for generating random file names.
@@ -49,7 +50,8 @@ class DataRequestHandler:
         # call, but multi-format output handling will eventually take care of
         # this.
         out_df = gpd.GeoDataFrame(
-            {'x': request.subset_geom.geom.x, 'y': request.subset_geom.geom.y}
+            #{'x': request.subset_geom.geom.x, 'y': request.subset_geom.geom.y}
+            geometry = subset_geom.geom
         )
 
         # Retrieve the point data.
@@ -60,12 +62,48 @@ class DataRequestHandler:
         if data is not None:
 
             # Output the result.
-            fout_path = (
-                output_dir / (self._getSingleLayerOutputFileName(
-                    dataset.id, varname, grain, rdate
-                ) + '.csv')
-            )
-            out_df.assign(value=data).to_csv(fout_path, index=False)
+            fname = '{0}_{1}'.format(dataset.id, varname)
+            fout_path = output_dir / (fname + request.file_extension)
+
+            if grain == dr.NONE or rdate is None:
+                my_date = ''
+            elif grain == dr.ANNUAL:
+                my_date = rdate.year
+            elif grain == dr.MONTHLY:
+                my_date = '{0}-{1:02}'.format(
+                    rdate.year, rdate.month
+                )
+            else:
+                my_date = '{0}-{1:02}-{2:02}'.format(
+                    rdate.year, rdate.month, rdate.day
+                )
+
+            if request.file_extension == ".csv":
+                out_df = gpd.GeoDataFrame({
+                    'x': request.subset_geom.geom.x, 
+                    'y': request.subset_geom.geom.y,
+                    'time': my_date, 
+                    varname: data
+                    }
+                )
+                out_df.to_csv(fout_path, index=False, mode="a")
+            else:
+                out_df = gpd.GeoDataFrame({
+                    'time': my_date, 
+                    varname: data
+                    },
+                    geometry = subset_geom.geom,
+                )
+
+                if not(fout_path.exists()):
+                    out_df.to_file(fout_path, index=False)
+                else:
+                    out_df.to_file(fout_path, index=False, mode="a")
+
+                # Return all shapefile's auxillary files
+                if request.file_extension == ".shp":
+                    p = Path(output_dir).glob(fname+'.*')
+                    fout_path = [file for file in p]
 
             return fout_path
         else:
@@ -169,6 +207,13 @@ class DataRequestHandler:
                     request.date_grain not in dsc[dsid].supported_grains
                 ):
                     raise ValueError('{0} does not have requested granularity'.format(dsid))
+
+        # Create temporary folder for request
+        tmp_fname = (
+            'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8))
+        )
+        tmp_path = output_dir / tmp_fname
+        tmp_path.mkdir()
 
         for dsid in request.dsvars:
             # If the dataset is non-temporal, we don't need to iterate over the
@@ -298,7 +343,7 @@ class DataRequestHandler:
                     if request.request_type == dr.REQ_RASTER:
                         raster_layer = self._getRasterLayer(
                             dsc[dsid], varname, ds_grain, rdate, ds_subset_geoms[dsid],
-                            request, output_dir, target_path
+                            request, tmp_path, target_path
                         )
                         if harmonization and target_path is None:
                             target_path = raster_layer
@@ -309,12 +354,17 @@ class DataRequestHandler:
                     elif request.request_type == dr.REQ_POINT:
                         point_layer = self._getPointLayer(
                             dsc[dsid], varname, ds_grain, rdate, ds_subset_geoms[dsid],
-                            request, output_dir
+                            request, tmp_path
                         )
                         # Check if data returned
                         # (sparse daily data not always returned)
                         if point_layer is not None:
-                            fout_paths.append(point_layer)
+                            # Check if multiple files
+                            if isinstance(point_layer, Path):
+                                fout_paths.append(point_layer)
+                            else:
+                                for lyr in point_layer:
+                                    fout_paths.append(lyr)
                     else:
                         raise ValueError('Unsupported request type.')
 
