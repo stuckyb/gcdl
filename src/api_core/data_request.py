@@ -280,29 +280,65 @@ class DataRequest:
 
         return (dates, date_grain)
 
-    def _parseDateRange(self, date_str):
+    def _parseRangeStr(self, rangestr, maxval):
         """
-        Parses the date strings from days, months, and years and returns 
-        a list of included days, months, or years as integers.
+        Parses a range string of the format "STARTVAL-ENDVAL[+INCREMENT]".
+        Returns the range as an ordered list of integers (smallest to largest),
+        which includes the endpoints unless ENDVAL does not correspond with the
+        increment size.  If ENDVAL == 'N', it is interpreted as maxval.
+
+        rangestr: The range string to parse.
+        maxval: The maximum value allowed for the range.
         """
-        # Split non-conscutive dates separated by commas then
-        # determine if a range is provided. If so, add each 
-        # date in range. 
-        all_dates = []
-        date_parts = date_str.split(',')
-        for dpart in date_parts:
-            cur_range = [val for val in dpart.split('-')]
-            if len(cur_range) == 1:
-                all_dates.append(int(cur_range[0]))
-            else:
-                step_parts = [int(val) for val in cur_range[1].split('+')]
-                if len(step_parts) == 1:
-                    dstep = 1
-                else:
-                    dstep = step_parts[1]
-                for d in range(int(cur_range[0]), step_parts[0]+1, dstep):
-                    all_dates.append(d)
-        return(all_dates)
+        parts = rangestr.split('-')
+        if len(parts) != 2:
+            raise ValueError(f'Invalid range string: "{rangestr}".')
+
+        startval = int(parts[0])
+
+        if '+' in parts[1]:
+            # Extract the increment size.
+            end_parts = parts[1].split('+')
+            if len(end_parts) != 2:
+                raise ValueError(f'Invalid range string: "{rangestr}".')
+
+            endval_str = end_parts[0]
+            inc = int(end_parts[1])
+        else:
+            endval_str = parts[1]
+            inc = 1
+
+        # Determine the ending value of the range.
+        if endval_str == 'N':
+            if maxval is None:
+                raise ValueError(
+                    f'Cannot interpret range string "{rangestr}": no maximum '
+                    'value was provided.'
+                )
+            endval = maxval
+        else:
+            endval = int(endval_str)
+
+        # Check for a bunch of error conditions.
+        if startval > endval:
+            raise ValueError(
+                f'Invalid range string: "{rangestr}". The starting value '
+                'cannot exceed the ending value.'
+            )
+        
+        if startval <= 0 or endval <= 0:
+            raise ValueError(
+                f'Invalid range string: "{rangestr}". The starting and '
+                'and ending values must be greater than 0.'
+            )
+
+        if maxval is not None and endval > maxval:
+            raise ValueError(
+                f'Invalid range string: "{rangestr}". The ending value '
+                f'cannot exceed {maxval}.'
+            )
+
+        return list(range(startval, endval + 1, inc))
 
     def _parseYMD(self, years, months, days):
         if years is not None:

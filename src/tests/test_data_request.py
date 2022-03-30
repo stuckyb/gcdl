@@ -137,6 +137,93 @@ class TestDataRequest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Start and end .* specified'):
             dr._parseSimpleDateRange('', '1980')
 
+    def test_parseRangeStr(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Test basic range specifications.
+        exp = [1]
+        r = dr._parseRangeStr('1-1', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,2]
+        r = dr._parseRangeStr('1-2', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,2,3,4]
+        r = dr._parseRangeStr('1-4', None)
+        self.assertEqual(exp, r)
+
+        exp = [4]
+        r = dr._parseRangeStr('4-4', None)
+        self.assertEqual(exp, r)
+
+        exp = [4,5,6,7]
+        r = dr._parseRangeStr('4-7', None)
+        self.assertEqual(exp, r)
+
+        # Test ranges with custom increments.
+        exp = [4]
+        r = dr._parseRangeStr('4-4+2', None)
+        self.assertEqual(exp, r)
+
+        exp = [4]
+        r = dr._parseRangeStr('4-5+2', None)
+        self.assertEqual(exp, r)
+
+        exp = [4,6]
+        r = dr._parseRangeStr('4-6+2', None)
+        self.assertEqual(exp, r)
+
+        exp = [4,6]
+        r = dr._parseRangeStr('4-7+2', None)
+        self.assertEqual(exp, r)
+
+        exp = [4,6,8]
+        r = dr._parseRangeStr('4-8+2', None)
+        self.assertEqual(exp, r)
+
+        # Test ranges with a maximum value.
+        exp = [4,5,6,7,8]
+        r = dr._parseRangeStr('4-N', 8)
+        self.assertEqual(exp, r)
+
+        exp = [4,6,8]
+        r = dr._parseRangeStr('4-N+2', 8)
+        self.assertEqual(exp, r)
+
+        # Test error conditions.
+        with self.assertRaisesRegex(ValueError, 'Invalid range string'):
+            dr._parseRangeStr('4', None)
+
+        with self.assertRaisesRegex(ValueError, 'Invalid range string'):
+            dr._parseRangeStr('4-10+2+', None)
+
+        with self.assertRaisesRegex(ValueError, 'invalid literal'):
+            dr._parseRangeStr('4-a', None)
+
+        with self.assertRaisesRegex(ValueError, 'no maximum'):
+            dr._parseRangeStr('4-N', None)
+
+        with self.assertRaisesRegex(ValueError, 'starting value .* exceed'):
+            dr._parseRangeStr('4-1', None)
+
+        with self.assertRaisesRegex(ValueError, 'greater than 0'):
+            dr._parseRangeStr('0-4', None)
+
+        with self.assertRaisesRegex(ValueError, 'cannot exceed 8'):
+            dr._parseRangeStr('4-10', 8)
+
     def test_parseDates(self):
         dr = DataRequest(
             self.dsc, {},
