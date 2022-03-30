@@ -84,24 +84,38 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    days: str = Query(
-        None, title='Days of year date subset', 
-        description='Days of year to subset years. Accepts values 1-366. Can '
-        'be expressed as ranges and sequences such as "1-100,200-230,266-366". '
-        'Required if years is specified but daily data is desired. '
-    ), 
-    months: str = Query(
-        None, title='Month date subset', description='Months '
-        'to subset years. Accepts values 1-12. Can be '
-        'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
-        '1-12. Ignored if days specified.'
-    ),
     years: str = Query(
-        None, title='Year subset', description='Years '
-        'to subset data. Can be '
-        'expressed as ranges and sequences such as "2004-2005,2009". '
-        # Ignored if date_start/date_end specified?
+        None, title='Years to include in request',
+        description='Years to subset data. Can be expressed as ranges and '
+        'sequences, such as "2004-2005,2009" or "2000-2010+2", which is '
+        'interpreted as every other year starting with 2000. Ranges are '
+        'inclusive of their endpoints unless the endpoint does not correspond '
+        'with the step size increment.'
     ),
+    months: str = Query(
+        None, title='Months to include in request',
+        description='Months to include for each year of the data request. '
+        'Only valid if "years" is also specified. Accepts values 1-12. Can be '
+        'expressed as ranges and sequences, such as "1-3,5,9-12" or "1-12+2", '
+        'which is interpreted as every other month. Ranges are inclusive of '
+        'their endpoints unless the endpoint does not correspond with the '
+        'step size increment.'
+    ),
+    days: str = Query(
+        None, title='Days of year or month to include in request', 
+        description='Only valid if "years" or "years" and "months" are also '
+        'specified.  If only "years" is specified, "days" is interpreted as '
+        'the days of each year (starting from 1) to include in the request. '
+        'If "years" and "months" are both specified, "days" is interpreted as '
+        'the days of each month (starting from 1) to incude in the request. '
+        'The special value "N" represents the last day of a month or year. '
+        'Can be expressed as ranges and sequences, such as '
+        '"1-100,200-230,266-366", "1-N", or "10-N+10", which is interpreted '
+        'as every 10th day of the year or month. Ranges are inclusive of '
+        'their endpoints unless the endpoint does not correspond with the '
+        'step size increment. Required if "years" or "years" and "months" are '
+        'specified and daily data are desired.'
+    ), 
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
         description='How to handle scenario of requested date grains not '
@@ -203,24 +217,38 @@ async def subset_points(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    days: str = Query(
-        None, title='Days of year date subset', 
-        description='Days of year to subset date_start and date_end. '
-        'Accepts values 1-366. Can be expressed as ranges and sequences such '
-        'as "1-100,200-230,266-366". Defaults to 1-366. '
-    ), 
-    months: str = Query(
-        None, title='Month date subset', description='Months '
-        'to subset date_start and date_end. Accepts values 1-12. Can be '
-        'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
-        '1-12. Ignored if days specified.'
-    ),
     years: str = Query(
-        None, title='Year subset', description='Years '
-        'to subset data. Can be '
-        'expressed as ranges and sequences such as "2004-2005,2009". '
-        'Ignored if months or days specified. '
+        None, title='Years to include in request',
+        description='Years to subset data. Can be expressed as ranges and '
+        'sequences, such as "2004-2005,2009" or "2000-2010+2", which is '
+        'interpreted as every other year starting with 2000. Ranges are '
+        'inclusive of their endpoints unless the endpoint does not correspond '
+        'with the step size increment.'
     ),
+    months: str = Query(
+        None, title='Months to include in request',
+        description='Months to include for each year of the data request. '
+        'Only valid if "years" is also specified. Accepts values 1-12. Can be '
+        'expressed as ranges and sequences, such as "1-3,5,9-12" or "1-12+2", '
+        'which is interpreted as every other month. Ranges are inclusive of '
+        'their endpoints unless the endpoint does not correspond with the '
+        'step size increment.'
+    ),
+    days: str = Query(
+        None, title='Days of year or month to include in request', 
+        description='Only valid if "years" or "years" and "months" are also '
+        'specified.  If only "years" is specified, "days" is interpreted as '
+        'the days of each year (starting from 1) to include in the request. '
+        'If "years" and "months" are both specified, "days" is interpreted as '
+        'the days of each month (starting from 1) to incude in the request. '
+        'The special value "N" represents the last day of a month or year. '
+        'Can be expressed as ranges and sequences, such as '
+        '"1-100,200-230,266-366", "1-N", or "10-N+10", which is interpreted '
+        'as every 10th day of the year or month. Ranges are inclusive of '
+        'their endpoints unless the endpoint does not correspond with the '
+        'step size increment. Required if "years" or "years" and "months" are '
+        'specified and daily data are desired.'
+    ), 
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
         description='How to handle scenario of requested date grains not '
