@@ -49,7 +49,7 @@ class DataRequest:
     def __init__(
         self, dataset_catalog, dsvars, date_start, date_end, years, 
         months, days, grain_method, subset_geom, target_crs, 
-        target_resolution, ri_method, output_format, request_type, 
+        target_resolution, ri_method, request_type, output_format,
         req_metadata
     ):
         """
@@ -60,6 +60,10 @@ class DataRequest:
             'YYYY-MM-DD'.
         date_end: Inclusive end date, specied as 'YYYY', 'YYYY-MM', or
             'YYYY-MM-DD'.
+        years: Years to include in request.
+        months: Months to include in request.
+        days: Days to include in request.
+        grain_method: 
         subset_geom: A SubsetGeom representing the clipping region or points to
             use or None.
         target_crs: A CRS instance.
@@ -68,6 +72,7 @@ class DataRequest:
         ri_method: The resampling/interpolation algorithm to use for
             reprojection or extracting point data.
         request_type: A constant specifying the output type.
+        output_format: A constant specifying the output file format.
         req_metadata: A key/value mapping of metadata associated with the
             request.
         """

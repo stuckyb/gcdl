@@ -12,22 +12,46 @@ class TestDataRequest(unittest.TestCase):
 
     def test_init(self):
         # Test a variety of misconfigurations.
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'Invalid resampling method'):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
-                'fakemethod', data_request.REQ_RASTER, {}
+                self.dsc, {},
+                # Date parameters.
+                '1980', '1980', None, None, None, None,
+                # Subset geometry.
+                None,
+                # Projection/resolution parameters.
+                CRS('NAD83'), None, 'fakemethod',
+                # Output parameters.
+                data_request.REQ_RASTER, None,
+                {}
             )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'Invalid point .* method'):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
-                'fakemethod', data_request.REQ_POINT, {}
+                self.dsc, {},
+                # Date parameters.
+                '1980', '1980', None, None, None, None,
+                # Subset geometry.
+                None,
+                # Projection/resolution parameters.
+                CRS('NAD83'), None, 'cubic',
+                # Output parameters.
+                data_request.REQ_POINT, None,
+                {}
             )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'No points provided'):
             dr = DataRequest(
-                self.dsc, {}, '1980', '1980', None, CRS('NAD83'), None,
-                'cubic', data_request.REQ_POINT, {}
+                self.dsc, {},
+                # Date parameters.
+                '1980', '1980', None, None, None, None,
+                # Subset geometry.
+                None,
+                # Projection/resolution parameters.
+                CRS('NAD83'), None, 'linear',
+                # Output parameters.
+                data_request.REQ_POINT, None,
+                {}
             )
 
     def test_parseDates(self):

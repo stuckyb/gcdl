@@ -179,7 +179,7 @@ async def subset_polygon(
         request = DataRequest(
             dsc, datasets, date_start, date_end, years, months, days,
             grain_method, clip_geom, target_crs, resolution, resample_method, 
-            output_format, REQ_RASTER, req_md
+            REQ_RASTER, output_format, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -302,7 +302,7 @@ async def subset_points(
         request = DataRequest(
             dsc, datasets, date_start, date_end, years, 
             months, days, grain_method, sub_points, target_crs, 
-            None, interp_method, output_format, REQ_POINT, req_md
+            None, interp_method, REQ_POINT, output_format, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
