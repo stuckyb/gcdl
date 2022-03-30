@@ -224,6 +224,64 @@ class TestDataRequest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'cannot exceed 8'):
             dr._parseRangeStr('4-10', 8)
 
+    def test_parseNumValsStr(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Test basic number values string parsing.  We don't need to
+        # extensively test range strings here, because that functionality is
+        # tested separately.
+        exp = [1]
+        r = dr._parseNumValsStr('1', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,2]
+        r = dr._parseNumValsStr('1,2', None)
+        self.assertEqual(exp, r)
+        r = dr._parseNumValsStr('2,1', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,4,5,6,8]
+        r = dr._parseNumValsStr('1,4-6,8', None)
+        self.assertEqual(exp, r)
+        r = dr._parseNumValsStr('8,1,4-6', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,4,7,10,12,14,16,17,18,40]
+        r = dr._parseNumValsStr('1,4-10+3,12-14+2,16-18,40', None)
+        self.assertEqual(exp, r)
+
+        # Test including a maximum value.
+        exp = [1,4,5,6,7,8]
+        r = dr._parseNumValsStr('1,4-N', 8)
+
+        # Test overlapping values.
+        exp = [1]
+        r = dr._parseNumValsStr('1,1', None)
+        self.assertEqual(exp, r)
+
+        exp = [1,2,3,4]
+        r = dr._parseNumValsStr('1,2-4,3', None)
+        self.assertEqual(exp, r)
+
+        # Test error conditions.
+        with self.assertRaisesRegex(ValueError, 'greater than 0'):
+            dr._parseNumValsStr('0,1', None)
+
+        # Test error conditions.
+        with self.assertRaisesRegex(ValueError, 'values cannot exceed 8'):
+            dr._parseNumValsStr('1,4,7-8,10', 8)
+
     def test_parseDates(self):
         dr = DataRequest(
             self.dsc, {},

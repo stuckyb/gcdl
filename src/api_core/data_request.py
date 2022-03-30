@@ -340,6 +340,42 @@ class DataRequest:
 
         return list(range(startval, endval + 1, inc))
 
+    def _parseNumValsStr(self, nvstr, maxval):
+        """
+        Parses a string that specifies integer values for day of year or day of
+        month.  The string should be of the format (in EBNF):
+          NUMVALSSTR = (integer | RANGESTR) , [{",", (integer | RANGESTR)}]
+          RANGESTR = integer, "-", integer, ["+", integer]
+        Returns the corresponding list of integers in increasing order.
+
+        nvstr: The number values string.
+        maxval: The maximum allowed integer value.
+        """
+        nvals = set()
+
+        parts = nvstr.split(',')
+
+        for part in parts:
+            if '-' in part:
+                nvals.update(self._parseRangeStr(part, maxval))
+            else:
+                newval = int(part)
+                if maxval is not None and newval > maxval:
+                    raise ValueError(
+                        f'Invalid date values string: "{nvstr}". The values '
+                        f'cannot exceed {maxval}.'
+                    )
+                
+                if newval <= 0:
+                    raise ValueError(
+                        f'Invalid date values string: "{nvstr}". The values '
+                        f'must be greater than 0.'
+                    )
+
+                nvals.add(newval)
+
+        return sorted(nvals)
+
     def _parseYMD(self, years, months, days):
         if years is not None:
             print('HERE')
