@@ -84,17 +84,23 @@ async def subset_polygon(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    julian_range: str = Query(
-        None, title='Julian days of year date subset', 
-        description='Julian days of year to subset date_start and date_end. '
-        'Accepts values 1-366. Can be expressed as ranges and sequences such '
-        'as "1-100,200-230,266-366". Defaults to 1-366. '
+    days: str = Query(
+        None, title='Days of year date subset', 
+        description='Days of year to subset years. Accepts values 1-366. Can '
+        'be expressed as ranges and sequences such as "1-100,200-230,266-366". '
+        'Required if years is specified but daily data is desired. '
     ), 
-    month_range: str = Query(
+    months: str = Query(
         None, title='Month date subset', description='Months '
-        'to subset date_start and date_end. Accepts values 1-12. Can be '
+        'to subset years. Accepts values 1-12. Can be '
         'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
-        '1-12. Ignored if julian_range specified.'
+        '1-12. Ignored if days specified.'
+    ),
+    years: str = Query(
+        None, title='Year subset', description='Years '
+        'to subset data. Can be '
+        'expressed as ranges and sequences such as "2004-2005,2009". '
+        # Ignored if date_start/date_end specified?
     ),
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
@@ -157,7 +163,7 @@ async def subset_polygon(
         clip_geom = SubsetPolygon(clip, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, julian_range, month_range,
+            dsc, datasets, date_start, date_end, years, months, days,
             grain_method, clip_geom, target_crs, resolution, resample_method, 
             output_format, REQ_RASTER, req_md
         )
@@ -197,17 +203,23 @@ async def subset_points(
         '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
         'data requests.'
     ),
-    julian_range: str = Query(
-        None, title='Julian days of year date subset', 
-        description='Julian days of year to subset date_start and date_end. '
+    days: str = Query(
+        None, title='Days of year date subset', 
+        description='Days of year to subset date_start and date_end. '
         'Accepts values 1-366. Can be expressed as ranges and sequences such '
         'as "1-100,200-230,266-366". Defaults to 1-366. '
     ), 
-    month_range: str = Query(
+    months: str = Query(
         None, title='Month date subset', description='Months '
         'to subset date_start and date_end. Accepts values 1-12. Can be '
         'expressed as ranges and sequences such as "1-3,5,9-12". Defaults to '
-        '1-12. Ignored if julian_range specified.'
+        '1-12. Ignored if days specified.'
+    ),
+    years: str = Query(
+        None, title='Year subset', description='Years '
+        'to subset data. Can be '
+        'expressed as ranges and sequences such as "2004-2005,2009". '
+        'Ignored if months or days specified. '
     ),
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
@@ -260,9 +272,9 @@ async def subset_points(
         sub_points = SubsetMultiPoint(points, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, julian_range,
-            month_range, grain_method, sub_points, target_crs, None,
-            interp_method, output_format, REQ_POINT, req_md
+            dsc, datasets, date_start, date_end, years, 
+            months, days, grain_method, sub_points, target_crs, 
+            None, interp_method, output_format, REQ_POINT, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

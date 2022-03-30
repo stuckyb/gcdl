@@ -47,9 +47,10 @@ class DataRequest:
     Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dataset_catalog, dsvars, date_start, date_end, julian_range,
-        month_range, grain_method, subset_geom, target_crs, target_resolution, 
-        ri_method, output_format, request_type, req_metadata
+        self, dataset_catalog, dsvars, date_start, date_end, years, 
+        months, days, grain_method, subset_geom, target_crs, 
+        target_resolution, ri_method, output_format, request_type, 
+        req_metadata
     ):
         """
         dataset_catalog: The DatasetCatalog associated with this request.
@@ -75,7 +76,7 @@ class DataRequest:
         self.date_start_raw = date_start
         self.date_end_raw = date_end
         self.dates, self.date_grain = self._parseDates(
-            date_start, date_end, julian_range, month_range
+            date_start, date_end, years, months, days
         )
         self.subset_geom = subset_geom
         self.target_crs = target_crs
@@ -123,6 +124,7 @@ class DataRequest:
             )
 
         self.grain_method = grain_method
+        self._verifyGrains()
 
         if output_format is None:
             if request_type == REQ_RASTER:
@@ -175,7 +177,43 @@ class DataRequest:
 
         return md
 
-    def _parseDates(self, date_start, date_end, julian_range, month_range):
+    def _verifyGrains(self):
+        # Check strict date granularity
+        if self.grain_method == 'strict':
+            for dsid in self.dsvars:
+                if (
+                    not(self.dsc[dsid].nontemporal) and 
+                    self.date_grain not in self.dsc[dsid].supported_grains
+                ):
+                    raise ValueError('{0} does not have requested granularity'.format(dsid))
+
+
+    def _parseDateRange(self, date_str):
+        """
+        Parses the date strings from days, months, and years and returns 
+        a list of included days, months, or years as integers.
+        """
+        # Split non-conscutive dates separated by commas then
+        # determine if a range is provided. If so, add each 
+        # date in range. 
+        all_dates = []
+        date_parts = date_str.split(',')
+        for dpart in date_parts:
+            cur_range = [val for val in dpart.split('-')]
+            if len(cur_range) == 1:
+                all_dates.append(int(cur_range[0]))
+            else:
+                step_parts = [int(val) for val in cur_range[1].split('+')]
+                if len(step_parts) == 1:
+                    dstep = 1
+                else:
+                    dstep = step_parts[1]
+                for d in range(int(cur_range[0]), step_parts[0]+1, dstep):
+                    all_dates.append(d)
+        return(all_dates)
+
+
+    def _parseDates(self, date_start, date_end, years, months, days):
         """
         Parses the starting and ending date strings and returns a list of
         RequestDate instances that specifies all dates included in the request.
@@ -184,141 +222,119 @@ class DataRequest:
         """
         dates = []
 
-        if date_start is None:
-            date_start = ''
-        if date_end is None:
-            date_end = ''
-
-        # List out requested julian dates
-        if julian_range is None:
-            j_range = [i+1 for i in range(366)]
-        else:
-            j_range = []
-            julian_chunks = julian_range.split(',')
-            for chunk in julian_chunks:
-                cur_range = [int(val) for val in chunk.split('-')]
-                if len(cur_range) == 1:
-                    j_range.append(cur_range[0])
-                else:
-                    for j in range(cur_range[0],cur_range[1]+1):
-                        j_range.append(j)
-
-        # List out requested months
-        if month_range is None:
-            m_range = [i+1 for i in range(12)]
-        else:
-            m_range = []
-            month_chunks = month_range.split(',')
-            for chunk in month_chunks:
-                cur_range = [int(val) for val in chunk.split('-')]
-                if len(cur_range) == 1:
-                    m_range.append(cur_range[0])
-                else:
-                    for m in range(cur_range[0],cur_range[1]+1):
-                        m_range.append(m)
-        
         # Generate RequestDates
-        if len(date_start) == 0 and len(date_end) == 0:
-            date_grain = NONE
+        # Did user specify dates as 1) simple date_start and date_end range
+        # or 2) provide years/months/days?
+        if date_start is not None and date_end is not None:
+            print('here')
+            # Dates method 1
+            if (len(date_start) == 4 and len(date_end) == 4):
+                # Annual data request.
+                date_grain = ANNUAL
 
-        elif (len(date_start) == 4 and len(date_end) == 4 and
-            julian_range is None and month_range is None
-        ):
-            # Annual data request.
-            date_grain = ANNUAL
+                start = int(date_start)
+                end = int(date_end) + 1
+                if end <= start:
+                    raise ValueError('The end date cannot precede the start date.')
+                
+                # Generate the dates data structure.
+                for year in range(start, end):
+                    dates.append(RequestDate(year, None, None))
+            elif len(date_start) == 7 and len(date_end) == 7:
+                # Monthly data request.
+                date_grain = MONTHLY
 
-            start = int(date_start)
-            end = int(date_end) + 1
-            if end <= start:
-                raise ValueError('The end date cannot precede the start date.')
-            
-            # Generate the dates data structure.
-            for year in range(start, end):
-                dates.append(RequestDate(year, None, None))
+                start_y, start_m = [int(val) for val in date_start.split('-')]
+                end_y, end_m = [int(val) for val in date_end.split('-')]
 
-        elif (((len(date_start) == 7 and len(date_end) == 7) or 
-            month_range is not None) and julian_range is None
-        ):
-            # Monthly data request.
-            date_grain = MONTHLY
+                if start_m < 1 or start_m > 12:
+                    raise ValueError(f'Invalid month value: {start_m}.')
+                if end_m < 1 or end_m > 12:
+                    raise ValueError(f'Invalid month value: {end_m}.')
 
-            start_parts = [int(val) for val in date_start.split('-')]
-            end_parts = [int(val) for val in date_end.split('-')]
+                if end_y * 12 + end_m < start_y * 12 + start_m:
+                    raise ValueError('The end date cannot precede the start date.')
 
-            if len(start_parts) == 2:
-                start_y, start_m = start_parts
-                end_y, end_m  = end_parts
-            else:
-                start_y = start_parts[0]
-                start_m = 1
-                end_y = end_parts[0]
-                end_m = 12
-
-            if start_m < 1 or start_m > 12:
-                raise ValueError(f'Invalid month value: {start_m}.')
-            if end_m < 1 or end_m > 12:
-                raise ValueError(f'Invalid month value: {end_m}.')
-
-            if end_y * 12 + end_m < start_y * 12 + start_m:
-                raise ValueError('The end date cannot precede the start date.')
-
-            # Generate the dates data structure.
-            cur_y = start_y
-            cur_m = start_m
-            m_cnt = start_m - 1
-            while cur_y * 12 + cur_m <= end_y * 12 + end_m:
-                if cur_m in m_range:
+                # Generate the dates data structure.
+                cur_y = start_y
+                cur_m = start_m
+                m_cnt = start_m - 1
+                while cur_y * 12 + cur_m <= end_y * 12 + end_m:
                     dates.append(RequestDate(cur_y, cur_m, None))
 
-                m_cnt += 1
-                cur_y = start_y + m_cnt // 12
-                cur_m = (m_cnt % 12) + 1
+                    m_cnt += 1
+                    cur_y = start_y + m_cnt // 12
+                    cur_m = (m_cnt % 12) + 1
 
-        elif ((len(date_start) == 10 and len(date_end) == 10) or 
-            julian_range is not None
-        ):
-            # Daily data request.
-            date_grain = DAILY
+            elif len(date_start) == 10 and len(date_end) == 10:
+                # Daily data request.
+                date_grain = DAILY
 
-            start_parts = [int(val) for val in date_start.split('-')]
-            end_parts = [int(val) for val in date_end.split('-')]
+                start_y, start_m, start_d = [int(val) for val in date_start.split('-')]
+                end_y, end_m, end_d = [int(val) for val in date_end.split('-')]
 
-            if len(start_parts) == 3:
-                start_y, start_m, start_d = start_parts
-                end_y, end_m, end_d  = end_parts
-            elif len(start_parts) == 2:
-                raise NotImplementedError()
-            else:
-                start_y = start_parts[0]
-                start_m = 1
-                start_d = 1
-                end_y = end_parts[0]
-                end_m = 12
-                end_d = 31
+                inc_date = dt.date(start_y, start_m, start_d)
+                end_date = dt.date(end_y, end_m, end_d)
 
-            inc_date = dt.date(start_y, start_m, start_d)
-            end_date = dt.date(end_y, end_m, end_d)
+                if end_date < inc_date:
+                    raise ValueError('The end date cannot precede the start date.')
 
-            if end_date < inc_date:
-                raise ValueError('The end date cannot precede the start date.')
+                interval = dt.timedelta(days=1)
+                end_date += interval
 
-            interval = dt.timedelta(days=1)
-            end_date += interval
-
-            # Generate the dates data structure.
-            while inc_date != end_date:
-                jday = inc_date.toordinal() - dt.date(inc_date.year, 1, 1).toordinal() + 1
-                if jday in j_range:
+                # Generate the dates data structure.
+                while inc_date != end_date:
                     dates.append(
                         RequestDate(inc_date.year, inc_date.month, inc_date.day)
                     )
 
-                inc_date += interval
+                    inc_date += interval
 
-        else:
-            raise ValueError(
-                'Mismatched starting and ending date granularity.'
-            )
+            else:
+                raise ValueError(
+                    'Mismatched starting and ending date granularity.'
+                )
+
+
+        elif years is not None:
+            print('HERE')
+            # Dates method 2
+            y_range = self._parseDateRange(years)
+
+            if months is None and days is None:
+                date_grain = ANNUAL
+
+                # Generate the dates data structure.
+                for year in y_range:
+                    dates.append(RequestDate(year, None, None))
+
+            elif months is not None:
+                date_grain = MONTHLY
+
+                # Generate the dates data structure.
+                m_range = self._parseDateRange(months)
+                for year in y_range:
+                    for month in m_range:
+                        dates.append(RequestDate(year, month, None))
+                
+                
+            elif days is not None:
+                date_grain = DAILY
+
+                # Generate the dates data structure.
+                d_range = self._parseDateRange(days)
+                for year in y_range:
+                    for day in d_range:
+                        date = dt.date.fromordinal(day + dt.date(year,1,1).toordinal() - 1) 
+                        if day == 366 and date.year != year:
+                            continue
+                        dates.append(RequestDate(year, date.month, date.day))
+                
+        else: 
+            # No dates
+            date_grain = NONE
+
+        print(date_grain)
 
         return (dates, date_grain)
 

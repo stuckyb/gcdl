@@ -199,15 +199,6 @@ class DataRequestHandler:
         if(request.target_resolution is not None and request.subset_geom is not None):
             harmonization = True
 
-        # Check strict date granularity before processing by dataset
-        if request.grain_method == 'strict':
-            for dsid in request.dsvars:
-                if (
-                    not(dsc[dsid].nontemporal) and 
-                    request.date_grain not in dsc[dsid].supported_grains
-                ):
-                    raise ValueError('{0} does not have requested granularity'.format(dsid))
-
         # Create temporary folder for request
         tmp_fname = (
             'geocdl_subset_' + ''.join(random.choices(fname_chars, k=8))
