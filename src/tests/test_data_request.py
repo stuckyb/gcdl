@@ -262,6 +262,12 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
 
         # Test including a maximum value.
+        exp = [8]
+        r = dr._parseNumValsStr('N', 8)
+
+        exp = [1,8]
+        r = dr._parseNumValsStr('1,N', 8)
+
         exp = [1,4,5,6,7,8]
         r = dr._parseNumValsStr('1,4-N', 8)
 
@@ -278,9 +284,109 @@ class TestDataRequest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'greater than 0'):
             dr._parseNumValsStr('0,1', None)
 
-        # Test error conditions.
         with self.assertRaisesRegex(ValueError, 'values cannot exceed 8'):
             dr._parseNumValsStr('1,4,7-8,10', 8)
+
+        with self.assertRaisesRegex(ValueError, 'no maximum .* was provided'):
+            dr._parseNumValsStr('1,4,7-8,N', None)
+
+    def test_parseYMD(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Year-only values.
+        exp = [RD(1980, None, None)]
+        r, dg = dr._parseYMD('1980', None, None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.ANNUAL, dg)
+
+        exp = [RD(1980, None, None), RD(1982, None, None)]
+        r, dg = dr._parseYMD('1980-1982+2', None, None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.ANNUAL, dg)
+
+        # Year + month values.
+        exp = [RD(1980, 4, None)]
+        r, dg = dr._parseYMD('1980', '4', None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.MONTHLY, dg)
+
+        exp = [RD(1980, 4, None), RD(1981, 4, None)]
+        r, dg = dr._parseYMD('1980-1981', '4', None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.MONTHLY, dg)
+
+        exp = [
+            RD(1980, 10, None), RD(1980, 12, None),
+            RD(1981, 10, None), RD(1981, 12, None)
+        ]
+        r, dg = dr._parseYMD('1980-1981', '10-N+2', None)
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.MONTHLY, dg)
+
+        # Daily values without month.
+        exp = [RD(1980, 1, 10)]
+        r, dg = dr._parseYMD('1980', None, '10')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        exp = [
+            RD(1980, 1, 10), RD(1980, 1, 12),
+            RD(1981, 1, 10), RD(1981, 1, 12)
+        ]
+        r, dg = dr._parseYMD('1980-1981', None, '10-12+2')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        # Daily values without month, including both leap and common years.
+        exp = [
+            RD(1980, 2, 28), RD(1980, 2, 29),
+            RD(1981, 2, 28), RD(1981, 3, 1)
+        ]
+        r, dg = dr._parseYMD('1980-1981', None, '59-60')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        exp = [
+            RD(1980, 12, 30), RD(1980, 12, 31),
+            RD(1981, 12, 31)
+        ]
+        r, dg = dr._parseYMD('1980-1981', None, '365-N')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        # Daily values with month.
+        exp = [RD(1980, 4, 10)]
+        r, dg = dr._parseYMD('1980', '4', '10')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        exp = [
+            RD(1980, 4, 8), RD(1980, 4, 9), RD(1980, 6, 8), RD(1980, 6, 9),
+            RD(1981, 4, 8), RD(1981, 4, 9), RD(1981, 6, 8), RD(1981, 6, 9)
+        ]
+        r, dg = dr._parseYMD('1980-1981', '4-6+2', '8,9')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
+
+        # Daily values with month, including both leap and common years.
+        exp = [
+            RD(1980, 2, 20), RD(1980, 2, 29), RD(1980, 3, 20), RD(1980, 3, 31),
+            RD(1981, 2, 20), RD(1981, 2, 28), RD(1981, 3, 20), RD(1981, 3, 31),
+        ]
+        r, dg = dr._parseYMD('1980-1981', '2-3', '20,N')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
 
     def test_parseDates(self):
         dr = DataRequest(
@@ -323,4 +429,12 @@ class TestDataRequest(unittest.TestCase):
         exp = [RD(1980, 1, None), RD(1980, 2, None)]
         r, dg = dr._parseDates('1980-01', '1980-02', '1980-1990', None, None)
         self.assertEqual(exp, r)
+        self.assertEqual(data_request.MONTHLY, dg)
+
+        # Test YMD dates.  Again, we only need to worry about testing basic
+        # parameter handling.
+        exp = [RD(1980, 1, 31), RD(1980, 2, 29)]
+        r, dg = dr._parseDates(None, None, '1980', '1-2', 'N')
+        self.assertEqual(exp, r)
+        self.assertEqual(data_request.DAILY, dg)
 

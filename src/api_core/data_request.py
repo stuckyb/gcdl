@@ -1,6 +1,7 @@
 
 import datetime as dt
 from collections import namedtuple
+import calendar as cal
 from pyproj.crs import CRS
 from subset_geom import SubsetMultiPoint
 from library.datasets.gsdataset import getCRSMetadata
@@ -344,9 +345,11 @@ class DataRequest:
         """
         Parses a string that specifies integer values for day of year or day of
         month.  The string should be of the format (in EBNF):
-          NUMVALSSTR = (integer | RANGESTR) , [{",", (integer | RANGESTR)}]
+          NUMVALSSTR = (SINGLEVAL | RANGESTR) , [{",", (SINGLEVAL | RANGESTR)}]
+          SINGLEVAL = (integer | "N")
           RANGESTR = integer, "-", integer, ["+", integer]
-        Returns the corresponding list of integers in increasing order.
+        Returns the corresponding list of integers in increasing order.  If
+        SINGLEVAL == 'N", it is interpreted as maxval.
 
         nvstr: The number values string.
         maxval: The maximum allowed integer value.
@@ -359,7 +362,16 @@ class DataRequest:
             if '-' in part:
                 nvals.update(self._parseRangeStr(part, maxval))
             else:
-                newval = int(part)
+                if part == 'N':
+                    if maxval is None:
+                        raise ValueError(
+                            f'Cannot interpret number values string "{nvstr}": '
+                            'no maximum value was provided.'
+                        )
+                    newval = maxval
+                else:
+                    newval = int(part)
+
                 if maxval is not None and newval > maxval:
                     raise ValueError(
                         f'Invalid date values string: "{nvstr}". The values '
@@ -376,44 +388,78 @@ class DataRequest:
 
         return sorted(nvals)
 
-    def _parseYMD(self, years, months, days):
-        if years is not None:
-            print('HERE')
-            # Dates method 2
-            y_range = self._parseDateRange(years)
+    def _parseYMD(self, years_str, months_str, days_str):
+        """
+        Generates a list of RequestDate instances based on the date number
+        value strings (see _parseNumValsStr() for details) years, months, and
+        days.
+        """
+        if years_str is None or years_str == '':
+            raise ValueError('The years to include were not specified.')
 
-            if months is None and days is None:
+        # Parse the year values.
+        years = self._parseNumValsStr(years_str, None)
+    
+        # Parse the month values.
+        if months_str is not None and months_str != '':
+            months = self._parseNumValsStr(months_str, 12)
+        else:
+            months = None
+
+        if days_str == '':
+            days_str = None
+
+        dates = []
+
+        if days_str is None:
+            if months is None:
                 date_grain = ANNUAL
 
-                # Generate the dates data structure.
-                for year in y_range:
+                for year in years:
                     dates.append(RequestDate(year, None, None))
 
-            elif months is not None:
+            else:
                 date_grain = MONTHLY
 
-                # Generate the dates data structure.
-                m_range = self._parseDateRange(months)
-                for year in y_range:
-                    for month in m_range:
+                for year in years:
+                    for month in months:
                         dates.append(RequestDate(year, month, None))
-                
-                
-            elif days is not None:
-                date_grain = DAILY
 
-                # Generate the dates data structure.
-                d_range = self._parseDateRange(days)
-                for year in y_range:
-                    for day in d_range:
-                        date = dt.date.fromordinal(day + dt.date(year,1,1).toordinal() - 1) 
-                        if day == 366 and date.year != year:
-                            continue
-                        dates.append(RequestDate(year, date.month, date.day))
-                
-        else: 
-            # No dates
-            date_grain = NONE
+        else:
+            date_grain = DAILY
+
+            if months is None:
+                # Pre-parse the day values for leap years and common years so
+                # we don't have to repeatedly parse the day values string.
+                days_common = self._parseNumValsStr(days_str, 365)
+                days_leap = self._parseNumValsStr(days_str, 366)
+
+                for year in years:
+                    if cal.isleap(year):
+                        days = days_leap
+                    else:
+                        days = days_common
+
+                    ord_year = dt.date(year, 1, 1).toordinal()
+
+                    for day in days:
+                        # Get the month and day of month for the given day of
+                        # year.
+                        d = dt.date.fromordinal(ord_year + day - 1)
+                        dates.append(RequestDate(year, d.month, d.day))
+
+            else:
+                for year in years:
+                    for month in months:
+                        # Get the number of days in the month and use this as
+                        # the maxval for parsing the day values string.
+                        days_in_month = cal.monthrange(year, month)[1]
+                        days = self._parseNumValsStr(days_str, days_in_month)
+
+                        for day in days:
+                            dates.append(RequestDate(year, month, day))
+
+        return (dates, date_grain)
 
     def _parseDates(self, date_start, date_end, years, months, days):
         """
@@ -435,7 +481,7 @@ class DataRequest:
         if date_start is not None or date_end is not None:
             dates, date_grain = self._parseSimpleDateRange(date_start, date_end)
         else:
-            dates, date_graim = self._parseYMD(years, months, days)
+            dates, date_grain = self._parseYMD(years, months, days)
 
         return (dates, date_grain)
 
