@@ -1,6 +1,5 @@
 
 import unittest
-import geojson
 from pyproj.crs import CRS
 from api_core import data_request, RequestDate as RD, DataRequest
 from library.catalog import DatasetCatalog

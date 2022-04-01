@@ -1,7 +1,5 @@
 
 import unittest
-import geojson
-import pyproj
 from pathlib import Path
 from pyproj.crs import CRS
 from subset_geom import SubsetPolygon, SubsetMultiPoint

@@ -1,7 +1,5 @@
 
 import unittest
-import geojson
-import pyproj
 from library.datasets.gsdataset import GSDataSet
 
 
