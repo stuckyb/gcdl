@@ -81,9 +81,27 @@ class DataRequest:
         self.dsvars = dsvars
         self.date_start_raw = date_start
         self.date_end_raw = date_end
-        self.dates, self.date_grain = self._parseDates(
+        self.dates = {}
+        requested_dates, self.inferred_grain = self._parseDates(
             date_start, date_end, years, months, days
         )
+        self.dates[self.inferred_grain] = requested_dates
+
+        if grain_method is None:
+            grain_method = 'strict'
+
+        if grain_method not in GRAIN_METHODS:
+            raise ValueError(
+                f'Invalid date grain matching method: "{grain_method}".'
+            )
+
+        self.grain_method = grain_method
+        self.ds_date_grains = self._verifyGrains()
+        self.dates.update(self._populateDates(
+            self.inferred_grain, self.ds_date_grains, date_start, date_end, 
+            years, months, days
+        ))
+
         self.subset_geom = subset_geom
         self.target_crs = target_crs
         self.target_resolution = target_resolution
@@ -120,17 +138,6 @@ class DataRequest:
 
         self.ri_method = ri_method
         self.metadata = self._getMetadata(req_metadata)
-
-        if grain_method is None:
-            grain_method = 'strict'
-
-        if grain_method not in GRAIN_METHODS:
-            raise ValueError(
-                f'Invalid date grain matching method: "{grain_method}".'
-            )
-
-        self.grain_method = grain_method
-        self._verifyGrains()
 
         if output_format is None:
             if request_type == REQ_RASTER:
@@ -183,16 +190,135 @@ class DataRequest:
 
         return md
 
-    def _verifyGrains(self):
-        # Check strict date granularity
-        if self.grain_method == 'strict':
-            for dsid in self.dsvars:
-                if (
-                    not(self.dsc[dsid].nontemporal) and 
-                    self.date_grain not in self.dsc[dsid].supported_grains
-                ):
-                    raise ValueError('{0} does not have requested granularity'.format(dsid))
+    def _listAllowedGrains(self, grain, method):
+        """
+        Given a date grain and a grain method, returns a list 
+        of other grains allowed by the method from coarser to finer
+        """
+        grains = [None]
+        if method == 'finer':
+            if grain == ANNUAL:
+                grains = [MONTHLY, DAILY]
+            if grain == MONTHLY:
+                grains = [DAILY]
+        elif method == 'coarser':
+            if grain == DAILY:
+                grains = [MONTHLY, ANNUAL]
+            if grain == MONTHLY:
+                grains = [ANNUAL]
+        elif method == 'any':
+            grains = [g for g in [ANNUAL, MONTHLY, DAILY] if g != grain]
 
+        return grains
+
+    def _verifyGrains(self):
+        """
+        Checks for mixed date granularities and returns a dictionary of date grains
+        to use for each temporal dataset
+        """
+        ds_grains = {}
+        allowed_grains = self._listAllowedGrains(self.inferred_grain, self.grain_method)
+
+        for dsid in self.dsvars:
+            if not(self.dsc[dsid].nontemporal):
+                if self.inferred_grain in self.dsc[dsid].supported_grains:
+                    ds_grains[dsid] = self.inferred_grain
+                if self.inferred_grain not in self.dsc[dsid].supported_grains:
+                    if self.grain_method == 'strict': 
+                        raise ValueError('{0} does not have requested date granularity'.format(dsid))
+                    elif self.grain_method == 'skip':
+                        ds_grains[dsid] = None
+                    else:
+                        new_grain = None
+                        for ag in allowed_grains:
+                            if ag in self.dsc[dsid].supported_grains:
+                                new_grain = ag
+                                break
+                        if new_grain is not None:
+                            ds_grains[dsid] = new_grain
+                        else:
+                            raise ValueError('{0} has no supported date granularity'.format(dsid))
+
+        return ds_grains
+
+    def _populateYMD(self, original_grain, new_grain, years, months, days):
+        """
+        Creates date lists for modified date grains in YMD format
+        """
+        if new_grain == ANNUAL:
+            g_months = None
+            g_days = None
+        elif new_grain == MONTHLY:
+            if original_grain == DAILY:
+                g_months = months
+            else:
+                g_months = '1-12'
+            g_days = None
+        elif new_grain == DAILY:
+            g_days = '1-N'
+            if original_grain == MONTHLY:
+                g_months = months
+            else:
+                g_months = '1-12'
+
+        new_date_list, grain = self._parseDates(
+            None, None, years, g_months, g_days
+        )
+
+        return(new_date_list)
+
+    def _populateSimpleDateRange(self, original_grain, new_grain, date_start, date_end):
+        if new_grain == ANNUAL:
+            g_start = date_start[0:3]
+            g_end = date_end[0:3]
+        elif new_grain == MONTHLY:
+            if original_grain == DAILY:
+                g_start = date_start[0:6]
+                g_end = date_end[0:6]
+            else:
+                g_start = date_start + '-01'
+                g_end = date_end + '-12'  
+        elif new_grain == DAILY:
+            if original_grain == MONTHLY:
+                g_start = date_start + '-01'
+                days_in_month = cal.monthrange(
+                    date_start[0:3], date_start[5:6]
+                )[1]
+                g_end = date_start + '-' + days_in_month 
+            else:
+                g_start = date_start + '-01-01'
+                g_end = date_end + '-12-31' 
+
+        new_date_list, grain  = self._parseDates(
+            g_start, g_end, None, None, None
+        )
+
+        return(new_date_list)
+
+
+    def _populateDates(self, original_grain, new_grains, date_start, date_end, 
+            years, months, days):
+        """
+        Creates dictionary of date lists per unique date grain in new_grains 
+        """
+        new_grains_unique = set(new_grains.values())
+
+        grain_dates = {}
+
+        # Need to modify date inputs per new grain:
+        for ug in new_grains_unique:
+            if ug is None or ug == original_grain:
+                continue
+            elif date_start is not None or date_end is not None:
+                grain_dates[ug] = self._populateSimpleDateRange(
+                    original_grain, ug, years, months, days
+                )
+            else:
+                grain_dates[ug] = self._populateYMD(
+                    original_grain, ug, years, months, days
+                )
+
+        return grain_dates
 
     def _parseSimpleDateRange(self, date_start, date_end):
         """

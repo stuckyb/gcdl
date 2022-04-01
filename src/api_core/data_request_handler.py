@@ -212,122 +212,20 @@ class DataRequestHandler:
             # If the request's date grain is available in the dataset,
             # use that date grain. Otherwise, use grain_method
             # to determine response.
+            ds_grain = request.ds_date_grains[dsid]
 
             if dsc[dsid].nontemporal:
                 date_list = [None]
-                ds_grain = None
-            elif request.date_grain in dsc[dsid].supported_grains:
-                date_list = request.dates
-                ds_grain = request.date_grain
+            elif ds_grain in dsc[dsid].supported_grains:
+                date_list = request.dates[ds_grain] 
             elif (
-                request.date_grain not in dsc[dsid].supported_grains and
+                ds_grain not in dsc[dsid].supported_grains and
                 request.grain_method == 'skip'
             ):
                 # Skip this dataset
                 continue
             else:
-                date_list = []
-                # Find next date grain and modify request dates
-                if request.date_grain == dr.ANNUAL:
-                    if (
-                        dr.MONTHLY in dsc[dsid].supported_grains and
-                        request.grain_method in ['finer','any']
-                    ):
-                        # Expand years to months
-                        for ydate in request.dates:
-                            for month in range(12):
-                                new_date = dr.RequestDate(ydate.year, month+1, None)
-                                date_list.append(new_date)
-
-                        ds_grain = dr.MONTHLY
-
-                    elif (
-                        dr.DAILY in dsc[dsid].supported_grains and
-                        request.grain_method in ['finer','any']
-                    ):
-                        # Expand to full dates
-                        for ydate in request.dates:
-                            inc_date = dt.date(ydate.year, 1, 1)
-                            end_date = dt.date(ydate.year, 12, 31)
-
-                            interval = dt.timedelta(days=1)
-                            end_date += interval
-
-                            # Add each date in the year
-                            while inc_date != end_date:
-                                new_date = dr.RequestDate(
-                                    inc_date.year, inc_date.month, inc_date.day
-                                )
-                                date_list.append(new_date)
-                                inc_date += interval
-
-                        ds_grain = dr.DAILY
-                    else:
-                        # No coarser options, so skip
-                        continue
-
-                elif request.date_grain == dr.MONTHLY:
-                    if (
-                        dr.ANNUAL in dsc[dsid].supported_grains and
-                        request.grain_method in ['coarser','any']
-                    ):
-                        # Simplify months to years
-                        for mdate in request.dates:
-                            new_date = dr.RequestDate(mdate.year, None, None)
-                            date_list.append(new_date)
-
-                        date_list = list(set(date_list))
-                        ds_grain = dr.ANNUAL
-                    elif (
-                        dr.DAILY in dsc[dsid].supported_grains and
-                        request.grain_method in ['finer','any']
-                    ):
-                        # Expand to full dates
-                        for mdate in request.dates:
-                            inc_date = dt.date(mdate.year, mdate.month, 1)
-                            interval = dt.timedelta(days=1)
-
-                            # Add each date in the month
-                            while inc_date.month == mdate.month:
-                                new_date = dr.RequestDate(
-                                    inc_date.year, inc_date.month, inc_date.day
-                                )
-                                date_list.append(new_date)
-                                inc_date += interval
-
-                        ds_grain = dr.DAILY
-                    else:
-                        # No other options, so skip
-                        continue
-
-                elif request.date_grain == dr.DAILY:
-                    if (
-                        dr.MONTHLY in dsc[dsid].supported_grains and
-                        request.grain_method in ['coarser','any']
-                    ):
-                        # Simplify dates to months
-                        for date in request.dates:
-                            new_date = dr.RequestDate(date.year, date.month, None)
-                            date_list.append(new_date)
-
-                        date_list = list(set(date_list))
-                        ds_grain = dr.MONTHLY
-                    elif (
-                        dr.ANNUAL in dsc[dsid].supported_grains and
-                        request.grain_method in ['coarser','any']
-                    ):
-                        # Simplify dates to years
-                        for date in request.dates:
-                            new_date = dr.RequestDate(date.year, None, None)
-                            date_list.append(new_date)
-
-                        date_list = list(set(date_list))
-                        ds_grain = dr.ANNUAL
-                    else:
-                        # No finer options, so skip
-                        continue
-                else:
-                    raise NotImplementedError()
+                raise ValueError('Unsupported date grain.')
 
             for varname in request.dsvars[dsid]:
                 for rdate in date_list:
