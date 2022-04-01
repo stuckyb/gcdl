@@ -37,4 +37,5 @@ jobs:
     - name: Run all tests
       run: |
         cd src/tests
-        ./run_tests.py
+        python run_tests.py
+
