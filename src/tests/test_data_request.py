@@ -3,6 +3,7 @@ import unittest
 from pyproj.crs import CRS
 from api_core import data_request, RequestDate as RD, DataRequest
 from library.catalog import DatasetCatalog
+import datetime as dt
 
 
 class TestDataRequest(unittest.TestCase):
@@ -36,6 +37,20 @@ class TestDataRequest(unittest.TestCase):
                 CRS('NAD83'), None, 'cubic',
                 # Output parameters.
                 data_request.REQ_POINT, None,
+                {}
+            )
+
+        with self.assertRaisesRegex(ValueError, 'Invalid date grain matching method'):
+            dr = DataRequest(
+                self.dsc, {},
+                # Date parameters.
+                '1980', '1980', None, None, None, 'fakemethod',
+                # Subset geometry.
+                None,
+                # Projection/resolution parameters.
+                CRS('NAD83'), None, None,
+                # Output parameters.
+                data_request.REQ_RASTER, None,
                 {}
             )
 
@@ -437,3 +452,208 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
+    def test_verifyGrains(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, 'strict',
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Test strict grain rule with mis-matched available grains.
+        #with self.assertRaisesRegex(
+        #    ValueError, 'does not have requested date granularity'
+        #):
+        #    dr._verifyGrains(data_request.ANNUAL, 'strict')
+
+        # Test strict grain rule with no mis-matched available grains.
+        #exp = {}
+        #r = dr._verifyGrains(data_request.ANNUAL,'strict')
+        #self.assertEqual(exp, r)
+
+        # Test single dataset
+        #exp = {}
+
+        # Test coarser method but no coarser options
+
+        # Test finer method but no finer options
+
+        # Test any method
+
+        # Test skip method
+
+
+
+    def test_listAllowedGrains(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # test coarser methods
+        exp = [data_request.MONTHLY, data_request.ANNUAL]
+        r = dr._listAllowedGrains(data_request.DAILY, 'coarser')
+        self.assertEqual(exp, r)
+
+        exp = [data_request.ANNUAL]
+        r = dr._listAllowedGrains(data_request.MONTHLY, 'coarser')
+        self.assertEqual(exp, r)
+
+        exp = []
+        r = dr._listAllowedGrains(data_request.ANNUAL, 'coarser')
+        self.assertEqual(exp, r)
+
+        exp = []
+        r = dr._listAllowedGrains(data_request.NONE, 'coarser')
+        self.assertEqual(exp, r)
+
+        # test finer methods
+        exp = []
+        r = dr._listAllowedGrains(data_request.DAILY, 'finer')
+        self.assertEqual(exp, r)
+
+        exp = [data_request.DAILY]
+        r = dr._listAllowedGrains(data_request.MONTHLY, 'finer')
+        self.assertEqual(exp, r)
+
+        exp = [data_request.MONTHLY, data_request.DAILY]
+        r = dr._listAllowedGrains(data_request.ANNUAL, 'finer')
+        self.assertEqual(exp, r)
+
+        exp = []
+        r = dr._listAllowedGrains(data_request.NONE, 'finer')
+        self.assertEqual(exp, r)
+
+        # test the any method
+        exp = [data_request.ANNUAL, data_request.MONTHLY]
+        r = dr._listAllowedGrains(data_request.DAILY, 'any')
+        self.assertEqual(exp, r)
+
+        exp = [data_request.ANNUAL, data_request.DAILY]
+        r = dr._listAllowedGrains(data_request.MONTHLY, 'any')
+        self.assertEqual(exp, r)
+
+        exp = [data_request.MONTHLY, data_request.DAILY]
+        r = dr._listAllowedGrains(data_request.ANNUAL, 'any')
+        self.assertEqual(exp, r)
+
+        exp = []
+        r = dr._listAllowedGrains(data_request.NONE, 'any')
+        self.assertEqual(exp, r)
+
+    def test_populateDates(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Test no new grains so no new dates
+        exp = {}
+        r = dr._populateDates(
+            data_request.ANNUAL, {}, 
+            None, None, 
+            None, None, None
+        )
+        self.assertEqual(exp, r)
+
+        # Test new dates added by YMD (see test_populateYMD)
+        exp = {
+            data_request.MONTHLY: [RD(1980, m+1, None) for m in range(12)]
+        }
+        r = dr._populateDates(
+            data_request.ANNUAL, {'ds1': data_request.MONTHLY}, 
+            None, None, 
+            '1980', None, None
+        )
+        self.assertEqual(exp, r)
+
+
+    def test_populateYMD(self):
+        dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
+
+        # Test ANNUAL to MONTHLY
+        exp = [RD(1980, m+1, None) for m in range(12)]
+        r = dr._populateYMD(
+            data_request.ANNUAL,data_request.MONTHLY,
+            '1980', None, None
+        )
+        self.assertEqual(exp, r)
+
+        # Test ANNUAL to DAILY
+        exp = []
+        for d in range(366):
+            ord_year = dt.date(1980, 1, 1).toordinal()
+            d = dt.date.fromordinal(ord_year + d)
+            exp.append(RD(1980, d.month, d.day)) 
+        r = dr._populateYMD(
+            data_request.ANNUAL,data_request.DAILY,
+            '1980', None, None
+        )
+        self.assertEqual(exp, r)
+
+        # Test MONHTLY to ANNUAL
+        exp = [RD(1980, None, None)]
+        r = dr._populateYMD(
+            data_request.MONTHLY,data_request.ANNUAL,
+            '1980', '1', None
+        )
+        self.assertEqual(exp, r)
+
+        # Test MONTHLY to DAILY
+        exp = [RD(1980, 1, d+1) for d in range(31)]
+        r = dr._populateYMD(
+            data_request.MONTHLY,data_request.DAILY,
+            '1980', '1', None
+        )
+        self.assertEqual(exp, r)
+
+        # Test DAILY to MONTHLY
+        exp = [RD(1980, 1, None)]
+        r = dr._populateYMD(
+            data_request.DAILY,data_request.MONTHLY,
+            '1980', '1', '1'
+        )
+        self.assertEqual(exp, r)
+
+        # Test DAILY to ANNUAL
+        exp = [RD(1980, None, None)]
+        r = dr._populateYMD(
+            data_request.DAILY,data_request.ANNUAL,
+            '1980', '1', '1'
+        )
+        self.assertEqual(exp, r)
+
+        

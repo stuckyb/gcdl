@@ -96,7 +96,9 @@ class DataRequest:
             )
 
         self.grain_method = grain_method
-        self.ds_date_grains = self._verifyGrains()
+        self.ds_date_grains = self._verifyGrains(
+            self.inferred_grain, self.grain_method
+        )
         self.dates.update(self._populateDates(
             self.inferred_grain, self.ds_date_grains, date_start, date_end, 
             years, months, days
@@ -195,7 +197,7 @@ class DataRequest:
         Given a date grain and a grain method, returns a list 
         of other grains allowed by the method from coarser to finer
         """
-        grains = [None]
+        grains = []
         if method == 'finer':
             if grain == ANNUAL:
                 grains = [MONTHLY, DAILY]
@@ -206,27 +208,27 @@ class DataRequest:
                 grains = [MONTHLY, ANNUAL]
             if grain == MONTHLY:
                 grains = [ANNUAL]
-        elif method == 'any':
+        elif method == 'any' and grain != NONE:
             grains = [g for g in [ANNUAL, MONTHLY, DAILY] if g != grain]
 
         return grains
 
-    def _verifyGrains(self):
+    def _verifyGrains(self, inferred_grain, grain_method):
         """
         Checks for mixed date granularities and returns a dictionary of date grains
         to use for each temporal dataset
         """
         ds_grains = {}
-        allowed_grains = self._listAllowedGrains(self.inferred_grain, self.grain_method)
+        allowed_grains = self._listAllowedGrains(inferred_grain, grain_method)
 
         for dsid in self.dsvars:
             if not(self.dsc[dsid].nontemporal):
-                if self.inferred_grain in self.dsc[dsid].supported_grains:
-                    ds_grains[dsid] = self.inferred_grain
-                if self.inferred_grain not in self.dsc[dsid].supported_grains:
-                    if self.grain_method == 'strict': 
+                if inferred_grain in self.dsc[dsid].supported_grains:
+                    ds_grains[dsid] = inferred_grain
+                if inferred_grain not in self.dsc[dsid].supported_grains:
+                    if grain_method == 'strict': 
                         raise ValueError('{0} does not have requested date granularity'.format(dsid))
-                    elif self.grain_method == 'skip':
+                    elif grain_method == 'skip':
                         ds_grains[dsid] = None
                     else:
                         new_grain = None
