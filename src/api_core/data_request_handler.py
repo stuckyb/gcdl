@@ -62,7 +62,10 @@ class DataRequestHandler:
         if data is not None:
 
             # Output the result.
-            fname = '{0}_{1}'.format(dataset.id, varname)
+            if request.file_extension == ".shp":
+                fname = '{0}_{1}'.format(dataset.id, varname)
+            else:
+                fname = '{0}'.format(dataset.id)
             fout_path = output_dir / (fname + request.file_extension)
 
             if grain == dr.NONE or rdate is None:
@@ -83,10 +86,17 @@ class DataRequestHandler:
                     'x': request.subset_geom.geom.x, 
                     'y': request.subset_geom.geom.y,
                     'time': my_date, 
-                    varname: data
+                    'var': varname,
+                    'value': data
                     }
                 )
-                out_df.to_csv(fout_path, index=False, mode="a")
+                if not(fout_path.exists()):
+                    out_df.to_csv(fout_path, index=False)
+                else:
+                    out_df.to_csv(
+                        fout_path, index=False, header = False, mode="a"
+                    )
+
             else:
                 out_df = gpd.GeoDataFrame({
                     'time': my_date, 
