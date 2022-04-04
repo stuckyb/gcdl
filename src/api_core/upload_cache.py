@@ -64,5 +64,17 @@ class UploadDataCache:
         pass
 
     def getCacheStats(self):
-        pass
+        """
+        Returns a tuple containing
+        (total number of files in the cache, total cache size (in bytes)).
+        """
+        f_cnt = 0
+        t_size = 0
+
+        for fpath in self.cachedir.iterdir():
+            if fpath.is_file():
+                f_cnt += 1
+                t_size += fpath.stat().st_size
+            
+        return (f_cnt, t_size)
 
