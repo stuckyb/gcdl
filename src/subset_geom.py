@@ -39,7 +39,7 @@ class SubsetGeom(ABC):
             # pairs.
             coords = geom_spec
         elif isinstance(geom_spec, Mapping):
-            # Otherwise, assume we have GeoJSON mapping (dict, e.g.).
+            # Otherwise, assume we have a GeoJSON mapping (dict, e.g.).
             coords = self._getCoordsFromGeomDict(geom_spec)
         else:
             raise Exception(
@@ -123,6 +123,7 @@ class SubsetGeom(ABC):
         buffered_sg.geom = self.geom.buffer(distance)
 
         return buffered_sg
+
 
 class SubsetPolygon(SubsetGeom):
     def __init__(self, geom_spec=None, crs_str=None):
