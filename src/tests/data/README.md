@@ -19,3 +19,9 @@ This folder contains a raster dataset using WGS84 lat/long coordinates (EPSG:432
   * value: 8
 * `tile_mosaic.tif`: all 4 tiles in a single layer
 
+
+## `upload_cache/`
+
+This folder contains files for testing the upload cache and geometry file parsing.
+
+
