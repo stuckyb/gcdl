@@ -11,21 +11,22 @@ class SubsetGeom(ABC):
     Provides a CRS-aware geometry object (either a polygon or set of points)
     for use in dataset operations.  Base class for concrete geometry types.
     """
-    def __init__(self, geom_spec=None, crs_str=None):
+    def __init__(self, geom_spec=None, crs=None):
         """
         Creates a new SubsetGeom.  Although the arguments are optional, empty
         SubsetGeoms should not be created by client code.
 
         geom_spec: A GeoJSON string, geojson dictionary, or sequence of
             coordinates representing a polygon or multi-point geometry.
-        crs_str: A string representing the CRS of the geometry.
+        crs: A string or pyproj.CRS object representing the CRS of the
+            geometry.
         """
         self.geom = None
 
-        if geom_spec is None and crs_str is None:
+        if geom_spec is None and crs is None:
             return
 
-        if geom_spec is None or crs_str is None:
+        if geom_spec is None or crs is None:
             raise Exception(
                 'SubsetGeom requires both a geometry specification and a CRS.'
             )
@@ -46,7 +47,7 @@ class SubsetGeom(ABC):
                 'Unsupported type for instantiating a SubsetGeometry.'
             )
 
-        # For complete information about all accepted crs_str formats, see the
+        # For complete information about all accepted crs formats, see the
         # documentation for CRS.from_user_input():
         # https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS.from_user_input
         # CRS.from_user_input() in turn calls the CRS constructor, which then
@@ -55,7 +56,7 @@ class SubsetGeom(ABC):
         # accepted strings:
         # https://proj.org/development/reference/functions.html#c.proj_create.
 
-        self._initGeometry(coords, crs_str)
+        self._initGeometry(coords, crs)
 
     @abstractmethod
     def _getCoordsFromGeomDict(self, geom_dict):
@@ -65,7 +66,7 @@ class SubsetGeom(ABC):
         pass
 
     @abstractmethod
-    def _initGeometry(self, coords, crs_str):
+    def _initGeometry(self, coords, crs):
         """
         Initializes the internal geometry representation.
         """
@@ -126,8 +127,8 @@ class SubsetGeom(ABC):
 
 
 class SubsetPolygon(SubsetGeom):
-    def __init__(self, geom_spec=None, crs_str=None):
-        super().__init__(geom_spec, crs_str)
+    def __init__(self, geom_spec=None, crs=None):
+        super().__init__(geom_spec, crs)
 
     def _getCoordsFromGeomDict(self, geom_dict):
         """
@@ -141,9 +142,9 @@ class SubsetPolygon(SubsetGeom):
 
         return geom_dict['coordinates'][0]
 
-    def _initGeometry(self, coords, crs_str):
+    def _initGeometry(self, coords, crs):
         sh_poly = sg.Polygon(coords)
-        self.geom = gpd.GeoSeries([sh_poly], crs=crs_str)
+        self.geom = gpd.GeoSeries([sh_poly], crs=crs)
 
     def _convertToJson(self):
         f_dict = geojson.loads(self.geom.to_json())
@@ -164,9 +165,9 @@ class SubsetMultiPoint(SubsetGeom):
 
         return geom_dict['coordinates']
 
-    def _initGeometry(self, coords, crs_str):
+    def _initGeometry(self, coords, crs):
         sh_multi = sg.MultiPoint(coords)
-        self.geom = gpd.GeoSeries(sh_multi.geoms, crs=crs_str)
+        self.geom = gpd.GeoSeries(sh_multi.geoms, crs=crs)
 
     def _convertToJson(self):
         f_dict = geojson.loads(self.geom.to_json())
