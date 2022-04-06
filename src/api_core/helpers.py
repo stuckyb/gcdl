@@ -28,7 +28,7 @@ def parse_datasets_str(datasets_str, ds_catalog):
 
     return ds_vars
 
-def _parse_coords(coords_str):
+def parse_coords(coords_str):
     """
     Parses a semicolon-separated list of coordinates of the form
     "x1,y1;x2,y2..." or a comma-separated list of coordinates of the form
@@ -83,7 +83,7 @@ def parse_clip_bounds(
         return None
 
     try:
-        coords = _parse_coords(clip)
+        coords = parse_coords(clip)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -117,27 +117,6 @@ def parse_clip_bounds(
         clip_coords = coords
 
     return clip_coords
-
-def parse_points(
-    points: str = Query(
-        ..., title='Point Extraction', description='The x and y coordinates '
-        'of point locations for extracting from the data, specified '
-        'as "x1,y1;x2,y2..." or "(x1,y1),(x2,y2)...". If no point '
-        'coordinates are specified, the full spatial extent will be returned. '
-        'If both bbox and points are specified, the bbox will be used. '
-        'Coordinates are assumed to match the target CRS or the CRS of the '
-        'first requested dataset if no target CRS is specified.'
-    )
-):
-    """
-    Parses comma-separated rectangular bounding box coordinates.
-    """
-    try:
-        coords = _parse_coords(points)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    return coords
 
 def get_request_metadata(req):
     """

@@ -10,7 +10,7 @@ import pyproj
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
 from api_core.helpers import (
-    parse_datasets_str, parse_clip_bounds, parse_points, get_request_metadata
+    parse_datasets_str, parse_clip_bounds, parse_coords, get_request_metadata
 )
 from library.catalog import DatasetCatalog
 from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI
@@ -65,7 +65,7 @@ async def ds_info(
 
 
 @app.post(
-    '/upload_geom', tags=['Uploaded geometries'],
+    '/upload_geom', tags=['Geometry uploads'],
     summary='Upload a geometry file (either multipoint or polygon).'
 )
 def upload_geom(
@@ -288,7 +288,19 @@ async def subset_points(
         'grain will be returned, with coarser having higher priority over finer.'
         'Non-temporal datasets are always returned.'
     ),
-    points: list = Depends(parse_points),
+    points: str = Query(
+        '', title='Geographic points', description='The x and y coordinates '
+        'of point locations for extracting from the data, specified '
+        'as "x1,y1;x2,y2..." or "(x1,y1),(x2,y2)...".  Coordinates are '
+        'assumed to match the target CRS or the CRS of the first requested '
+        'dataset if no target CRS is specified.'
+    ),
+    geom_guid: str = Query(
+        '', title='GUID of uploaded geometry data',
+        description='The GUID of previously uploaded multipoint geometry '
+        'data.  If point coordinates are provided as a query parameter, '
+        'geom_guid will be ignored.'
+    ),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -306,6 +318,11 @@ async def subset_points(
         'are: "csv", "shapefile", or "netcdf". each option will rreturn one file. '
     )
 ):
+    if points == '' and geom_guid == '':
+        raise HTTPException(
+            status_code=400, detail='No point data were provided.'
+        )
+
     req_md = get_request_metadata(req)
 
     # For complete information about all accepted crs_str formats, see the
@@ -326,7 +343,11 @@ async def subset_points(
         else:
             target_crs = pyproj.crs.CRS(crs)
 
-        sub_points = SubsetMultiPoint(points, target_crs)
+        if points != '':
+            coords = parse_coords(points)
+            sub_points = SubsetMultiPoint(points, target_crs)
+        else:
+            sub_points = ul_cache.getMultiPoint(geom_guid, target_crs)
 
         request = DataRequest(
             dsc, datasets, date_start, date_end, years, 
