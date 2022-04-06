@@ -4,10 +4,10 @@ import tempfile
 import io
 from pathlib import Path
 from pyproj import CRS
-from api_core.upload_cache import UploadDataCache
+from api_core.upload_cache import DataUploadCache
 
 
-class TestUploadDataCache(unittest.TestCase):
+class TestDataUploadCache(unittest.TestCase):
     # Define test input data of 24 bytes.
     fdata1 = b'lat,long\n0.0,1.0\n2.0,3.0'
 
@@ -24,7 +24,7 @@ class TestUploadDataCache(unittest.TestCase):
 
             # Upload file data and verify that the cache file exists and the
             # contents are correct.
-            uc = UploadDataCache(tdir, 1024)
+            uc = DataUploadCache(tdir, 1024)
 
             guid = uc.addFile(finput, 'tfile.csv')
 
@@ -39,7 +39,7 @@ class TestUploadDataCache(unittest.TestCase):
             # upload a file of exactly the maximum allowable size.  Set a small
             # chunk size to ensure that at least some data chunks are
             # processed.
-            uc = UploadDataCache(tdir, len(self.fdata1), chunk_size=2)
+            uc = DataUploadCache(tdir, len(self.fdata1), chunk_size=2)
 
             finput.seek(0)
             guid = uc.addFile(finput, 'tfile.csv')
@@ -55,7 +55,7 @@ class TestUploadDataCache(unittest.TestCase):
             # exactly 1 byte more than the maximum allowable size.  Set a small
             # chunk size to ensure that at least some data chunks are
             # processed.
-            uc = UploadDataCache(tdir, len(self.fdata1) - 1, chunk_size=2)
+            uc = DataUploadCache(tdir, len(self.fdata1) - 1, chunk_size=2)
 
             # There should be 2 files in the cache at this point.
             self.assertEqual(2, len(list(tpath.iterdir())))
@@ -72,7 +72,7 @@ class TestUploadDataCache(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tdir:
             tpath = Path(tdir)
 
-            uc = UploadDataCache(tdir, 1024)
+            uc = DataUploadCache(tdir, 1024)
 
             # Upload one file and verify cache stats.
             finput = io.BytesIO(self.fdata1)
@@ -98,7 +98,7 @@ class TestUploadDataCache(unittest.TestCase):
 
         exp = [(0.0, 1.0), (2.0, 3.0)]
 
-        uc = UploadDataCache('data/upload_cache', 1024)
+        uc = DataUploadCache('data/upload_cache', 1024)
 
         # Test files with all allowable x and y column names.
         for fpath in (file1, file2, file3):
@@ -120,7 +120,7 @@ class TestUploadDataCache(unittest.TestCase):
         }
         exp_crs = CRS('epsg:4326')
 
-        uc = UploadDataCache('data/upload_cache', 1024)
+        uc = DataUploadCache('data/upload_cache', 1024)
 
         # Test pulling data from a CSV file with an extension from the cache.
         r = uc.getMultiPoint('csv_1', 'epsg:4326')
@@ -144,5 +144,4 @@ class TestUploadDataCache(unittest.TestCase):
         # Test a file that cannot be parsed as point data.
         with self.assertRaisesRegex(Exception, 'No point data found'):
             r = uc.getMultiPoint('invalid_data')
-
 

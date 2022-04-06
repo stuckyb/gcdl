@@ -1,17 +1,21 @@
 
-from library.catalog import DatasetCatalog
-from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI
-from fastapi import FastAPI, Query, HTTPException, Depends, Request
+from fastapi import (
+    FastAPI, Query, HTTPException, Depends, Request, UploadFile, File
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 from pathlib import Path
 import pyproj
-from subset_geom import SubsetPolygon, SubsetMultiPoint
+
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
 from api_core.helpers import (
     parse_datasets_str, parse_clip_bounds, parse_points, get_request_metadata
 )
+from library.catalog import DatasetCatalog
+from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI
+from subset_geom import SubsetPolygon, SubsetMultiPoint
+from api_core.upload_cache import DataUploadCache
 
 
 dsc = DatasetCatalog('../local_data')
@@ -19,6 +23,9 @@ dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI)
 
 # Directory for serving output files.
 output_dir = Path('../output')
+
+# Data upload cache.
+ul_cache = DataUploadCache('../upload', 1024 * 1024)
 
 
 app = FastAPI(
@@ -55,6 +62,28 @@ async def ds_info(
         )
 
     return dsc[dsid].getMetadata()
+
+
+@app.post(
+    '/upload_geom', tags=['Uploaded geometries'],
+    summary='Upload a geometry file (either multipoint or polygon).'
+)
+def upload_geom(
+    geom_file: UploadFile = File(
+        ..., title='Uploaded file',
+        description='A supported file type containing geometry data (either '
+        'multipoint or polygon).  For multipoint data, tabular data in a CSV '
+        'file is currently supported.  The CSV file must contain a column '
+        'named "x", "long", or "longitude" (not case sensitive) and a column '
+        'named "y", "lat", or "latitude" (not case sensitive).'
+    )
+):
+    try:
+        guid = ul_cache.addFile(geom_file.file, geom_file.filename)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {'geom_guid': guid}
 
 
 @app.get(

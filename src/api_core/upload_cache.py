@@ -6,7 +6,7 @@ import csv
 from subset_geom import SubsetMultiPoint, SubsetPolygon
 
 
-class UploadDataCache:
+class DataUploadCache:
     """
     Implements an on-disk cache for uploaded geospatial data.
     """
