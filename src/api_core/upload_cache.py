@@ -3,6 +3,7 @@ from pathlib import Path
 import os.path
 import uuid
 import csv
+import time
 from subset_geom import SubsetMultiPoint, SubsetPolygon
 
 
@@ -25,7 +26,7 @@ class DataUploadCache:
         cachedir (str or Path): The on-disk storage location.
         max_file_size (int): Maximum file size to accept, in bytes.
         retention_time (int): Maximum file retention time, in seconds (default:
-            4 hours).
+            4 hours) since the last time a cached geometry was accessed.
         chunk_size (int): The chunk size, in bytes, for reading uploaded data
             (default: 1 KB).
         """
@@ -63,6 +64,15 @@ class DataUploadCache:
             )
 
         return guid
+
+    def contains(self, guid):
+        """
+        Returns true if the provided GUID is a valid reference to an object in
+        the cache.
+        """
+        fpaths = list(self.cachedir.glob(guid + '*'))
+
+        return len(fpaths) == 1
 
     def getPolygon(self, guid):
         pass
@@ -158,10 +168,20 @@ class DataUploadCache:
 
         return geom
 
-    def cleanCache(self):
-        pass
+    def clean(self):
+        """
+        Deletes files from the cache that were last accessed longer ago than
+        the maximum retention time.
+        """
+        now = time.time()
 
-    def getCacheStats(self):
+        for fpath in self.cachedir.iterdir():
+            if fpath.is_file():
+                atime = fpath.stat().st_atime
+                if (now - atime) > self.maxtime:
+                    fpath.unlink()
+
+    def getStats(self):
         """
         Returns a tuple containing
         (total number of files in the cache, total cache size (in bytes)).

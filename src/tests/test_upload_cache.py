@@ -3,6 +3,8 @@ import unittest
 import tempfile
 import io
 from pathlib import Path
+import os
+import time
 from pyproj import CRS
 from api_core.upload_cache import DataUploadCache
 
@@ -14,7 +16,7 @@ class TestDataUploadCache(unittest.TestCase):
     # Define test input data of 32 bytes.
     fdata2 = b'lat,long\n0.0,1.0\n2.0,3.0\n4.0,5.0'
 
-    def atest_addFile(self):
+    def test_addFile(self):
         # Create an in-memory file-like object.
         finput = io.BytesIO(self.fdata1)
 
@@ -67,7 +69,22 @@ class TestDataUploadCache(unittest.TestCase):
             # Verify that there are still only 2 files in the cache.
             self.assertEqual(2, len(list(tpath.iterdir())))
 
-    def atest_getCacheStats(self):
+    def test_contains(self):
+        # Create an in-memory file-like object.
+        finput = io.BytesIO(self.fdata1)
+
+        # This test needs to write to the cache, so use a temporary directory.
+        with tempfile.TemporaryDirectory() as tdir:
+            tpath = Path(tdir)
+
+            # Upload file data.
+            uc = DataUploadCache(tdir, 1024)
+            guid = uc.addFile(finput, 'tfile.csv')
+
+            self.assertFalse(uc.contains('invalid_guid'))
+            self.assertTrue(uc.contains(guid))
+
+    def test_getStats(self):
         # This test needs to write to the cache, so use a temporary directory.
         with tempfile.TemporaryDirectory() as tdir:
             tpath = Path(tdir)
@@ -78,13 +95,13 @@ class TestDataUploadCache(unittest.TestCase):
             finput = io.BytesIO(self.fdata1)
             uc.addFile(finput, 'tfile1.csv')
 
-            self.assertEqual((1, 24), uc.getCacheStats())
+            self.assertEqual((1, 24), uc.getStats())
 
             # Upload a second file and verify cache stats.
             finput = io.BytesIO(self.fdata2)
             uc.addFile(finput, 'tfile2.csv')
 
-            self.assertEqual((2, 56), uc.getCacheStats())
+            self.assertEqual((2, 56), uc.getStats())
 
     def test_readCSV(self):
         # Test files with all allowable lower-case column names.
@@ -144,4 +161,30 @@ class TestDataUploadCache(unittest.TestCase):
         # Test a file that cannot be parsed as point data.
         with self.assertRaisesRegex(Exception, 'No point data found'):
             r = uc.getMultiPoint('invalid_data')
+
+    def test_clean(self):
+        # This test needs to write to the cache, so use a temporary directory.
+        with tempfile.TemporaryDirectory() as tdir:
+            tpath = Path(tdir)
+
+            # Create a new upload cache and set the retention time to 1 minute.
+            uc = DataUploadCache(tdir, 1024, retention_time=60)
+
+            # Upload two files to the cache.
+            finput = io.BytesIO(self.fdata1)
+            guid1 = uc.addFile(finput, 'tfile1.csv')
+
+            finput = io.BytesIO(self.fdata2)
+            guid2 = uc.addFile(finput, 'tfile2.csv')
+
+            # Set the atime of the second file to 70 seconds ago.
+            now = time.time()
+            os.utime(tpath / (guid2 + '.csv'), times=(now - 70, now - 70))
+
+            uc.clean()
+
+            # Verify that the first file is still in the cache and the second
+            # file is gone.
+            self.assertTrue(uc.contains(guid1))
+            self.assertFalse(uc.contains(guid2))
 
