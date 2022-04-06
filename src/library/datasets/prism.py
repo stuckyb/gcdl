@@ -42,7 +42,11 @@ class PRISM(GSDataSet):
             datetime.date(1981, 1, 1), datetime.date(2021, 1, 31)
         ]
 
-        # File name patterns for each PRISM variable.
+        # File name patterns for each PRISM variable.  Note that for
+        # precipation data, the current version of "M2" for years < 1981 and
+        # "M3" for years >= 1981.  See
+        # https://prism.oregonstate.edu/documents/PRISM_datasets.pdf for
+        # details.
         self.fpatterns = {
             'ppt': 'PRISM_ppt_stable_4kmM3_{0}_bil.bil',
             'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
@@ -70,6 +74,13 @@ class PRISM(GSDataSet):
             raise NotImplementedError()
         else:
             raise ValueError('Invalid date grain specification.')
+
+        # For precipation data, the current version of "M2" for years < 1981
+        # and "M3" for years >= 1981.  See
+        # https://prism.oregonstate.edu/documents/PRISM_datasets.pdf for
+        # details.
+        if request_date.year < 1981 and varname == 'ppt':
+            fname = fname.replace('M3', 'M2')
 
         fpath = self.ds_path / fname
 
