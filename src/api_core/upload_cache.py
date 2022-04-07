@@ -4,6 +4,7 @@ import os.path
 import uuid
 import csv
 import time
+import geojson
 from subset_geom import SubsetMultiPoint, SubsetPolygon
 
 
@@ -115,6 +116,40 @@ class DataUploadCache:
 
         return coords
 
+    def _extractGeoJSONCoords(self, geom):
+        """
+        Extracts coordinates from Point and MultiPoint GeoJSON objects and
+        recursively from GeometryCollection objects (including support for
+        nested GeometryCollection objects).
+        """
+        coords = []
+
+        if geom['type'] == 'Point':
+            coords.append(geom['coordinates'])
+        elif geom['type'] == 'MultiPoint':
+            coords += geom['coordinates']
+        elif geom['type'] == 'GeometryCollection':
+            for c_geom in geom['geometries']:
+                coords += self._extractGeoJSONCoords(c_geom)
+        else:
+            raise Exception(
+                f"Unsupported GeoJSON geometry type for point data: "
+                f"\"{geom['type']}\"."
+            )
+
+        return coords
+
+    def _readGeoJSONPoints(self, fpath):
+        """
+        Extracts geographic points from a GeoJSON file and returns a list of
+        (x, y) float coordinates.  Coordinates will be taken from Point and
+        MultiPoint objects, including elements of a GeometryCollection.
+        """
+        with open(fpath) as fin:
+            geom = geojson.load(fin)
+
+        return self._extractGeoJSONCoords(geom)
+
     def getMultiPoint(self, guid, crs_str=None):
         """
         Given a valid GUID and appropriate cache data, returns a
@@ -142,12 +177,16 @@ class DataUploadCache:
 
         # If the cached file has an extension, use that to infer file type.
         f_ext = fpaths[0].suffix
-        if f_ext == '.csv':
-            try:
-                points = self._readCSV(fpaths[0])
-            except:
-                pass
-
+        try:
+            if f_ext == '.csv':
+                    points = self._readCSV(fpaths[0])
+            elif f_ext == '.json' or f_ext == '.geojson':
+                    points = self._readGeoJSONPoints(fpaths[0])
+        except:
+            raise Exception(
+                f'Could not parse uploaded geometry object at {guid}.'
+            )
+ 
         # If inferring the file type failed, try each file format directly.
         if len(points) == 0:
             try:
@@ -155,8 +194,14 @@ class DataUploadCache:
             except:
                 pass
 
+            if len(points) == 0:
+                try:
+                    points = self._readGeoJSONPoints(fpaths[0])
+                except:
+                    pass
+
         if len(points) == 0:
-            raise Exception(f'No point data found for GUID {guid}.')
+            raise Exception(f'No uploaded point data found for GUID {guid}.')
         
         if crs_str is None:
             crs_str = data_crs

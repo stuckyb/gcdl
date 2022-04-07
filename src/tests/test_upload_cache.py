@@ -130,6 +130,32 @@ class TestDataUploadCache(unittest.TestCase):
         with self.assertRaisesRegex(Exception, 'Could not find .* columns'):
             r = uc._readCSV(file5)
 
+    def test_readGeoJSONPoints(self):
+        file1 = Path('data/upload_cache/geojson_point.json')
+        file2 = Path('data/upload_cache/geojson_multipoint1.json')
+        file3 = Path('data/upload_cache/geojson_geometrycoll.json')
+        file4 = Path('data/upload_cache/geojson_polygon.json')
+
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        exp = [[0.0, 1.0]]
+        r = uc._readGeoJSONPoints(file1)
+        self.assertEqual(exp, r)
+        
+        exp = [[0.0, 1.0], [2.0, 3.0]]
+        r = uc._readGeoJSONPoints(file2)
+        self.assertEqual(exp, r)
+        
+        exp = [[0.0, 1.0], [2.0, 3.0], [4.0, 5.0]]
+        r = uc._readGeoJSONPoints(file3)
+        self.assertEqual(exp, r)
+        
+        # Test an incorrect geometry type.
+        with self.assertRaisesRegex(
+            Exception, 'Unsupported .* geometry type for point data'
+        ):
+            r = uc._readGeoJSONPoints(file4)
+
     def test_getMultiPoint(self):
         exp = {
             'coordinates': [[0.0, 1.0], [2.0, 3.0]],
@@ -150,8 +176,20 @@ class TestDataUploadCache(unittest.TestCase):
         self.assertEqual(exp, r.json)
         self.assertTrue(exp_crs.equals(r.crs))
 
+        # Test pulling data from a GeoJSON file with an extension from the
+        # cache.
+        r = uc.getMultiPoint('geojson_multipoint1', 'epsg:4326')
+        self.assertEqual(exp, r.json)
+        self.assertTrue(exp_crs.equals(r.crs))
+
+        # Test pulling data from a GeoJSON file without an extension from the
+        # cache.
+        r = uc.getMultiPoint('geojson_multipoint2', 'epsg:4326')
+        self.assertEqual(exp, r.json)
+        self.assertTrue(exp_crs.equals(r.crs))
+
         # Test an invalid GUID.
-        with self.assertRaisesRegex(Exception, 'No .* data found'):
+        with self.assertRaisesRegex(Exception, 'No cached .* data found'):
             r = uc.getMultiPoint('invalid_ID')
 
         # Test a non-unique GUID.
@@ -159,7 +197,7 @@ class TestDataUploadCache(unittest.TestCase):
             r = uc.getMultiPoint('csv_')
 
         # Test a file that cannot be parsed as point data.
-        with self.assertRaisesRegex(Exception, 'No point data found'):
+        with self.assertRaisesRegex(Exception, 'No .* point data found'):
             r = uc.getMultiPoint('invalid_data')
 
     def test_clean(self):
