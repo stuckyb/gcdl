@@ -1,0 +1,10 @@
+{
+  "type": "Feature",
+  "properties": {
+    "ignore": "a"
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [0.0, 1.0]
+  }
+}

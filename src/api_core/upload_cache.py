@@ -119,8 +119,8 @@ class DataUploadCache:
     def _extractGeoJSONCoords(self, geom):
         """
         Extracts coordinates from Point and MultiPoint GeoJSON objects and
-        recursively from GeometryCollection objects (including support for
-        nested GeometryCollection objects).
+        recursively from GeometryCollection, Feature, and FeatureCollection
+        objects (including support for arbitrary nesting of compound objects).
         """
         coords = []
 
@@ -131,6 +131,11 @@ class DataUploadCache:
         elif geom['type'] == 'GeometryCollection':
             for c_geom in geom['geometries']:
                 coords += self._extractGeoJSONCoords(c_geom)
+        elif geom['type'] == 'Feature':
+            coords += self._extractGeoJSONCoords(geom['geometry'])
+        elif geom['type'] == 'FeatureCollection':
+            for feature in geom['features']:
+                coords += self._extractGeoJSONCoords(feature['geometry'])
         else:
             raise Exception(
                 f"Unsupported GeoJSON geometry type for point data: "
@@ -143,7 +148,8 @@ class DataUploadCache:
         """
         Extracts geographic points from a GeoJSON file and returns a list of
         (x, y) float coordinates.  Coordinates will be taken from Point and
-        MultiPoint objects, including elements of a GeometryCollection.
+        MultiPoint objects, including Point and MultiPoint objects embedded in
+        GeometryCollection, Feature, and FeatureCollection objects.
         """
         with open(fpath) as fin:
             geom = geojson.load(fin)

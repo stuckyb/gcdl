@@ -131,30 +131,44 @@ class TestDataUploadCache(unittest.TestCase):
             r = uc._readCSV(file5)
 
     def test_readGeoJSONPoints(self):
-        file1 = Path('data/upload_cache/geojson_point.json')
-        file2 = Path('data/upload_cache/geojson_multipoint1.json')
-        file3 = Path('data/upload_cache/geojson_geometrycoll.json')
-        file4 = Path('data/upload_cache/geojson_polygon.json')
-
         uc = DataUploadCache('data/upload_cache', 1024)
 
+        # Point object.
         exp = [[0.0, 1.0]]
-        r = uc._readGeoJSONPoints(file1)
+        gfile = Path('data/upload_cache/geojson_point.json')
+        r = uc._readGeoJSONPoints(gfile)
         self.assertEqual(exp, r)
         
+        # MultiPoint object.
         exp = [[0.0, 1.0], [2.0, 3.0]]
-        r = uc._readGeoJSONPoints(file2)
+        gfile = Path('data/upload_cache/geojson_multipoint1.json')
+        r = uc._readGeoJSONPoints(gfile)
         self.assertEqual(exp, r)
         
+        # GeometryCollection object.
         exp = [[0.0, 1.0], [2.0, 3.0], [4.0, 5.0]]
-        r = uc._readGeoJSONPoints(file3)
+        gfile = Path('data/upload_cache/geojson_geometrycoll.json')
+        r = uc._readGeoJSONPoints(gfile)
         self.assertEqual(exp, r)
         
-        # Test an incorrect geometry type.
+        # Feature object.
+        exp = [[0.0, 1.0]]
+        gfile = Path('data/upload_cache/geojson_feature_pnt.json')
+        r = uc._readGeoJSONPoints(gfile)
+        self.assertEqual(exp, r)
+        
+        # FeatureCollection object.
+        exp = [[0.0, 1.0], [2.0, 3.0]]
+        gfile = Path('data/upload_cache/geojson_featurecoll_pnt.json')
+        r = uc._readGeoJSONPoints(gfile)
+        self.assertEqual(exp, r)
+        
+        # Test an incorrect geometry type (Polygon, in this case).
+        gfile = Path('data/upload_cache/geojson_polygon.json')
         with self.assertRaisesRegex(
             Exception, 'Unsupported .* geometry type for point data'
         ):
-            r = uc._readGeoJSONPoints(file4)
+            r = uc._readGeoJSONPoints(gfile)
 
     def test_getMultiPoint(self):
         exp = {
