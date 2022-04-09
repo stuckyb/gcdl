@@ -5,6 +5,9 @@ import uuid
 import csv
 import time
 import geojson
+import shapefile
+import zipfile
+from pyproj.crs import CRS
 from subset_geom import SubsetMultiPoint, SubsetPolygon
 
 
@@ -156,6 +159,70 @@ class DataUploadCache:
 
         return self._extractGeoJSONCoords(geom)
 
+    def _readZippedShapefile(self, zf):
+        """
+        Opens a shapefile contained in a ZIP archive and returns a tuple
+        containing a GeoJSON representation of the shapefile and a pyproj.CRS
+        object or None if the shapefile does not include a .prj file.
+
+        zf: A zipfile.ZipFile object.
+        """
+        crs = None
+        shp_path = None
+
+        # Locate the shapefile in the archive.
+        for fpath in zf.namelist():
+            if fpath.endswith('.shp'):
+                if shp_path is not None:
+                    raise Exception(
+                        'Uploaded ZIP archives cannot include more than one '
+                        'shapefile.'
+                    )
+                else:
+                    shp_path = fpath
+
+        sf_base = os.path.splitext(shp_path)[0]
+        dbf_path = zipfile.Path(zf, at=sf_base + '.dbf')
+        shx_path = zipfile.Path(zf, at=sf_base + '.shx')
+
+        # The implementation of zipfile.Path.is_file() contained a bug that was
+        # not fixed until late in 2020
+        # (https://github.com/python/cpython/commit/d1a0a960ee493262fb95a0f5b795b5b6d75cecb8),
+        # so it is still common "in the wild".  Thus, we avoid it here.
+        if not(dbf_path.exists()) or dbf_path.is_dir():
+            raise Exception(
+                'Uploaded shapefile ZIP archive is missing .dbf file.'
+            )
+
+        # File-like objects are automatically closed by shapefile.Reader when
+        # it is destroyed.
+        reader_args = {
+            'shp': zf.open(shp_path, mode='r'),
+            'dbf': dbf_path.open(mode='rb')
+        }
+        if shx_path.exists():
+            reader_args['shx'] = shx_path.open(mode='rb')
+
+        sfr = shapefile.Reader(**reader_args)
+
+        # Load CRS information, if provided.
+        prj_path = zipfile.Path(zf, at=sf_base + '.prj')
+        if prj_path.exists() and not(dbf_path.is_dir()):
+            with prj_path.open(mode='r') as fin:
+                crs = CRS.from_string(fin.read())
+
+        return sfr.__geo_interface__, crs
+
+    def _readShapefilePoints(self, fpath):
+        """
+        Extracts geographic points from a shapefile stored as a single ZIP
+        archive.  The archive should contain only one shapefile.
+        """
+        with zipfile.ZipFile(fpath, mode='r') as zf:
+            geom, crs = self._readZippedShapefile(zf)
+
+        return self._extractGeoJSONCoords(geom), crs
+
     def getMultiPoint(self, guid, crs_str=None):
         """
         Given a valid GUID and appropriate cache data, returns a
@@ -188,6 +255,8 @@ class DataUploadCache:
                     points = self._readCSV(fpaths[0])
             elif f_ext == '.json' or f_ext == '.geojson':
                     points = self._readGeoJSONPoints(fpaths[0])
+            elif f_ext == '.zip':
+                    points, data_crs = self._readShapefilePoints(fpaths[0])
         except:
             raise Exception(
                 f'Could not parse uploaded geometry object at {guid}.'
@@ -203,6 +272,12 @@ class DataUploadCache:
             if len(points) == 0:
                 try:
                     points = self._readGeoJSONPoints(fpaths[0])
+                except:
+                    pass
+
+            if len(points) == 0:
+                try:
+                    points, data_crs = self._readShapefilePoints(fpaths[0])
                 except:
                     pass
 

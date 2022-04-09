@@ -8,3 +8,4 @@ geojson
 pydap
 requests
 python-multipart
+shapefile >= 2.2.0

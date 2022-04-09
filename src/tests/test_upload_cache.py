@@ -170,6 +170,31 @@ class TestDataUploadCache(unittest.TestCase):
         ):
             r = uc._readGeoJSONPoints(gfile)
 
+    def test_readShapefilePoints(self):
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        # Shapefile without containing folder in archive, no CRS information.
+        exp = [(0.0, 1.0), (2.0, 3.0)]
+        gfile = Path('data/upload_cache/shapefile_pnt-no_crs-no_dir.zip')
+        r, crs = uc._readShapefilePoints(gfile)
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
+        # Shapefile with containing folder in archive, no CRS information.
+        exp = [(0.0, 1.0), (2.0, 3.0)]
+        gfile = Path('data/upload_cache/shapefile_pnt-no_crs-in_dir.zip')
+        r, crs = uc._readShapefilePoints(gfile)
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
+        # Shapefile with containing folder in archive, with CRS information.
+        exp = [(0.0, 1.0), (2.0, 3.0)]
+        exp_crs = CRS('epsg:4326')
+        gfile = Path('data/upload_cache/shapefile_pnt-with_crs-in_dir.zip')
+        r, crs = uc._readShapefilePoints(gfile)
+        self.assertEqual(exp, r)
+        self.assertEqual(exp_crs.to_authority(), crs.to_authority())
+
     def test_getMultiPoint(self):
         exp = {
             'coordinates': [[0.0, 1.0], [2.0, 3.0]],
@@ -201,6 +226,17 @@ class TestDataUploadCache(unittest.TestCase):
         r = uc.getMultiPoint('geojson_multipoint2', 'epsg:4326')
         self.assertEqual(exp, r.json)
         self.assertTrue(exp_crs.equals(r.crs))
+
+        # Test pulling data from a shapefile with no CRS information.
+        r = uc.getMultiPoint('shapefile_pnt-no_crs-in_dir', 'epsg:4326')
+        self.assertEqual(exp, r.json)
+        self.assertTrue(exp_crs.equals(r.crs))
+
+        # Test pulling data from a shapefile with CRS information.
+        r = uc.getMultiPoint('shapefile_pnt-with_crs-in_dir', None)
+        self.assertEqual(exp, r.json)
+        self.assertFalse(exp_crs.equals(r.crs))
+        self.assertEqual(exp_crs.to_authority(), r.crs.to_authority())
 
         # Test an invalid GUID.
         with self.assertRaisesRegex(Exception, 'No cached .* data found'):
