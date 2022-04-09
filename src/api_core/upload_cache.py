@@ -78,8 +78,23 @@ class DataUploadCache:
 
         return len(fpaths) == 1
 
-    def getPolygon(self, guid):
-        pass
+    def _getCacheFile(self, guid):
+        """
+        Returns a Path object referencing the cached file identified by the
+        provided GUID.
+        """
+        fpaths = list(self.cachedir.glob(guid + '*'))
+
+        if len(fpaths) == 0:
+            raise Exception(f'No cached uploaded data found with GUID {guid}.')
+
+        if len(fpaths) > 1:
+            raise Exception(
+                f'The provided uploaded data cache GUID, {guid}, does not '
+                'appear to be unique.'
+            )
+
+        return fpaths[0]
 
     def _readCSV(self, fpath):
         """
@@ -231,32 +246,23 @@ class DataUploadCache:
         provided.  If crs_str is provided, it will take precedence over any CRS
         information included with the cached geometry data.
 
-        guid (str): The GUID of cached geometry data.
+        guid (str): The GUID of the cached geometry data.
         crs_str: The CRS of the cached geometry data.
         """
-        fpaths = list(self.cachedir.glob(guid + '*'))
-
-        if len(fpaths) == 0:
-            raise Exception(f'No cached uploaded data found with GUID {guid}.')
-
-        if len(fpaths) > 1:
-            raise Exception(
-                f'The provided uploaded data cache GUID, {guid}, does not '
-                'appear to be unique.'
-            )
+        fpath = self._getCacheFile(guid)
 
         points = []
         data_crs = None
 
         # If the cached file has an extension, use that to infer file type.
-        f_ext = fpaths[0].suffix
+        f_ext = fpath.suffix
         try:
             if f_ext == '.csv':
-                    points = self._readCSV(fpaths[0])
+                    points = self._readCSV(fpath)
             elif f_ext == '.json' or f_ext == '.geojson':
-                    points = self._readGeoJSONPoints(fpaths[0])
+                    points = self._readGeoJSONPoints(fpath)
             elif f_ext == '.zip':
-                    points, data_crs = self._readShapefilePoints(fpaths[0])
+                    points, data_crs = self._readShapefilePoints(fpath)
         except:
             raise Exception(
                 f'Could not parse uploaded geometry object at {guid}.'
@@ -265,19 +271,19 @@ class DataUploadCache:
         # If inferring the file type failed, try each file format directly.
         if len(points) == 0:
             try:
-                points = self._readCSV(fpaths[0])
+                points = self._readCSV(fpath)
             except:
                 pass
 
             if len(points) == 0:
                 try:
-                    points = self._readGeoJSONPoints(fpaths[0])
+                    points = self._readGeoJSONPoints(fpath)
                 except:
                     pass
 
             if len(points) == 0:
                 try:
-                    points, data_crs = self._readShapefilePoints(fpaths[0])
+                    points, data_crs = self._readShapefilePoints(fpath)
                 except:
                     pass
 
@@ -291,6 +297,112 @@ class DataUploadCache:
             raise Exception('No CRS string provided for multi-point data.')
 
         geom = SubsetMultiPoint(points, crs_str)
+
+        return geom
+
+    def _extractGeoJSONPolygon(self, geom):
+        """
+        Extracts polygon coordinates from Polygon and MultiPolygon GeoJSON
+        objects and recursively from GeometryCollection, Feature, and
+        FeatureCollection objects (including support for arbitrary nesting of
+        compound objects).  Objects with more than one polygon defined are not
+        supported.  "Holes" in polygons will be ignored.
+        """
+        coords = []
+
+        if geom['type'] == 'Polygon':
+            coords = geom['coordinates'][0]
+        elif geom['type'] == 'MultiPolygon':
+            if len(geom['coordinates']) > 1:
+                raise Exception('Multiple polygons are not supported.')
+            else:
+                coords = geom['coordinates'][0][0]
+        elif geom['type'] == 'GeometryCollection':
+            if len(geom['geometries']) > 1:
+                raise Exception('Multiple polygons are not supported.')
+            else:
+                coords = self._extractGeoJSONPolygon(geom['geometries'][0])
+        elif geom['type'] == 'Feature':
+            coords = self._extractGeoJSONPolygon(geom['geometry'])
+        elif geom['type'] == 'FeatureCollection':
+            if len(geom['features']) > 1:
+                raise Exception('Multiple polygons are not supported.')
+            else:
+                coords = self._extractGeoJSONPolygon(
+                    geom['features'][0]['geometry']
+                )
+        else:
+            raise Exception(
+                f"Unsupported GeoJSON geometry type for polygon data: "
+                f"\"{geom['type']}\"."
+            )
+
+        return coords
+
+    def _readGeoJSONPolygon(self, fpath):
+        """
+        Extracts polygon coordinates from a GeoJSON file and returns a list of
+        (x, y) float coordinates.  Coordinates will be taken from Polygon
+        objects, MultiPolygon objects with a single Polygon, and Polygon and
+        MultiPolygon objects embedded in GeometryCollection, Feature, and
+        FeatureCollection objects.  "Holes" in polygons will be ignored.
+        """
+        with open(fpath) as fin:
+            geom = geojson.load(fin)
+
+        return self._extractGeoJSONPolygon(geom)
+
+    def getPolygon(self, guid, crs_str=None):
+        """
+        Given a valid GUID and appropriate cache data, returns a
+        SubsetPolygon object containing the cached geometry data.  If the
+        cached data does not include CRS information, a CRS string must be
+        provided.  If crs_str is provided, it will take precedence over any CRS
+        information included with the cached geometry data.
+
+        guid (str): The GUID of the cached geometry data.
+        crs_str: The CRS of the cached geometry data.
+        """
+        fpath = self._getCacheFile(guid)
+
+        points = []
+        data_crs = None
+
+        # If the cached file has an extension, use that to infer file type.
+        f_ext = fpath.suffix
+        try:
+            if f_ext == '.json' or f_ext == '.geojson':
+                    points = self._readGeoJSONPolygon(fpath)
+            elif f_ext == '.zip':
+                    points, data_crs = self._readShapefilePolygon(fpath)
+        except:
+            raise Exception(
+                f'Could not parse uploaded geometry object at {guid}.'
+            )
+ 
+        # If inferring the file type failed, try each file format directly.
+        if len(points) == 0:
+            try:
+                points = self._readGeoJSONPolygon(fpath)
+            except:
+                pass
+
+            if len(points) == 0:
+                try:
+                    points, data_crs = self._readShapefilePolygon(fpath)
+                except:
+                    pass
+
+        if len(points) == 0:
+            raise Exception(f'No uploaded polygon data found for GUID {guid}.')
+        
+        if crs_str is None:
+            crs_str = data_crs
+
+        if crs_str is None:
+            raise Exception('No CRS string provided for polygon data.')
+
+        geom = SubsetPolygon(points, crs_str)
 
         return geom
 

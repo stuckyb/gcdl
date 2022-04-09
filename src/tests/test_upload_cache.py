@@ -84,6 +84,21 @@ class TestDataUploadCache(unittest.TestCase):
             self.assertFalse(uc.contains('invalid_guid'))
             self.assertTrue(uc.contains(guid))
 
+    def test_getCacheFile(self):
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        exp = 'data/upload_cache/csv_1.csv'
+        r = uc._getCacheFile('csv_1')
+        self.assertEqual(exp, str(r))
+
+        # Test an invalid GUID.
+        with self.assertRaisesRegex(Exception, 'No cached .* data found'):
+            r = uc._getCacheFile('invalid_ID')
+
+        # Test a non-unique GUID.
+        with self.assertRaisesRegex(Exception, 'does not appear to be unique'):
+            r = uc._getCacheFile('csv_')
+
     def test_getStats(self):
         # This test needs to write to the cache, so use a temporary directory.
         with tempfile.TemporaryDirectory() as tdir:
@@ -147,7 +162,7 @@ class TestDataUploadCache(unittest.TestCase):
         
         # GeometryCollection object.
         exp = [[0.0, 1.0], [2.0, 3.0], [4.0, 5.0]]
-        gfile = Path('data/upload_cache/geojson_geometrycoll.json')
+        gfile = Path('data/upload_cache/geojson_geometrycoll_pnt.json')
         r = uc._readGeoJSONPoints(gfile)
         self.assertEqual(exp, r)
         
@@ -164,7 +179,7 @@ class TestDataUploadCache(unittest.TestCase):
         self.assertEqual(exp, r)
         
         # Test an incorrect geometry type (Polygon, in this case).
-        gfile = Path('data/upload_cache/geojson_polygon.json')
+        gfile = Path('data/upload_cache/geojson_polygon-no_holes.json')
         with self.assertRaisesRegex(
             Exception, 'Unsupported .* geometry type for point data'
         ):
@@ -238,17 +253,73 @@ class TestDataUploadCache(unittest.TestCase):
         self.assertFalse(exp_crs.equals(r.crs))
         self.assertEqual(exp_crs.to_authority(), r.crs.to_authority())
 
-        # Test an invalid GUID.
-        with self.assertRaisesRegex(Exception, 'No cached .* data found'):
-            r = uc.getMultiPoint('invalid_ID')
-
-        # Test a non-unique GUID.
-        with self.assertRaisesRegex(Exception, 'does not appear to be unique'):
-            r = uc.getMultiPoint('csv_')
-
         # Test a file that cannot be parsed as point data.
         with self.assertRaisesRegex(Exception, 'No .* point data found'):
             r = uc.getMultiPoint('invalid_data')
+
+    def test_readGeoJSONPolygon(self):
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        # Polygon object without holes.
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_polygon-no_holes.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+        # Polygon object with holes.
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_polygon-with_holes.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+        # MultiPolygon object (polygon with holes).
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_multipolygon-single.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+        # MultiPolygon object with more than one polygon.
+        gfile = Path('data/upload_cache/geojson_multipolygon-multi.json')
+        with self.assertRaisesRegex(Exception, 'Multiple .* not supported'):
+            r = uc._readGeoJSONPolygon(gfile)
+        
+        # GeometryCollection object with one polygon.
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_geometrycoll_poly.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+        # Feature object.
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_feature_poly.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+        # FeatureCollection object with one polygon Feature.
+        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+        gfile = Path('data/upload_cache/geojson_featurecoll_poly.json')
+        r = uc._readGeoJSONPolygon(gfile)
+        self.assertEqual(exp, r)
+        
+    def test_getPolygon(self):
+        exp = {
+            'coordinates': [
+                [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+            ],
+            'type': 'Polygon'
+        }
+        exp_crs = CRS('epsg:4326')
+
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        # Test pulling data from a GeoJSON file.
+        r = uc.getPolygon('geojson_polygon-no_holes', 'epsg:4326')
+        self.assertEqual(exp, r.json)
+        self.assertTrue(exp_crs.equals(r.crs))
+
+        # Test a file that cannot be parsed as a polygon.
+        with self.assertRaisesRegex(Exception, 'No .* polygon data found'):
+            r = uc.getPolygon('invalid_data')
 
     def test_clean(self):
         # This test needs to write to the cache, so use a temporary directory.
