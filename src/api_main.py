@@ -74,10 +74,19 @@ def upload_geom(
         description='A supported file type containing geometry data (either '
         'point or polygon).  For point data, the following file formats are '
         'supported: CSV (comma-separated values), shapefiles, and GeoJSON.  '
-        'CSV files must contain a column named "x", "long", or "longitude" '
-        '(not case sensitive) and a column named "y", "lat", or "latitude" '
+        'For polygon data, the following file formats are supported: '
+        'shapefiles and GeoJSON.  CSV files must contain a column named "x", '
+        '"long", or "longitude" (not case sensitive) and a column named "y", '
+        '"lat", or "latitude" '
         '(not case sensitive).  Shapefiles must be uploaded in a single ZIP '
-        'archive.'
+        'archive.  Supported GeoJSON types for point data uploads are '
+        '"Point", "MultiPoint", "GeometryCollection", "Feature", and '
+        '"FeatureCollection".  Supported GeoJSON types for polygon data uploads '
+        'are "Polygon", "MultiPolygon", "GeometryCollection", '
+        '"Feature", and "FeatureCollection".  For polygon data, GeoJSON '
+        'objects with more than one polygon definition are not supported '
+        '(e.g., "MultiPolygon" objects must only contain one polygon).  '
+        '"Holes" in polygons will be ignored.'
     )
 ):
     try:
