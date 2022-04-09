@@ -72,10 +72,12 @@ def upload_geom(
     geom_file: UploadFile = File(
         ..., title='Uploaded file',
         description='A supported file type containing geometry data (either '
-        'multipoint or polygon).  For multipoint data, tabular data in a CSV '
-        'file is currently supported.  The CSV file must contain a column '
-        'named "x", "long", or "longitude" (not case sensitive) and a column '
-        'named "y", "lat", or "latitude" (not case sensitive).'
+        'point or polygon).  For point data, the following file formats are '
+        'supported: CSV (comma-separated values), shapefiles, and GeoJSON.  '
+        'CSV files must contain a column named "x", "long", or "longitude" '
+        '(not case sensitive) and a column named "y", "lat", or "latitude" '
+        '(not case sensitive).  Shapefiles must be uploaded in a single ZIP '
+        'archive.'
     )
 ):
     try:
