@@ -201,7 +201,7 @@ class DataUploadCache:
         shx_path = zipfile.Path(zf, at=sf_base + '.shx')
 
         # The implementation of zipfile.Path.is_file() contained a bug that was
-        # not fixed until late in 2020
+        # present in 2021 releases of Python
         # (https://github.com/python/cpython/commit/d1a0a960ee493262fb95a0f5b795b5b6d75cecb8),
         # so it is still common "in the wild".  Thus, we avoid it here.
         if not(dbf_path.exists()) or dbf_path.is_dir():
@@ -351,6 +351,17 @@ class DataUploadCache:
             geom = geojson.load(fin)
 
         return self._extractGeoJSONPolygon(geom)
+
+    def _readShapefilePolygon(self, fpath):
+        """
+        Extracts geographic points from a shapefile stored as a single ZIP
+        archive.  The archive should contain only one shapefile.
+        """
+        with zipfile.ZipFile(fpath, mode='r') as zf:
+            geom, crs = self._readZippedShapefile(zf)
+            print(geom)
+
+        return self._extractGeoJSONPolygon(geom), crs
 
     def getPolygon(self, guid, crs_str=None):
         """

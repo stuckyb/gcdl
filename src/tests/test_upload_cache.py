@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 import os
 import time
+import zipfile
 from pyproj import CRS
 from api_core.upload_cache import DataUploadCache
 
@@ -185,6 +186,52 @@ class TestDataUploadCache(unittest.TestCase):
         ):
             r = uc._readGeoJSONPoints(gfile)
 
+    def test_readZippedShapefile(self):
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        exp = {
+            'type': 'FeatureCollection',
+            'features':[
+                {
+                    'type': 'Feature',
+                    'properties': {'ignore': 'a'},
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': (0.0, 1.0)
+                    }
+                },
+                {
+                    'type': 'Feature',
+                    'properties': {'ignore': 'b'},
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': (2.0, 3.0)
+                    }
+                }
+            ],
+            'bbox': [0.0, 1.0, 2.0, 3.0]
+        }
+
+        # Shapefile without containing folder in archive, no CRS information.
+        gfile = Path('data/upload_cache/shapefile_pnt-no_crs-no_dir.zip')
+        r, crs = uc._readZippedShapefile(zipfile.ZipFile(gfile))
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
+        # Shapefile with containing folder in archive, no CRS information.
+        gfile = Path('data/upload_cache/shapefile_pnt-no_crs-in_dir.zip')
+        r, crs = uc._readZippedShapefile(zipfile.ZipFile(gfile))
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
+        # Shapefile with containing folder in archive, with CRS information.
+        exp_crs = CRS('epsg:4326')
+        gfile = Path('data/upload_cache/shapefile_pnt-with_crs-in_dir.zip')
+        r, crs = uc._readZippedShapefile(zipfile.ZipFile(gfile))
+        self.assertEqual(exp, r)
+        self.assertEqual(exp_crs.to_authority(), crs.to_authority())
+
+
     def test_readShapefilePoints(self):
         uc = DataUploadCache('data/upload_cache', 1024)
 
@@ -260,20 +307,19 @@ class TestDataUploadCache(unittest.TestCase):
     def test_readGeoJSONPolygon(self):
         uc = DataUploadCache('data/upload_cache', 1024)
 
+        exp = [[0.0, 0.1], [2.0, 0.2], [1.0, 2.1], [0.0, 0.1]]
+
         # Polygon object without holes.
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_polygon-no_holes.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
         
         # Polygon object with holes.
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_polygon-with_holes.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
         
         # MultiPolygon object (polygon with holes).
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_multipolygon-single.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
@@ -284,27 +330,43 @@ class TestDataUploadCache(unittest.TestCase):
             r = uc._readGeoJSONPolygon(gfile)
         
         # GeometryCollection object with one polygon.
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_geometrycoll_poly.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
         
         # Feature object.
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_feature_poly.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
         
         # FeatureCollection object with one polygon Feature.
-        exp = [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
         gfile = Path('data/upload_cache/geojson_featurecoll_poly.json')
         r = uc._readGeoJSONPolygon(gfile)
         self.assertEqual(exp, r)
         
+    def test_readShapefilePolygon(self):
+        uc = DataUploadCache('data/upload_cache', 1024)
+
+        exp = [(0.0, 0.1), (2.0, 0.2), (1.0, 2.1), (0.0, 0.1)]
+
+        # Polygon with no holes, no CRS information.
+        gfile = Path('data/upload_cache/shapefile_polygon-no_crs-no_holes.zip')
+        r, crs = uc._readShapefilePolygon(gfile)
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
+        # Polygon with one hole, no CRS information.
+        gfile = Path(
+            'data/upload_cache/shapefile_polygon-no_crs-with_holes.zip'
+        )
+        r, crs = uc._readShapefilePolygon(gfile)
+        self.assertEqual(exp, r)
+        self.assertIsNone(crs)
+
     def test_getPolygon(self):
         exp = {
             'coordinates': [
-                [[0.0, 0.5], [1.0, 1.5], [2.0, 2.5], [0.0, 0.5]]
+                [[0.0, 0.1], [2.0, 0.2], [1.0, 2.1], [0.0, 0.1]]
             ],
             'type': 'Polygon'
         }
