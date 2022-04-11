@@ -167,53 +167,53 @@ class TestDataRequest(unittest.TestCase):
 
         # Test basic range specifications.
         exp = [1]
-        r = dr._parseRangeStr('1-1', None)
+        r = dr._parseRangeStr('1:1', None)
         self.assertEqual(exp, r)
 
         exp = [1,2]
-        r = dr._parseRangeStr('1-2', None)
+        r = dr._parseRangeStr('1:2', None)
         self.assertEqual(exp, r)
 
         exp = [1,2,3,4]
-        r = dr._parseRangeStr('1-4', None)
+        r = dr._parseRangeStr('1:4', None)
         self.assertEqual(exp, r)
 
         exp = [4]
-        r = dr._parseRangeStr('4-4', None)
+        r = dr._parseRangeStr('4:4', None)
         self.assertEqual(exp, r)
 
         exp = [4,5,6,7]
-        r = dr._parseRangeStr('4-7', None)
+        r = dr._parseRangeStr('4:7', None)
         self.assertEqual(exp, r)
 
         # Test ranges with custom increments.
         exp = [4]
-        r = dr._parseRangeStr('4-4+2', None)
+        r = dr._parseRangeStr('4:4+2', None)
         self.assertEqual(exp, r)
 
         exp = [4]
-        r = dr._parseRangeStr('4-5+2', None)
+        r = dr._parseRangeStr('4:5+2', None)
         self.assertEqual(exp, r)
 
         exp = [4,6]
-        r = dr._parseRangeStr('4-6+2', None)
+        r = dr._parseRangeStr('4:6+2', None)
         self.assertEqual(exp, r)
 
         exp = [4,6]
-        r = dr._parseRangeStr('4-7+2', None)
+        r = dr._parseRangeStr('4:7+2', None)
         self.assertEqual(exp, r)
 
         exp = [4,6,8]
-        r = dr._parseRangeStr('4-8+2', None)
+        r = dr._parseRangeStr('4:8+2', None)
         self.assertEqual(exp, r)
 
         # Test ranges with a maximum value.
         exp = [4,5,6,7,8]
-        r = dr._parseRangeStr('4-N', 8)
+        r = dr._parseRangeStr('4:N', 8)
         self.assertEqual(exp, r)
 
         exp = [4,6,8]
-        r = dr._parseRangeStr('4-N+2', 8)
+        r = dr._parseRangeStr('4:N+2', 8)
         self.assertEqual(exp, r)
 
         # Test error conditions.
@@ -221,22 +221,22 @@ class TestDataRequest(unittest.TestCase):
             dr._parseRangeStr('4', None)
 
         with self.assertRaisesRegex(ValueError, 'Invalid range string'):
-            dr._parseRangeStr('4-10+2+', None)
+            dr._parseRangeStr('4:10+2+', None)
 
         with self.assertRaisesRegex(ValueError, 'invalid literal'):
-            dr._parseRangeStr('4-a', None)
+            dr._parseRangeStr('4:a', None)
 
         with self.assertRaisesRegex(ValueError, 'no maximum'):
-            dr._parseRangeStr('4-N', None)
+            dr._parseRangeStr('4:N', None)
 
         with self.assertRaisesRegex(ValueError, 'starting value .* exceed'):
-            dr._parseRangeStr('4-1', None)
+            dr._parseRangeStr('4:1', None)
 
         with self.assertRaisesRegex(ValueError, 'greater than 0'):
-            dr._parseRangeStr('0-4', None)
+            dr._parseRangeStr('0:4', None)
 
         with self.assertRaisesRegex(ValueError, 'cannot exceed 8'):
-            dr._parseRangeStr('4-10', 8)
+            dr._parseRangeStr('4:10', 8)
 
     def test_parseNumValsStr(self):
         dr = DataRequest(
@@ -266,13 +266,13 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
 
         exp = [1,4,5,6,8]
-        r = dr._parseNumValsStr('1,4-6,8', None)
+        r = dr._parseNumValsStr('1,4:6,8', None)
         self.assertEqual(exp, r)
-        r = dr._parseNumValsStr('8,1,4-6', None)
+        r = dr._parseNumValsStr('8,1,4:6', None)
         self.assertEqual(exp, r)
 
         exp = [1,4,7,10,12,14,16,17,18,40]
-        r = dr._parseNumValsStr('1,4-10+3,12-14+2,16-18,40', None)
+        r = dr._parseNumValsStr('1,4:10+3,12:14+2,16:18,40', None)
         self.assertEqual(exp, r)
 
         # Test including a maximum value.
@@ -283,7 +283,7 @@ class TestDataRequest(unittest.TestCase):
         r = dr._parseNumValsStr('1,N', 8)
 
         exp = [1,4,5,6,7,8]
-        r = dr._parseNumValsStr('1,4-N', 8)
+        r = dr._parseNumValsStr('1,4:N', 8)
 
         # Test overlapping values.
         exp = [1]
@@ -291,7 +291,7 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
 
         exp = [1,2,3,4]
-        r = dr._parseNumValsStr('1,2-4,3', None)
+        r = dr._parseNumValsStr('1,2:4,3', None)
         self.assertEqual(exp, r)
 
         # Test error conditions.
@@ -299,10 +299,10 @@ class TestDataRequest(unittest.TestCase):
             dr._parseNumValsStr('0,1', None)
 
         with self.assertRaisesRegex(ValueError, 'values cannot exceed 8'):
-            dr._parseNumValsStr('1,4,7-8,10', 8)
+            dr._parseNumValsStr('1,4,7:8,10', 8)
 
         with self.assertRaisesRegex(ValueError, 'no maximum .* was provided'):
-            dr._parseNumValsStr('1,4,7-8,N', None)
+            dr._parseNumValsStr('1,4,7:8,N', None)
 
     def test_parseYMD(self):
         dr = DataRequest(
@@ -325,7 +325,7 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(data_request.ANNUAL, dg)
 
         exp = [RD(1980, None, None), RD(1982, None, None)]
-        r, dg = dr._parseYMD('1980-1982+2', None, None)
+        r, dg = dr._parseYMD('1980:1982+2', None, None)
         self.assertEqual(exp, r)
         self.assertEqual(data_request.ANNUAL, dg)
 
@@ -336,7 +336,7 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(data_request.MONTHLY, dg)
 
         exp = [RD(1980, 4, None), RD(1981, 4, None)]
-        r, dg = dr._parseYMD('1980-1981', '4', None)
+        r, dg = dr._parseYMD('1980:1981', '4', None)
         self.assertEqual(exp, r)
         self.assertEqual(data_request.MONTHLY, dg)
 
@@ -344,7 +344,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 10, None), RD(1980, 12, None),
             RD(1981, 10, None), RD(1981, 12, None)
         ]
-        r, dg = dr._parseYMD('1980-1981', '10-N+2', None)
+        r, dg = dr._parseYMD('1980:1981', '10:N+2', None)
         self.assertEqual(exp, r)
         self.assertEqual(data_request.MONTHLY, dg)
 
@@ -358,7 +358,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 1, 10), RD(1980, 1, 12),
             RD(1981, 1, 10), RD(1981, 1, 12)
         ]
-        r, dg = dr._parseYMD('1980-1981', None, '10-12+2')
+        r, dg = dr._parseYMD('1980:1981', None, '10:12+2')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
@@ -367,7 +367,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 2, 28), RD(1980, 2, 29),
             RD(1981, 2, 28), RD(1981, 3, 1)
         ]
-        r, dg = dr._parseYMD('1980-1981', None, '59-60')
+        r, dg = dr._parseYMD('1980:1981', None, '59:60')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
@@ -375,7 +375,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 12, 30), RD(1980, 12, 31),
             RD(1981, 12, 31)
         ]
-        r, dg = dr._parseYMD('1980-1981', None, '365-N')
+        r, dg = dr._parseYMD('1980:1981', None, '365:N')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
@@ -389,7 +389,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 4, 8), RD(1980, 4, 9), RD(1980, 6, 8), RD(1980, 6, 9),
             RD(1981, 4, 8), RD(1981, 4, 9), RD(1981, 6, 8), RD(1981, 6, 9)
         ]
-        r, dg = dr._parseYMD('1980-1981', '4-6+2', '8,9')
+        r, dg = dr._parseYMD('1980:1981', '4:6+2', '8,9')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
@@ -398,7 +398,7 @@ class TestDataRequest(unittest.TestCase):
             RD(1980, 2, 20), RD(1980, 2, 29), RD(1980, 3, 20), RD(1980, 3, 31),
             RD(1981, 2, 20), RD(1981, 2, 28), RD(1981, 3, 20), RD(1981, 3, 31),
         ]
-        r, dg = dr._parseYMD('1980-1981', '2-3', '20,N')
+        r, dg = dr._parseYMD('1980:1981', '2:3', '20,N')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 
@@ -441,14 +441,14 @@ class TestDataRequest(unittest.TestCase):
 
         # Simple ranges have precedence over YMD parameters.
         exp = [RD(1980, 1, None), RD(1980, 2, None)]
-        r, dg = dr._parseDates('1980-01', '1980-02', '1980-1990', None, None)
+        r, dg = dr._parseDates('1980-01', '1980-02', '1980:1990', None, None)
         self.assertEqual(exp, r)
         self.assertEqual(data_request.MONTHLY, dg)
 
         # Test YMD dates.  Again, we only need to worry about testing basic
         # parameter handling.
         exp = [RD(1980, 1, 31), RD(1980, 2, 29)]
-        r, dg = dr._parseDates(None, None, '1980', '1-2', 'N')
+        r, dg = dr._parseDates(None, None, '1980', '1:2', 'N')
         self.assertEqual(exp, r)
         self.assertEqual(data_request.DAILY, dg)
 

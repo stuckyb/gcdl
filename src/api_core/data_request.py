@@ -258,14 +258,14 @@ class DataRequest:
             if original_grain == DAILY:
                 g_months = months
             else:
-                g_months = '1-12'
+                g_months = '1:12'
             g_days = None
         elif new_grain == DAILY:
-            g_days = '1-N'
+            g_days = '1:N'
             if original_grain == MONTHLY:
                 g_months = months
             else:
-                g_months = '1-12'
+                g_months = '1:12'
 
         new_date_list, grain = self._parseDates(
             None, None, years, g_months, g_days
@@ -417,7 +417,7 @@ class DataRequest:
 
     def _parseRangeStr(self, rangestr, maxval):
         """
-        Parses a range string of the format "STARTVAL-ENDVAL[+INCREMENT]".
+        Parses a range string of the format "STARTVAL:ENDVAL[+INCREMENT]".
         Returns the range as an ordered list of integers (smallest to largest),
         which includes the endpoints unless ENDVAL does not correspond with the
         increment size.  If ENDVAL == 'N', it is interpreted as maxval.
@@ -425,7 +425,7 @@ class DataRequest:
         rangestr: The range string to parse.
         maxval: The maximum value allowed for the range.
         """
-        parts = rangestr.split('-')
+        parts = rangestr.split(':')
         if len(parts) != 2:
             raise ValueError(f'Invalid range string: "{rangestr}".')
 
@@ -481,9 +481,9 @@ class DataRequest:
         month.  The string should be of the format (in EBNF):
           NUMVALSSTR = (SINGLEVAL | RANGESTR) , [{",", (SINGLEVAL | RANGESTR)}]
           SINGLEVAL = (integer | "N")
-          RANGESTR = integer, "-", integer, ["+", integer]
+          RANGESTR = integer, ":", integer, ["+", integer]
         Returns the corresponding list of integers in increasing order.  If
-        SINGLEVAL == 'N", it is interpreted as maxval.
+        SINGLEVAL == "N", it is interpreted as maxval.
 
         nvstr: The number values string.
         maxval: The maximum allowed integer value.
@@ -493,7 +493,7 @@ class DataRequest:
         parts = nvstr.split(',')
 
         for part in parts:
-            if '-' in part:
+            if ':' in part:
                 nvals.update(self._parseRangeStr(part, maxval))
             else:
                 if part == 'N':
