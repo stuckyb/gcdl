@@ -190,26 +190,17 @@ class TestDataUploadCache(unittest.TestCase):
         uc = DataUploadCache('data/upload_cache', 1024)
 
         exp = {
-            'type': 'FeatureCollection',
-            'features':[
+            'type': 'GeometryCollection',
+            'geometries':[
                 {
-                    'type': 'Feature',
-                    'properties': {'ignore': 'a'},
-                    'geometry': {
-                        'type': 'Point',
-                        'coordinates': (0.0, 1.0)
-                    }
+                    'type': 'Point',
+                    'coordinates': (0.0, 1.0)
                 },
                 {
-                    'type': 'Feature',
-                    'properties': {'ignore': 'b'},
-                    'geometry': {
-                        'type': 'Point',
-                        'coordinates': (2.0, 3.0)
-                    }
+                    'type': 'Point',
+                    'coordinates': (2.0, 3.0)
                 }
-            ],
-            'bbox': [0.0, 1.0, 2.0, 3.0]
+            ]
         }
 
         # Shapefile without containing folder in archive, no CRS information.

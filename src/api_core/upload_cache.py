@@ -177,8 +177,9 @@ class DataUploadCache:
     def _readZippedShapefile(self, zf):
         """
         Opens a shapefile contained in a ZIP archive and returns a tuple
-        containing a GeoJSON representation of the shapefile and a pyproj.CRS
-        object or None if the shapefile does not include a .prj file.
+        containing a GeoJSON representation of the geometries in the shapefile
+        (features in the *.dbf file are ignored) and a pyproj.CRS object or
+        None if the shapefile does not include a .prj file.
 
         zf: A zipfile.ZipFile object.
         """
@@ -201,7 +202,7 @@ class DataUploadCache:
         shx_path = zipfile.Path(zf, at=sf_base + '.shx')
 
         # The implementation of zipfile.Path.is_file() contained a bug that was
-        # present in 2021 releases of Python
+        # present in at least some 2021 releases of Python
         # (https://github.com/python/cpython/commit/d1a0a960ee493262fb95a0f5b795b5b6d75cecb8),
         # so it is still common "in the wild".  Thus, we avoid it here.
         if not(dbf_path.exists()) or dbf_path.is_dir():
@@ -226,7 +227,7 @@ class DataUploadCache:
             with prj_path.open(mode='r') as fin:
                 crs = CRS.from_string(fin.read())
 
-        return sfr.__geo_interface__, crs
+        return sfr.shapes().__geo_interface__, crs
 
     def _readShapefilePoints(self, fpath):
         """
