@@ -215,8 +215,8 @@ class DataRequest:
 
     def _verifyGrains(self, inferred_grain, grain_method):
         """
-        Checks for mixed date granularities and returns a dictionary of date grains
-        to use for each temporal dataset
+        Checks for mixed date granularities and returns a dictionary of date
+        grains to use for each temporal dataset
         """
         ds_grains = {}
         allowed_grains = self._listAllowedGrains(inferred_grain, grain_method)
@@ -227,7 +227,9 @@ class DataRequest:
                     ds_grains[dsid] = inferred_grain
                 if inferred_grain not in self.dsc[dsid].supported_grains:
                     if grain_method == 'strict': 
-                        raise ValueError('{0} does not have requested date granularity'.format(dsid))
+                        raise ValueError(
+                            f'{dsid} does not have requested date granularity'
+                        )
                     elif grain_method == 'skip':
                         ds_grains[dsid] = None
                     else:
@@ -239,7 +241,9 @@ class DataRequest:
                         if new_grain is not None:
                             ds_grains[dsid] = new_grain
                         else:
-                            raise ValueError('{0} has no supported date granularity'.format(dsid))
+                            raise ValueError(
+                                f'{dsid} has no supported date granularity'
+                            )
 
         return ds_grains
 
@@ -269,7 +273,9 @@ class DataRequest:
 
         return(new_date_list)
 
-    def _populateSimpleDateRange(self, original_grain, new_grain, date_start, date_end):
+    def _populateSimpleDateRange(
+        self, original_grain, new_grain, date_start, date_end
+    ):
         if new_grain == ANNUAL:
             g_start = date_start[0:3]
             g_end = date_end[0:3]
