@@ -359,7 +359,6 @@ class DataUploadCache:
         """
         with zipfile.ZipFile(fpath, mode='r') as zf:
             geom, crs = self._readZippedShapefile(zf)
-            print(geom)
 
         return self._extractGeoJSONPolygon(geom), crs
 
