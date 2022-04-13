@@ -2,6 +2,7 @@
 import unittest
 from pyproj.crs import CRS
 from api_core import data_request, RequestDate as RD, DataRequest
+from api_core.data_request import ANNUAL, MONTHLY, DAILY
 from library.catalog import DatasetCatalog
 import datetime as dt
 
@@ -9,6 +10,20 @@ import datetime as dt
 class TestDataRequest(unittest.TestCase):
     def setUp(self):
         self.dsc =  DatasetCatalog('test_data')
+
+        # Set up a basic DataRequest object.
+        self.dr = DataRequest(
+            self.dsc, {},
+            # Date parameters.
+            '1980', None, None, None, None,
+            # Subset geometry.
+            None,
+            # Projection/resolution parameters.
+            CRS('NAD83'), None, 'bilinear',
+            # Output parameters.
+            data_request.REQ_RASTER, None,
+            {}
+        )
 
     def test_init(self):
         # Test a variety of misconfigurations.
@@ -69,24 +84,13 @@ class TestDataRequest(unittest.TestCase):
             )
 
     def test_parseSimpleDateRange(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test annual data request ranges.
         exp = [RD(1980, None, None)]
         r, dg = dr._parseSimpleDateRange('1980', '1980')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         exp = [RD(1980, None, None), RD(1981, None, None)]
         r, dg = dr._parseSimpleDateRange('1980', '1981')
@@ -108,15 +112,17 @@ class TestDataRequest(unittest.TestCase):
         exp = [RD(1980, 1, None)]
         r, dg = dr._parseSimpleDateRange('1980-01', '1980-01')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [RD(1980, 1, None), RD(1980, 2, None)]
         r, dg = dr._parseSimpleDateRange('1980-01', '1980-02')
         self.assertEqual(exp, r)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [RD(1980, 12, None), RD(1981, 1, None), RD(1981, 2, None)]
         r, dg = dr._parseSimpleDateRange('1980-12', '1981-02')
         self.assertEqual(exp, r)
+        self.assertEqual(MONTHLY, dg)
 
         with self.assertRaisesRegex(ValueError, 'end date cannot precede'):
             dr._parseSimpleDateRange('1980-02', '1980-01')
@@ -128,21 +134,42 @@ class TestDataRequest(unittest.TestCase):
         exp = [RD(1980, 1, 1)]
         r, dg = dr._parseSimpleDateRange('1980-01-01', '1980-01-01')
         self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
 
         exp = [RD(1980, 1, 1), RD(1980, 1, 2), RD(1980, 1, 3)]
         r, dg = dr._parseSimpleDateRange('1980-01-01', '1980-01-03')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [RD(1980, 12, 30), RD(1980, 12, 31), RD(1981, 1, 1)]
         r, dg = dr._parseSimpleDateRange('1980-12-30', '1981-01-01')
         self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
 
         with self.assertRaisesRegex(ValueError, 'end date cannot precede'):
             dr._parseSimpleDateRange('1980-01-02', '1980-01-01')
 
         with self.assertRaisesRegex(ValueError, 'end date cannot precede'):
             dr._parseSimpleDateRange('1980-01-01', '1979-12-31')
+
+        # Verify that leading 0s are not required.
+        exp = [RD(1980, 12, None), RD(1981, 1, None), RD(1981, 2, None)]
+        r, dg = dr._parseSimpleDateRange('1980-12', '1981-2')
+        self.assertEqual(exp, r)
+        self.assertEqual(MONTHLY, dg)
+
+        exp = [RD(1980, 1, 1), RD(1980, 1, 2), RD(1980, 1, 3)]
+        r, dg = dr._parseSimpleDateRange('1980-1-01', '1980-1-03')
+        self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
+
+        r, dg = dr._parseSimpleDateRange('1980-01-1', '1980-01-3')
+        self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
+
+        r, dg = dr._parseSimpleDateRange('1980-1-1', '1980-1-3')
+        self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
 
         # Test an invalid day of the month.
         with self.assertRaisesRegex(ValueError, 'day is out of range'):
@@ -156,18 +183,7 @@ class TestDataRequest(unittest.TestCase):
             dr._parseSimpleDateRange('', '1980')
 
     def test_parseSimpleDates(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Simple date range processing is thoroughly tested in
         # test_parseSimpleDateRange(), so we only need to test basic
@@ -177,12 +193,12 @@ class TestDataRequest(unittest.TestCase):
         exp = [RD(1980, None, None)]
         r, dg = dr._parseSimpleDates('1980')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         exp = [RD(1980, None, None), RD(1982, None, None)]
         r, dg = dr._parseSimpleDates('1980,1982')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         exp = [
             RD(1980, None, None), RD(1981, None, None), RD(1982, None, None),
@@ -190,18 +206,18 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseSimpleDates('1980:1982,1990')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         # Test monthly date requests.
         exp = [RD(1980, 1, None)]
         r, dg = dr._parseSimpleDates('1980-01')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [RD(1980, 1, None), RD(1980, 7, None)]
         r, dg = dr._parseSimpleDates('1980-01,1980-07')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [
             RD(1980, 1, None), RD(1980, 3, None), RD(1980, 4, None),
@@ -209,65 +225,59 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseSimpleDates('1980-01,1980-03:1980-05,1980-07')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         # Test daily date requests.
         exp = [RD(1980, 1, 1)]
         r, dg = dr._parseSimpleDates('1980-01-01')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [RD(1980, 1, 1), RD(1982, 2, 10)]
         r, dg = dr._parseSimpleDates('1980-01-01,1982-02-10')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [
             RD(1980, 1, 1), RD(1980, 12, 31), RD(1981, 1, 1), RD(1981, 1, 2)
         ]
         r, dg = dr._parseSimpleDates('1980-01-01,1980-12-31:1981-01-02')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
+
+        # Test that leading 0s are not required.
+        r, dg = dr._parseSimpleDates('1980-1-01,1980-12-31:1981-1-2')
+        self.assertEqual(exp, r)
+        self.assertEqual(DAILY, dg)
 
         # Test that dates get (re-)ordered correctly.
         exp = [RD(1980, None, None), RD(1982, None, None)]
         r, dg = dr._parseSimpleDates('1982,1980')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         exp = [RD(1980, 1, None), RD(1980, 7, None)]
         r, dg = dr._parseSimpleDates('1980-07,1980-01')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [RD(1980, 1, 1), RD(1980, 1, 10)]
         r, dg = dr._parseSimpleDates('1980-01-10,1980-01-01')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         # Test that duplicate dates are correctly handled.
         exp = [RD(1980, 1, 1), RD(1980, 1, 10)]
         r, dg = dr._parseSimpleDates('1980-01-10,1980-01-01,1980-01-10')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         # Test that mixed date grains are correctly detected.
         with self.assertRaisesRegex(ValueError, 'Cannot mix date grains'):
             dr._parseSimpleDates('1980,1980-01')
 
     def test_parseRangeStr(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test basic range specifications.
         exp = [1]
@@ -343,18 +353,7 @@ class TestDataRequest(unittest.TestCase):
             dr._parseRangeStr('4:10', 8)
 
     def test_parseNumValsStr(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test basic number values string parsing.  We don't need to
         # extensively test range strings here, because that functionality is
@@ -409,40 +408,29 @@ class TestDataRequest(unittest.TestCase):
             dr._parseNumValsStr('1,4,7:8,N', None)
 
     def test_parseYMD(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Year-only values.
         exp = [RD(1980, None, None)]
         r, dg = dr._parseYMD('1980', None, None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         exp = [RD(1980, None, None), RD(1982, None, None)]
         r, dg = dr._parseYMD('1980:1982+2', None, None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.ANNUAL, dg)
+        self.assertEqual(ANNUAL, dg)
 
         # Year + month values.
         exp = [RD(1980, 4, None)]
         r, dg = dr._parseYMD('1980', '4', None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [RD(1980, 4, None), RD(1981, 4, None)]
         r, dg = dr._parseYMD('1980:1981', '4', None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         exp = [
             RD(1980, 10, None), RD(1980, 12, None),
@@ -450,13 +438,13 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', '10:N+2', None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         # Daily values without month.
         exp = [RD(1980, 1, 10)]
         r, dg = dr._parseYMD('1980', None, '10')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [
             RD(1980, 1, 10), RD(1980, 1, 12),
@@ -464,7 +452,7 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', None, '10:12+2')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         # Daily values without month, including both leap and common years.
         exp = [
@@ -473,7 +461,7 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', None, '59:60')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [
             RD(1980, 12, 30), RD(1980, 12, 31),
@@ -481,13 +469,13 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', None, '365:N')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         # Daily values with month.
         exp = [RD(1980, 4, 10)]
         r, dg = dr._parseYMD('1980', '4', '10')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         exp = [
             RD(1980, 4, 8), RD(1980, 4, 9), RD(1980, 6, 8), RD(1980, 6, 9),
@@ -495,7 +483,7 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', '4:6+2', '8,9')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
         # Daily values with month, including both leap and common years.
         exp = [
@@ -504,21 +492,10 @@ class TestDataRequest(unittest.TestCase):
         ]
         r, dg = dr._parseYMD('1980:1981', '2:3', '20,N')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
     def test_parseDates(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test non-temporal (static) requests.
         exp = []
@@ -543,42 +520,31 @@ class TestDataRequest(unittest.TestCase):
         r, dg = dr._parseDates('1980-01,1980-02', None, None, None)
         self.assertEqual(exp, r)
 
-        # Simple date strings have precedence over YMD parameters.
+        # Simple date strings should have precedence over YMD parameters.
         exp = [RD(1980, 1, None), RD(1980, 2, None)]
         r, dg = dr._parseDates('1980-01,1980-02', '1980:1990', None, None)
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.MONTHLY, dg)
+        self.assertEqual(MONTHLY, dg)
 
         # Test YMD dates.  Again, we only need to worry about testing basic
         # parameter handling.
         exp = [RD(1980, 1, 31), RD(1980, 2, 29)]
         r, dg = dr._parseDates(None, '1980', '1:2', 'N')
         self.assertEqual(exp, r)
-        self.assertEqual(data_request.DAILY, dg)
+        self.assertEqual(DAILY, dg)
 
     def test_verifyGrains(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, 'strict',
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test strict grain rule with mis-matched available grains.
         #with self.assertRaisesRegex(
         #    ValueError, 'does not have requested date granularity'
         #):
-        #    dr._verifyGrains(data_request.ANNUAL, 'strict')
+        #    dr._verifyGrains(ANNUAL, 'strict')
 
         # Test strict grain rule with no mis-matched available grains.
         #exp = {}
-        #r = dr._verifyGrains(data_request.ANNUAL,'strict')
+        #r = dr._verifyGrains(ANNUAL,'strict')
         #self.assertEqual(exp, r)
 
         # Test single dataset
@@ -592,33 +558,20 @@ class TestDataRequest(unittest.TestCase):
 
         # Test skip method
 
-
-
     def test_listAllowedGrains(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # test coarser methods
-        exp = [data_request.MONTHLY, data_request.ANNUAL]
-        r = dr._listAllowedGrains(data_request.DAILY, 'coarser')
+        exp = [MONTHLY, ANNUAL]
+        r = dr._listAllowedGrains(DAILY, 'coarser')
         self.assertEqual(exp, r)
 
-        exp = [data_request.ANNUAL]
-        r = dr._listAllowedGrains(data_request.MONTHLY, 'coarser')
+        exp = [ANNUAL]
+        r = dr._listAllowedGrains(MONTHLY, 'coarser')
         self.assertEqual(exp, r)
 
         exp = []
-        r = dr._listAllowedGrains(data_request.ANNUAL, 'coarser')
+        r = dr._listAllowedGrains(ANNUAL, 'coarser')
         self.assertEqual(exp, r)
 
         exp = []
@@ -627,15 +580,15 @@ class TestDataRequest(unittest.TestCase):
 
         # test finer methods
         exp = []
-        r = dr._listAllowedGrains(data_request.DAILY, 'finer')
+        r = dr._listAllowedGrains(DAILY, 'finer')
         self.assertEqual(exp, r)
 
-        exp = [data_request.DAILY]
-        r = dr._listAllowedGrains(data_request.MONTHLY, 'finer')
+        exp = [DAILY]
+        r = dr._listAllowedGrains(MONTHLY, 'finer')
         self.assertEqual(exp, r)
 
-        exp = [data_request.MONTHLY, data_request.DAILY]
-        r = dr._listAllowedGrains(data_request.ANNUAL, 'finer')
+        exp = [MONTHLY, DAILY]
+        r = dr._listAllowedGrains(ANNUAL, 'finer')
         self.assertEqual(exp, r)
 
         exp = []
@@ -643,40 +596,91 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
 
         # test the any method
-        exp = [data_request.ANNUAL, data_request.MONTHLY]
-        r = dr._listAllowedGrains(data_request.DAILY, 'any')
+        exp = [ANNUAL, MONTHLY]
+        r = dr._listAllowedGrains(DAILY, 'any')
         self.assertEqual(exp, r)
 
-        exp = [data_request.ANNUAL, data_request.DAILY]
-        r = dr._listAllowedGrains(data_request.MONTHLY, 'any')
+        exp = [ANNUAL, DAILY]
+        r = dr._listAllowedGrains(MONTHLY, 'any')
         self.assertEqual(exp, r)
 
-        exp = [data_request.MONTHLY, data_request.DAILY]
-        r = dr._listAllowedGrains(data_request.ANNUAL, 'any')
+        exp = [MONTHLY, DAILY]
+        r = dr._listAllowedGrains(ANNUAL, 'any')
         self.assertEqual(exp, r)
 
         exp = []
         r = dr._listAllowedGrains(data_request.NONE, 'any')
         self.assertEqual(exp, r)
 
-    def test_populateDates(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
+    def test_modifySimpleDateGrain(self):
+        dr = self.dr
+
+        # Monthly to annual.
+        exp = ('1980', '1981')
+        r = dr._modifySimpleDateGrain(MONTHLY, ANNUAL, '1980-01', '1981-02')
+        self.assertEqual(exp, r)
+
+        r = dr._modifySimpleDateGrain(MONTHLY, ANNUAL, '1980-1', '1981-2')
+        self.assertEqual(exp, r)
+
+        # Daily to annual.
+        exp = ('1980', '1981')
+        r = dr._modifySimpleDateGrain(
+            DAILY, ANNUAL, '1980-01-01', '1981-02-01'
         )
+        self.assertEqual(exp, r)
+
+        r = dr._modifySimpleDateGrain(DAILY, ANNUAL, '1980-1-1', '1981-2-1')
+        self.assertEqual(exp, r)
+
+        # Annual to monthly.
+        exp = ('1980-01', '1981-12')
+        r = dr._modifySimpleDateGrain(ANNUAL, MONTHLY, '1980', '1981')
+        self.assertEqual(exp, r)
+
+        # Daily to monthly.
+        exp = ('1980-01', '1981-12')
+        r = dr._modifySimpleDateGrain(
+            DAILY, MONTHLY, '1980-01-01', '1981-12-01'
+        )
+        self.assertEqual(exp, r)
+
+        exp = ('1980-1', '1981-12')
+        r = dr._modifySimpleDateGrain(
+            DAILY, MONTHLY, '1980-1-01', '1981-12-01'
+        )
+        self.assertEqual(exp, r)
+
+        r = dr._modifySimpleDateGrain(
+            DAILY, MONTHLY, '1980-1-1', '1981-12-1'
+        )
+        self.assertEqual(exp, r)
+
+        # Annual to daily.
+        exp = ('1980-01-01', '1981-12-31')
+        r = dr._modifySimpleDateGrain(ANNUAL, DAILY, '1980', '1981')
+        self.assertEqual(exp, r)
+
+        # Monthly to daily.
+        exp = ('1980-01-01', '1981-02-28')
+        r = dr._modifySimpleDateGrain(MONTHLY, DAILY, '1980-01', '1981-02')
+        self.assertEqual(exp, r)
+
+        exp = ('1980-01-01', '1980-02-29')
+        r = dr._modifySimpleDateGrain(MONTHLY, DAILY, '1980-01', '1980-02')
+        self.assertEqual(exp, r)
+
+        exp = ('1980-1-01', '1981-2-28')
+        r = dr._modifySimpleDateGrain(MONTHLY, DAILY, '1980-1', '1981-2')
+        self.assertEqual(exp, r)
+
+    def test_populateDates(self):
+        dr = self.dr
 
         # Test no new grains so no new dates.
         exp = {}
         r = dr._populateDates(
-            data_request.ANNUAL, {}, 
+            ANNUAL, {}, 
             '1980',
             None, None, None
         )
@@ -684,10 +688,10 @@ class TestDataRequest(unittest.TestCase):
 
         # Test new dates added by a simple dates string.
         exp = {
-            data_request.MONTHLY: [RD(1980, m+1, None) for m in range(12)]
+            MONTHLY: [RD(1980, m+1, None) for m in range(12)]
         }
         r = dr._populateDates(
-            data_request.ANNUAL, {'ds1': data_request.MONTHLY}, 
+            ANNUAL, {'ds1': MONTHLY}, 
             '1980', 
             None, None, None
         )
@@ -695,33 +699,22 @@ class TestDataRequest(unittest.TestCase):
 
         # Test new dates added by YMD (see test_populateYMD).
         exp = {
-            data_request.MONTHLY: [RD(1980, m+1, None) for m in range(12)]
+            MONTHLY: [RD(1980, m+1, None) for m in range(12)]
         }
         r = dr._populateDates(
-            data_request.ANNUAL, {'ds1': data_request.MONTHLY}, 
+            ANNUAL, {'ds1': MONTHLY}, 
             None, 
             '1980', None, None
         )
         self.assertEqual(exp, r)
 
     def test_populateYMD(self):
-        dr = DataRequest(
-            self.dsc, {},
-            # Date parameters.
-            '1980', None, None, None, None,
-            # Subset geometry.
-            None,
-            # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
-            # Output parameters.
-            data_request.REQ_RASTER, None,
-            {}
-        )
+        dr = self.dr
 
         # Test ANNUAL to MONTHLY
         exp = [RD(1980, m+1, None) for m in range(12)]
         r = dr._populateYMD(
-            data_request.ANNUAL,data_request.MONTHLY,
+            ANNUAL, MONTHLY,
             '1980', None, None
         )
         self.assertEqual(exp, r)
@@ -733,7 +726,7 @@ class TestDataRequest(unittest.TestCase):
             d = dt.date.fromordinal(ord_year + d)
             exp.append(RD(1980, d.month, d.day)) 
         r = dr._populateYMD(
-            data_request.ANNUAL,data_request.DAILY,
+            ANNUAL, DAILY,
             '1980', None, None
         )
         self.assertEqual(exp, r)
@@ -741,7 +734,7 @@ class TestDataRequest(unittest.TestCase):
         # Test MONHTLY to ANNUAL
         exp = [RD(1980, None, None)]
         r = dr._populateYMD(
-            data_request.MONTHLY,data_request.ANNUAL,
+            MONTHLY, ANNUAL,
             '1980', '1', None
         )
         self.assertEqual(exp, r)
@@ -749,7 +742,7 @@ class TestDataRequest(unittest.TestCase):
         # Test MONTHLY to DAILY
         exp = [RD(1980, 1, d+1) for d in range(31)]
         r = dr._populateYMD(
-            data_request.MONTHLY,data_request.DAILY,
+            MONTHLY, DAILY,
             '1980', '1', None
         )
         self.assertEqual(exp, r)
@@ -757,7 +750,7 @@ class TestDataRequest(unittest.TestCase):
         # Test DAILY to MONTHLY
         exp = [RD(1980, 1, None)]
         r = dr._populateYMD(
-            data_request.DAILY,data_request.MONTHLY,
+            DAILY, MONTHLY,
             '1980', '1', '1'
         )
         self.assertEqual(exp, r)
@@ -765,7 +758,7 @@ class TestDataRequest(unittest.TestCase):
         # Test DAILY to ANNUAL
         exp = [RD(1980, None, None)]
         r = dr._populateYMD(
-            data_request.DAILY,data_request.ANNUAL,
+            DAILY, ANNUAL,
             '1980', '1', '1'
         )
         self.assertEqual(exp, r)

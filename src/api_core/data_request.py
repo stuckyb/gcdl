@@ -299,25 +299,24 @@ class DataRequest:
         """
         Returns new starting and ending simple date strings that reflect the
         new grain.  Expects strings of the format "YYYY", "YYYY-MM", or
-        "YYYY-MM-DD".
+        "YYYY-MM-DD".  Leading 0s are optional for "MM" and "DD".
         """
         if new_grain == ANNUAL:
-            g_start = date_start[0:3]
-            g_end = date_end[0:3]
+            g_start = date_start[0:4]
+            g_end = date_end[0:4]
         elif new_grain == MONTHLY:
             if original_grain == DAILY:
-                g_start = date_start[0:6]
-                g_end = date_end[0:6]
+                g_start = date_start[0:date_start.rindex('-')]
+                g_end = date_end[0:date_end.rindex('-')]
             else:
                 g_start = date_start + '-01'
                 g_end = date_end + '-12'  
         elif new_grain == DAILY:
             if original_grain == MONTHLY:
                 g_start = date_start + '-01'
-                days_in_month = cal.monthrange(
-                    date_start[0:3], date_start[5:6]
-                )[1]
-                g_end = date_start + '-' + days_in_month 
+                end_yr, end_month = [int(p) for p in date_end.split('-')]
+                days_in_month = cal.monthrange(end_yr, end_month)[1]
+                g_end = f'{date_end}-{days_in_month}'
             else:
                 g_start = date_start + '-01-01'
                 g_end = date_end + '-12-31' 
@@ -355,7 +354,9 @@ class DataRequest:
         RequestDate instances that specifies all dates included in the request.
         day of month.  The dates string should be of the format (in EBNF):
           DATESSTR = (SINGLEDATE | DATERANGE) , [{",", (SINGLEDATE | DATERANGE)}]
-          SINGLEDATE = string of the format "YYYY", "YYYY-MM", or "YYYY-MM-DD"
+          SINGLEDATE = string of the format "YYYY", "YYYY-MM", or "YYYY-MM-DD".
+            "MM" and "DD" may also be specified as "M" or "D" (i.e., leading 0s
+            are not required).
           DATERANGE = SINGLEDATE, ":", SINGLEDATE
         The RequestDate instances are returned in order from oldest to most
         recent.
@@ -418,7 +419,7 @@ class DataRequest:
             for year in range(start, end):
                 dates.append(RequestDate(year, None, None))
 
-        elif len(date_start) == 7 and len(date_end) == 7:
+        elif len(date_start) in (6,7) and len(date_end) in (6,7):
             # Monthly data request.
             date_grain = MONTHLY
 
@@ -444,7 +445,7 @@ class DataRequest:
                 cur_y = start_y + m_cnt // 12
                 cur_m = (m_cnt % 12) + 1
 
-        elif len(date_start) == 10 and len(date_end) == 10:
+        elif len(date_start) in (8,9,10) and len(date_end) in (8,9,10):
             # Daily data request.
             date_grain = DAILY
 
