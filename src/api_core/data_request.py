@@ -48,22 +48,18 @@ class DataRequest:
     Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dataset_catalog, dsvars, date_start, date_end, years, 
-        months, days, grain_method, subset_geom, target_crs, 
-        target_resolution, ri_method, request_type, output_format,
-        req_metadata
+        self, dataset_catalog, dsvars, dates, years, months, days,
+        grain_method, subset_geom, target_crs, target_resolution, ri_method,
+        request_type, output_format, req_metadata
     ):
         """
         dataset_catalog: The DatasetCatalog associated with this request.
         dsvars: A dict of lists of variables to include for each dataset with
             dataset IDs as keys.
-        date_start: Inclusive start date, specied as 'YYYY', 'YYYY-MM', or
-            'YYYY-MM-DD'.
-        date_end: Inclusive end date, specied as 'YYYY', 'YYYY-MM', or
-            'YYYY-MM-DD'.
-        years: Years to include in request.
-        months: Months to include in request.
-        days: Days to include in request.
+        dates: Dates to include in the request.
+        years: Years to include in the request.
+        months: Months to include in the request.
+        days: Days to include in the request.
         grain_method: 
         subset_geom: A SubsetGeom representing the clipping region or points to
             use or None.
@@ -79,11 +75,10 @@ class DataRequest:
         """
         self.dsc = dataset_catalog
         self.dsvars = dsvars
-        self.date_start_raw = date_start
-        self.date_end_raw = date_end
+        self.dates_raw = dates
         self.dates = {}
         requested_dates, self.inferred_grain = self._parseDates(
-            date_start, date_end, years, months, days
+            dates, years, months, days
         )
         self.dates[self.inferred_grain] = requested_dates
 
@@ -99,10 +94,10 @@ class DataRequest:
         self.ds_date_grains = self._verifyGrains(
             self.inferred_grain, self.grain_method
         )
-        self.dates.update(self._populateDates(
-            self.inferred_grain, self.ds_date_grains, date_start, date_end, 
-            years, months, days
-        ))
+        #self.dates.update(self._populateDates(
+        #    self.inferred_grain, self.ds_date_grains, date_start, date_end, 
+        #    years, months, days
+        #))
 
         self.subset_geom = subset_geom
         self.target_crs = target_crs
@@ -169,7 +164,7 @@ class DataRequest:
         req_md = {}
         req_md.update(req_vals)
 
-        req_md['target_date_range'] = [self.date_start_raw, self.date_end_raw]
+        req_md['target_dates'] = self.dates_raw
         req_md['target_crs'] = getCRSMetadata(self.target_crs)
 
         if self.request_type == REQ_RASTER:
@@ -249,7 +244,7 @@ class DataRequest:
 
     def _populateYMD(self, original_grain, new_grain, years, months, days):
         """
-        Creates date lists for modified date grains in YMD format
+        Creates date lists for modified date grains in YMD format.
         """
         if new_grain == ANNUAL:
             g_months = None
@@ -267,15 +262,45 @@ class DataRequest:
             else:
                 g_months = '1:12'
 
+        new_date_list, grain = self._parseDates(None, years, g_months, g_days)
+
+        return new_date_list
+
+    def _populateSimpleDates(self, original_grain, new_grain, datesstr):
+        """
+        Returns a list of RequestDate objects for a new granularity applied to
+        the provided dates string.
+        """
+        new_date_strs = []
+
+        for part in datesstr.split(','):
+            if ':' in part:
+                date_start, date_end = part.split(':')
+            else:
+                date_start = date_end = part
+
+            new_ds, new_de = self._modifySimpleDateGrain(
+                original_grain, new_grain, date_start, date_end
+            )
+
+            new_date_strs.append(new_ds + ':' + new_de)
+
+        new_dates_str = ','.join(new_date_strs)
+
         new_date_list, grain = self._parseDates(
-            None, None, years, g_months, g_days
+            new_dates_str, None, None, None
         )
 
-        return(new_date_list)
+        return new_date_list
 
-    def _populateSimpleDateRange(
+    def _modifySimpleDateGrain(
         self, original_grain, new_grain, date_start, date_end
     ):
+        """
+        Returns new starting and ending simple date strings that reflect the
+        new grain.  Expects strings of the format "YYYY", "YYYY-MM", or
+        "YYYY-MM-DD".
+        """
         if new_grain == ANNUAL:
             g_start = date_start[0:3]
             g_end = date_end[0:3]
@@ -297,17 +322,13 @@ class DataRequest:
                 g_start = date_start + '-01-01'
                 g_end = date_end + '-12-31' 
 
-        new_date_list, grain  = self._parseDates(
-            g_start, g_end, None, None, None
-        )
+        return (g_start, g_end)
 
-        return(new_date_list)
-
-
-    def _populateDates(self, original_grain, new_grains, date_start, date_end, 
-            years, months, days):
+    def _populateDates(
+        self, original_grain, new_grains, datesstr, years, months, days
+    ):
         """
-        Creates dictionary of date lists per unique date grain in new_grains 
+        Creates dictionary of date lists per unique date grain in new_grains.
         """
         new_grains_unique = set(new_grains.values())
 
@@ -317,9 +338,9 @@ class DataRequest:
         for ug in new_grains_unique:
             if ug is None or ug == original_grain:
                 continue
-            elif date_start is not None or date_end is not None:
-                grain_dates[ug] = self._populateSimpleDateRange(
-                    original_grain, ug, years, months, days
+            elif datesstr is not None and datesstr != '':
+                grain_dates[ug] = self._populateSimpleDates(
+                    original_grain, ug, datesstr
                 )
             else:
                 grain_dates[ug] = self._populateYMD(
@@ -328,10 +349,51 @@ class DataRequest:
 
         return grain_dates
 
+    def _parseSimpleDates(self, datesstr):
+        """
+        Parses a dates string and returns a list of
+        RequestDate instances that specifies all dates included in the request.
+        day of month.  The dates string should be of the format (in EBNF):
+          DATESSTR = (SINGLEDATE | DATERANGE) , [{",", (SINGLEDATE | DATERANGE)}]
+          SINGLEDATE = string of the format "YYYY", "YYYY-MM", or "YYYY-MM-DD"
+          DATERANGE = SINGLEDATE, ":", SINGLEDATE
+        The RequestDate instances are returned in order from oldest to most
+        recent.
+        """
+        dvals = set()
+        date_grain = None
+
+        parts = datesstr.split(',')
+
+        for part in parts:
+            if ':' in part:
+                dr_lims = part.split(':')
+                if len(dr_lims) != 2:
+                    raise ValueError(f'Invalid simple date range: {part}.')
+
+                dr_start, dr_end = dr_lims
+            else:
+                dr_start = dr_end = part
+
+            new_dates, new_grain = self._parseSimpleDateRange(dr_start, dr_end)
+
+            if date_grain is None:
+                date_grain = new_grain
+            elif date_grain != new_grain:
+                raise ValueError(
+                    f'Cannot mix date grains in a dates string: {datesstr}.'
+                )
+
+            dvals.update(new_dates)
+
+        return (sorted(dvals), date_grain)
+
     def _parseSimpleDateRange(self, date_start, date_end):
         """
         Parses starting and ending date strings and returns a list of
         RequestDate instances that specifies all dates included in the request.
+        Also returns the date grain of the request.  Results are returned as
+        the tuple (dates, grain).
         """
         dates = []
 
@@ -410,7 +472,7 @@ class DataRequest:
 
         else:
             raise ValueError(
-                'Mismatched starting and ending date granularity.'
+                'Mismatched starting and ending date range granularity.'
             )
 
         return (dates, date_grain)
@@ -477,8 +539,8 @@ class DataRequest:
 
     def _parseNumValsStr(self, nvstr, maxval):
         """
-        Parses a string that specifies integer values for day of year or day of
-        month.  The string should be of the format (in EBNF):
+        Parses a string that specifies integer values for year, day of year, or
+        day of month.  The string should be of the format (in EBNF):
           NUMVALSSTR = (SINGLEVAL | RANGESTR) , [{",", (SINGLEVAL | RANGESTR)}]
           SINGLEVAL = (integer | "N")
           RANGESTR = integer, ":", integer, ["+", integer]
@@ -595,25 +657,25 @@ class DataRequest:
 
         return (dates, date_grain)
 
-    def _parseDates(self, date_start, date_end, years, months, days):
+    def _parseDates(self, datesstr, years, months, days):
         """
-        Parses the starting and ending date strings and returns a list of
-        RequestDate instances that specifies all dates included in the request.
-        We represent request dates this way because it supports sparse date
+        Parses the dates parameter strings and returns a list of RequestDate
+        instances that represent all dates included in the request.  We
+        represent request dates this way because it supports sparse date
         ranges.
         """
         dates = []
 
         if all(
             param is None or param == '' for param in
-            (date_start, date_end, years, months, days)
+            (datesstr, years, months, days)
         ):
             date_grain = NONE
 
             return (dates, date_grain)
 
-        if date_start is not None or date_end is not None:
-            dates, date_grain = self._parseSimpleDateRange(date_start, date_end)
+        if datesstr is not None and datesstr != '':
+            dates, date_grain = self._parseSimpleDates(datesstr)
         else:
             dates, date_grain = self._parseYMD(years, months, days)
 
