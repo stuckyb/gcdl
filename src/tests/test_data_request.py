@@ -659,7 +659,7 @@ class TestDataRequest(unittest.TestCase):
         r = dr._listAllowedGrains(data_request.NONE, 'any')
         self.assertEqual(exp, r)
 
-    def test_populateSimpleDates(self):
+    def test_populateDates(self):
         dr = DataRequest(
             self.dsc, {},
             # Date parameters.
