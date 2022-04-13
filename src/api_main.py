@@ -109,19 +109,9 @@ async def subset_polygon(
         '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...]. '
         'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
     ),
-    date_start: str = Query(
-        None, title='Start date (inclusive)', description='The starting date '
-        'for which to request data. Dates must be specified as strings, where '
-        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
-        'data requests.'
-    ),
-    date_end: str = Query(
-        None, title='End date (inclusive)', description='The ending date '
-        'for which to request data. Dates must be specified as strings, where '
-        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
-        'data requests.'
+    dates: str = Query(
+        None, title='Dates to include in request',
+        description='The dates for which to request data. Dates must be specified as strings, where "YYYY" means extract annual data, "YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. Date ranges can be specified using a colon, as in "YYYY:YYYY", "YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Multiple dates and/or date ranges should be separated by commas. For example: "2000-2010", "2000-01,2005-01,2010-01:2010-06", "2000-01-01:2000-04-31". Dates can be omitted for non-temporal data requests. For more complicated, recurring date patterns, use the "years", "months", and "days" parameters.'
     ),
     years: str = Query(
         None, title='Years to include in request',
@@ -129,7 +119,8 @@ async def subset_polygon(
         'sequences, such as "2004-2005,2009" or "2000-2010+2", which is '
         'interpreted as every other year starting with 2000. Ranges are '
         'inclusive of their endpoints unless the endpoint does not correspond '
-        'with the step size increment.'
+        'with the step size increment. If "dates" is also provided, "years" '
+        '(and "months" and "days") will be ignored.'
     ),
     months: str = Query(
         None, title='Months to include in request',
@@ -216,9 +207,9 @@ async def subset_polygon(
         clip_geom = SubsetPolygon(clip, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, years, months, days,
-            grain_method, clip_geom, target_crs, resolution, resample_method, 
-            REQ_RASTER, output_format, req_md
+            dsc, datasets, dates, years, months, days, grain_method, clip_geom,
+            target_crs, resolution, resample_method, REQ_RASTER, output_format,
+            req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -242,19 +233,9 @@ async def subset_points(
         '"DATASET_ID:VARNAME[,VARNAME...][;DATASET_ID:VARNAME[,VARNAME...]...]. '
         'Examples: "PRISM:tmax", "PRISM:tmax;DaymetV4:tmax,prcp".'
     ),
-    date_start: str = Query(
-        None, title='Start date (inclusive)', description='The starting date '
-        'for which to request data. Dates must be specified as strings, where '
-        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
-        'data requests.'
-    ),
-    date_end: str = Query(
-        None, title='End date (inclusive)', description='The ending date '
-        'for which to request data. Dates must be specified as strings, where '
-        '"YYYY" means extract annual data, "YYYY-MM" is for monthly data, and '
-        '"YYYY-MM-DD" is for daily data. Date can be omitted for non-temporal '
-        'data requests.'
+    dates: str = Query(
+        None, title='Dates to include in request',
+        description='The dates for which to request data. Dates must be specified as strings, where "YYYY" means extract annual data, "YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. Date ranges can be specified using a colon, as in "YYYY:YYYY", "YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Multiple dates and/or date ranges should be separated by commas. For example: "2000-2010", "2000-01,2005-01,2010-01:2010-06", "2000-01-01:2000-04-31". Dates can be omitted for non-temporal data requests. For more complicated, recurring date patterns, use the "years", "months", and "days" parameters.'
     ),
     years: str = Query(
         None, title='Years to include in request',
@@ -360,9 +341,9 @@ async def subset_points(
             sub_points = ul_cache.getMultiPoint(geom_guid, target_crs)
 
         request = DataRequest(
-            dsc, datasets, date_start, date_end, years, 
-            months, days, grain_method, sub_points, target_crs, 
-            None, interp_method, REQ_POINT, output_format, req_md
+            dsc, datasets, dates, years, months, days, grain_method,
+            sub_points, target_crs, None, interp_method, REQ_POINT,
+            output_format, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
