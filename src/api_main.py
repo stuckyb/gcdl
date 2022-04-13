@@ -111,7 +111,17 @@ async def subset_polygon(
     ),
     dates: str = Query(
         None, title='Dates to include in request',
-        description='The dates for which to request data. Dates must be specified as strings, where "YYYY" means extract annual data, "YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. Date ranges can be specified using a colon, as in "YYYY:YYYY", "YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Multiple dates and/or date ranges should be separated by commas. For example: "2000-2010", "2000-01,2005-01,2010-01:2010-06", "2000-01-01:2000-04-31". Dates can be omitted for non-temporal data requests. For more complicated, recurring date patterns, use the "years", "months", and "days" parameters.'
+        description='The dates for which to request data. Dates must be '
+        'specified as strings, where "YYYY" means extract annual data, '
+        '"YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. '
+        'Date ranges can be specified using a colon, as in "YYYY:YYYY", '
+        '"YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Leading 0s in "MM" '
+        'and "DD" are optional (e.g., both "2020-01-01" and "2020-1-1" are '
+        'valid). Multiple dates and/or date ranges should be separated by '
+        'commas. For example: "2000-2010", "2000-1,2005-1,2010-1:2010-6", '
+        '"2000-01-01:2000-04-31". Dates can be omitted for non-temporal data '
+        'requests. For more complicated, recurring date patterns, use the '
+        '"years", "months", and "days" parameters.'
     ),
     years: str = Query(
         None, title='Years to include in request',
@@ -235,7 +245,17 @@ async def subset_points(
     ),
     dates: str = Query(
         None, title='Dates to include in request',
-        description='The dates for which to request data. Dates must be specified as strings, where "YYYY" means extract annual data, "YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. Date ranges can be specified using a colon, as in "YYYY:YYYY", "YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Multiple dates and/or date ranges should be separated by commas. For example: "2000-2010", "2000-01,2005-01,2010-01:2010-06", "2000-01-01:2000-04-31". Dates can be omitted for non-temporal data requests. For more complicated, recurring date patterns, use the "years", "months", and "days" parameters.'
+        description='The dates for which to request data. Dates must be '
+        'specified as strings, where "YYYY" means extract annual data, '
+        '"YYYY-MM" is for monthly data, and "YYYY-MM-DD" is for daily data. '
+        'Date ranges can be specified using a colon, as in "YYYY:YYYY", '
+        '"YYYY-MM:YYYY-MM", or "YYYY-MM-DD:YYYY-MM-DD". Leading 0s in "MM" '
+        'and "DD" are optional (e.g., both "2020-01-01" and "2020-1-1" are '
+        'valid). Multiple dates and/or date ranges should be separated by '
+        'commas. For example: "2000-2010", "2000-1,2005-1,2010-1:2010-6", '
+        '"2000-01-01:2000-04-31". Dates can be omitted for non-temporal data '
+        'requests. For more complicated, recurring date patterns, use the '
+        '"years", "months", and "days" parameters.'
     ),
     years: str = Query(
         None, title='Years to include in request',
