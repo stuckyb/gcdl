@@ -94,10 +94,10 @@ class DataRequest:
         self.ds_date_grains = self._verifyGrains(
             self.inferred_grain, self.grain_method
         )
-        #self.dates.update(self._populateDates(
-        #    self.inferred_grain, self.ds_date_grains, date_start, date_end, 
-        #    years, months, days
-        #))
+        self.dates.update(self._populateDates(
+            self.inferred_grain, self.ds_date_grains, dates, 
+            years, months, days
+        ))
 
         self.subset_geom = subset_geom
         self.target_crs = target_crs
