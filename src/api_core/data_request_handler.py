@@ -145,7 +145,10 @@ class DataRequestHandler:
                 else:
                     #Inefficient - but testing if harmonization works for now
                     target_layer = rioxarray.open_rasterio(target_path, masked=True)
-                    data = data.rio.reproject_match(target_layer)
+                    data = data.rio.reproject_match(
+                        match_data_array=target_layer,
+                        resampling=Resampling[request.ri_method]
+                    )
 
                 # Clip to the non-modified requested geometry
                 data = data.rio.clip([request.subset_geom.json], all_touched = True)
