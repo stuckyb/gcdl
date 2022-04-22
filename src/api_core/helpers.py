@@ -79,8 +79,8 @@ def parse_clip_bounds(
     """
     Parses a clip boundary specification.
     """
-    if clip is None:
-        return None
+    if clip == '':
+        return ''
 
     try:
         coords = parse_coords(clip)
