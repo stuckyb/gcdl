@@ -220,7 +220,7 @@ async def subset_polygon(
         else:
             target_crs = pyproj.crs.CRS(crs)
 
-        if points != '':
+        if clip != '':
             coords = parse_coords(clip)
             clip_geom = SubsetPolygon(coords, target_crs)
         else:
@@ -367,7 +367,7 @@ async def subset_points(
 
         if points != '':
             coords = parse_coords(points)
-            sub_points = SubsetMultiPoint(points, target_crs)
+            sub_points = SubsetMultiPoint(coords, target_crs)
         else:
             sub_points = ul_cache.getMultiPoint(geom_guid, target_crs)
 
