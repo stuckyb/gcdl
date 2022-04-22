@@ -64,7 +64,7 @@ def parse_coords(coords_str):
 
 def parse_clip_bounds(
     clip: str = Query(
-        None, title='Clip boundary', description='Specifies the clip boundary '
+        '', title='Clip boundary', description='Specifies the clip boundary '
         'for the subset operation.  The boundary can be specified in one of '
         'two ways: 1) The upper left and lower right corners of a '
         'bounding box for subsetting the data, specifed as a comma-separated '
