@@ -188,7 +188,7 @@ class DataUploadCache:
 
         # Locate the shapefile in the archive.
         for fpath in zf.namelist():
-            if fpath.endswith('.shp'):
+            if fpath.endswith('.shp') and not(Path(fpath).name.startswith('.')):
                 if shp_path is not None:
                     raise Exception(
                         'Uploaded ZIP archives cannot include more than one '

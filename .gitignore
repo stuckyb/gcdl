@@ -11,6 +11,7 @@ __pycache__/
 # Data input/output folders for testing
 local_data/*
 output/*
+upload/*
 
 # Rendered tutorials
 documentation/tutorials/*.html
