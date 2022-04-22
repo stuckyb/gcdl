@@ -222,7 +222,7 @@ async def subset_polygon(
 
         if points != '':
             coords = parse_coords(clip)
-            clip_geom = SubsetPolygon(clip, target_crs)
+            clip_geom = SubsetPolygon(coords, target_crs)
         else:
             clip_geom = ul_cache.getPolygon(geom_guid, target_crs)
 
