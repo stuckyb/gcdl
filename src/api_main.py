@@ -167,6 +167,12 @@ async def subset_polygon(
         'Non-temporal datasets are always returned.'
     ),
     clip: list = Depends(parse_clip_bounds),
+    geom_guid: str = Query(
+        '', title='GUID of uploaded geometry data',
+        description='The GUID of previously uploaded polygon geometry '
+        'data.  If polygon coordinates are provided as a query parameter, '
+        'geom_guid will be ignored.'
+    ),
     crs: str = Query(
         None, title='Target coordinate reference system.',
         description='The target coordinate reference system (CRS) for the '
@@ -214,7 +220,12 @@ async def subset_polygon(
         else:
             target_crs = pyproj.crs.CRS(crs)
 
-        clip_geom = SubsetPolygon(clip, target_crs)
+        if points != '':
+            coords = parse_coords(points)
+            clip_geom = SubsetPolygon(clip, target_crs)
+        else:
+            clip_geom = ul_cache.getPolygon(geom_guid, target_crs)
+
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method, clip_geom,
