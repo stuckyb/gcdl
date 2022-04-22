@@ -221,7 +221,7 @@ async def subset_polygon(
             target_crs = pyproj.crs.CRS(crs)
 
         if points != '':
-            coords = parse_coords(points)
+            coords = parse_coords(clip)
             clip_geom = SubsetPolygon(clip, target_crs)
         else:
             clip_geom = ul_cache.getPolygon(geom_guid, target_crs)
