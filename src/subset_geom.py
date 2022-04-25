@@ -113,18 +113,6 @@ class SubsetGeom(ABC):
 
         return transformed_sg
 
-    def buffer(self, distance):
-        """
-        Returns a new SubsetGeom with an added buffer of consistent width in 
-        all directions. The source SubsetGeom is not modified.
-
-        distance: The buffer width in units of the source SubsetGeom's CRS.
-        """
-        buffered_sg = type(self)()
-        buffered_sg.geom = self.geom.buffer(distance)
-
-        return buffered_sg
-
 
 class SubsetPolygon(SubsetGeom):
     def __init__(self, geom_spec=None, crs=None):
@@ -150,6 +138,18 @@ class SubsetPolygon(SubsetGeom):
         f_dict = geojson.loads(self.geom.to_json())
 
         return f_dict['features'][0]['geometry']
+
+    def buffer(self, distance):
+        """
+        Returns a new SubsetPolygon with an added buffer of consistent width in 
+        all directions. The source SubsetPolygon is not modified.
+
+        distance: The buffer width in units of the source SubsetPolygon's CRS.
+        """
+        buffered_sp = type(self)()
+        buffered_sp.geom = self.geom.buffer(distance)
+
+        return buffered_sp
 
 
 class SubsetMultiPoint(SubsetGeom):
