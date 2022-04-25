@@ -165,6 +165,37 @@ class DataRequestHandler:
         else:
             return None
 
+    def _buildDatasetSubsetGeoms(self, request):
+        """
+        Build a set of subset geometries, reprojected as needed, that match
+        the source dataset CRSs. A buffer width of the coarsest grid size 
+        is added to each to handle boundary discrepancies. We precompute 
+        these geometries to avoid redundant reprojections when processing 
+        the data retrievals.
+        """
+
+        # If raster-type request, buffer subet geometry
+        if request.request_type == dr.REQ_RASTER:
+            geom_unit = request.subset_geom.geom.crs.axis_info[0].unit_name
+            grid_sizes = [
+                    request.dsc[dsid].getGridSize(geom_unit) for dsid in request.dsvars
+                ]
+            rsg = request.subset_geom.buffer(max(grid_sizes))
+        else:
+            rsg = request.subset_geom
+
+        # Reproject to datasets' CRS
+        ds_subset_geoms = {}
+        for dsid in request.dsvars:
+            if request.subset_geom.crs.equals(request.dsc[dsid].crs):
+                ds_subset_geoms[dsid] = rsg
+            else:
+                ds_subset_geoms[dsid] = rsg.reproject(
+                    request.dsc[dsid].crs
+                )
+
+        return ds_subset_geoms
+
     def fulfillRequestSynchronous(self, request, output_dir):
         """
         Implements synchronous (i.e., blocking) data request fulfillment.
@@ -174,34 +205,8 @@ class DataRequestHandler:
         """
         dsc = request.dsc
 
-        # Build a set of subset geometries, reprojected as needed, that match
-        # the source dataset CRSs. A buffer width of the coarsest grid size 
-        # is added to each to handle boundary discrepancies. We precompute 
-        # these geometries to avoid redundant reprojections when processing 
-        # the data retrievals.
-        if request.request_type == dr.REQ_RASTER:
-            if request.subset_geom.geom.crs.axis_info[0].unit_name == 'metre':
-                grid_sizes = [
-                    dsc[dsid].grid_size if dsc[dsid].grid_unit == 'meters' 
-                    else dsc[dsid].grid_size*111000 for dsid in request.dsvars
-                ]
-            else:
-                grid_sizes = [
-                    dsc[dsid].grid_size/111000 if dsc[dsid].grid_unit == 'meters' 
-                    else dsc[dsid].grid_size for dsid in request.dsvars
-                ]
-            rsg = request.subset_geom.buffer(max(grid_sizes))
-        else:
-            rsg = request.subset_geom
-
-        ds_subset_geoms = {}
-        for dsid in request.dsvars:
-            if request.subset_geom.crs.equals(dsc[dsid].crs):
-                ds_subset_geoms[dsid] = rsg
-            else:
-                ds_subset_geoms[dsid] = rsg.reproject(
-                    dsc[dsid].crs
-                )
+        # Get subset geoms in datasets' CRSs
+        ds_subset_geoms = self._buildDatasetSubsetGeoms(request)
 
         # Get the requested data.
         fout_paths = []

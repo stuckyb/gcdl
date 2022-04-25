@@ -117,6 +117,27 @@ class GSDataSet(ABC):
 
         return grains
 
+    def getGridSize(self, unit=None):
+        """
+        Returns dataset's grid size in specified unit, or in dataset's
+        grid unit if not specified.
+        """
+        gs_unit = unit
+        if gs_unit is None:
+            gs_unit = self.grid_unit
+
+        if gs_unit in ['meters','metre']:
+            if self.grid_unit in ['meters','metre']:
+                return self.grid_size
+            else:
+                return self.grid_size*111000
+        elif gs_unit == 'degrees':
+            if self.grid_unit == 'degrees':
+                return self.grid_size
+            else:
+                return self.grid_size/111000
+
+
     def getMetadata(self):
         """
         Returns a data structure containing the dataset's metadata.
