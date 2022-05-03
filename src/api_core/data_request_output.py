@@ -42,31 +42,31 @@ class DataRequestOutput:
     def _writeShapefile(self, data_gdf, fout_path):
         data_gdf.to_file(fout_path, index=False)
 
-    def _writeNetCDF(self, data_gdf, subset_geom, fout_path):
-        
-        # Modify geometry to list coordinates in x,y columns
-        g_crs = data_gdf.geometry.crs
-        data_gdf['x'] = data_gdf.geometry.x
-        data_gdf['y'] = data_gdf.geometry.y
-        data_gdf = data_gdf.drop(columns=['geometry'])
-        data_gdf = data_gdf.set_index(['x', 'y', 'time'])
-        # Pivot wider
-        data_gdf['dsvar'] = data_gdf['dataset'] + '_' + data_gdf['variable']
-        data_gdf = data_gdf.pivot(
-            columns = 'dsvar',
-            values = 'value'
-        )
-        # Convert to xarray DataArray
-        data_xr = data_gdf.to_xarray()
-        data_xr.rio.write_crs(g_crs, inplace=True)
-        # Write to netCDF
-        data_xr.to_netcdf(fout_path)
+    def _writeNetCDF(self, data, subset_geom, fout_path):
+        if not(isinstance(data, xr.Dataset)):
+            # Modify geometry to list coordinates in x,y columns
+            g_crs = data.geometry.crs
+            data['x'] = data.geometry.x
+            data['y'] = data.geometry.y
+            data = data.drop(columns=['geometry'])
+            data = data.set_index(['x', 'y', 'time'])
+            # Pivot wider
+            data['dsvar'] = data['dataset'] + '_' + data['variable']
+            data = data.pivot(
+                columns = 'dsvar',
+                values = 'value'
+            )
+            # Convert to xarray DataArray
+            data = data.to_xarray()
+            data.rio.write_crs(g_crs, inplace=True)
 
-    def _writeGeoTIFFs(self, data_xrds, fout_path):
-        pass
+        # Write to netCDF
+        data.to_netcdf(fout_path)
+
+    def _writeGeoTIFF(self, data_xrda, rdate, fout_path):
+        data_xrda.sel(time = rdate).rio.to_raster(fout_path)
 
     def _writePointFiles(self, ds_output_dict, request, output_dir):
-        
         fname = '_'.join(request.dsvars.keys())
         fout_path = output_dir / (fname + request.file_extension)
 
@@ -97,6 +97,7 @@ class DataRequestOutput:
     def _writeRasterFiles(self, ds_output_dict, request, output_dir):
         fout_paths = []
         if request.file_extension == ".tif":
+            # Write a geoTIFF per dataset, variable, and date. 
             for dsid in ds_output_dict:
                 ds = ds_output_dict[dsid]
                 for varname in list(ds.data_vars):
@@ -104,7 +105,7 @@ class DataRequestOutput:
                     for t in dsvar.coords['time'].values:
                         fname = self._getSingleLayerOutputFileName(dsid, varname, t)
                         fout_path = output_dir / (fname + request.file_extension)
-                        dsvar.sel(time = t).rio.to_raster(fout_path)
+                        self._writeGeoTIFF(dsvar, t, fout_path)
                         fout_paths.append(fout_path)
         elif request.file_extension == ".nc":
             # Write a netcdf per dataset. 
@@ -112,7 +113,7 @@ class DataRequestOutput:
                 fname = dsid
                 fout_path = output_dir / (fname + request.file_extension)
                 ds_dataset = ds_output_dict[dsid]
-                ds_dataset.to_netcdf(fout_path)
+                self._writeNetCDF(ds_dataset,fout_path)
                 fout_paths.append(fout_path)
         else:
             raise ValueError('Unsupported raster output format.')
