@@ -84,6 +84,7 @@ class PRISM(GSDataSet):
 
         fpath = self.ds_path / fname
 
+        # Open data file
         data = rioxarray.open_rasterio(fpath, masked=True)
 
         if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
@@ -92,6 +93,10 @@ class PRISM(GSDataSet):
             )
 
         if isinstance(subset_geom, SubsetPolygon):
+            # Drop unnecessary 'band' dimension because rioxarray
+            # can't handle >3 dimensions in some later operations
+            data = data.squeeze('band')
+
             data = data.rio.clip([subset_geom.json], all_touched = True)
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
