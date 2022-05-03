@@ -17,29 +17,8 @@ class DataRequestOutput:
     def __init__(self):
         pass
 
-    def requestDateAsString(self, grain, rdate):
-        if grain == dr.NONE or rdate is None:
-            dstr = ''
-        elif grain == dr.ANNUAL:
-            dstr = '{0}'.format(
-                rdate.year
-            )
-        elif grain == dr.MONTHLY:
-            dstr = '{0}-{1:02}'.format(
-                rdate.year, rdate.month
-            )
-        elif grain == dr.DAILY:
-            dstr = '{0}-{1:02}-{2:02}'.format(
-                rdate.year, rdate.month, rdate.day
-            )
-        else:
-            raise ValueError('Invalid date granularity specification.')
+    def _getSingleLayerOutputFileName(self, dsid, varname, date_str):
 
-        return dstr
-
-    def _getSingleLayerOutputFileName(self, dsid, varname, grain, rdate):
-
-        date_str = self._requestDateAsString(grain, rdate)
         if date_str == '':
            fname = '{0}_{1}'.format(
                     dsid, varname
@@ -126,7 +105,7 @@ class DataRequestOutput:
                 for varname in list(ds.data_vars):
                     dsvar = ds[varname]
                     for t in dsvar.coords['time'].values:
-                        fname = self._getSingleLayerOutputFileName(dsid, varname, request.ds_date_grains[dsid], t)
+                        fname = self._getSingleLayerOutputFileName(dsid, varname, t)
                         fout_path = output_dir / (fname + request.file_extension)
                         dsvar.sel(time = t).rio.to_raster(fout_path)
                         fout_paths.append(fout_path)
