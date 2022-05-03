@@ -52,14 +52,12 @@ class DataRequestOutput:
         # Pivot wider
         data_gdf['dsvar'] = data_gdf['dataset'] + '_' + data_gdf['variable']
         data_gdf = data_gdf.pivot(
-            #index = ['x','y','time'],
             columns = 'dsvar',
             values = 'value'
         )
         # Convert to xarray DataArray
         data_xr = data_gdf.to_xarray()
         data_xr.rio.write_crs(subset_geom.crs, inplace=True)
-        print(data_xr)
         # Write to netCDF
         data_xr.to_netcdf(fout_path)
 
@@ -73,13 +71,11 @@ class DataRequestOutput:
 
         # Merge list of geodataframes into one geodataframe
         # Assuming long format for now:
-        print(ds_output_dict)
         ds_output_list = [gdf for gdf in ds_output_dict.values()]
         final_gdf = ds_output_list[0]
         for gdf in ds_output_list[1:]:
             final_gdf = final_gdf.append(gdf)
 
-        print(final_gdf)
         if request.file_extension == ".csv":
             self._writeCSV(final_gdf, fout_path)
             fout_paths = [fout_path]

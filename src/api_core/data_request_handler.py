@@ -169,12 +169,7 @@ class DataRequestHandler:
                     # Skip this dataset
                     continue
                 else:
-                    raise ValueError('Unsupported date grain.')
-
-                #date_index = pd.Index(
-                #    ['-'.join([str(d_int) for d_int in rd]) for rd in date_list], # doesn't feel right!
-                #    name="time"
-                #)  
+                    raise ValueError('Unsupported date grain.') 
 
                 # Collect requested data in a xarray.Dataset for this requested dataset
                 ds_output_data = xr.Dataset()
