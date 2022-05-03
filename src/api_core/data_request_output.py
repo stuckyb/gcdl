@@ -45,6 +45,7 @@ class DataRequestOutput:
     def _writeNetCDF(self, data_gdf, subset_geom, fout_path):
         
         # Modify geometry to list coordinates in x,y columns
+        g_crs = data_gdf.geometry.crs
         data_gdf['x'] = data_gdf.geometry.x
         data_gdf['y'] = data_gdf.geometry.y
         data_gdf = data_gdf.drop(columns=['geometry'])
@@ -57,11 +58,11 @@ class DataRequestOutput:
         )
         # Convert to xarray DataArray
         data_xr = data_gdf.to_xarray()
-        data_xr.rio.write_crs(subset_geom.crs, inplace=True)
+        data_xr.rio.write_crs(g_crs, inplace=True)
         # Write to netCDF
         data_xr.to_netcdf(fout_path)
 
-    def _writeGeoTIFF(self, data_xrds, fout_path):
+    def _writeGeoTIFFs(self, data_xrds, fout_path):
         pass
 
     def _writePointFiles(self, ds_output_dict, request, output_dir):
@@ -85,7 +86,7 @@ class DataRequestOutput:
             p = Path(output_dir).glob(fname+'.*')
             fout_paths = [file for file in p]
         elif request.file_extension == ".nc":
-            self._writeNetCDF(final_gdf, request.subset_geom, fout_path)
+            self._writeNetCDF(final_gdf, fout_path)
             fout_paths = [fout_path]
         else:
             raise ValueError('Unsupported point output format.')
