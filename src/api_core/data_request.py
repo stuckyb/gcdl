@@ -103,6 +103,11 @@ class DataRequest:
         self.target_crs = target_crs
         self.target_resolution = target_resolution
 
+        if target_resolution is not None and subset_geom is not None:
+            self.harmonization = True
+        else:
+            self.harmonization = False
+
         if request_type not in (REQ_RASTER, REQ_POINT):
             raise ValueError('Invalid request type.')
 
