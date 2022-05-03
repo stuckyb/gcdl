@@ -42,7 +42,7 @@ class DataRequestOutput:
     def _writeShapefile(self, data_gdf, fout_path):
         data_gdf.to_file(fout_path, index=False)
 
-    def _writeNetCDF(self, data, subset_geom, fout_path):
+    def _writeNetCDF(self, data,fout_path):
         if not(isinstance(data, xr.Dataset)):
             # Modify geometry to list coordinates in x,y columns
             g_crs = data.geometry.crs
