@@ -18,17 +18,17 @@ class DataRequestOutput:
         pass
 
     def requestDateAsString(self, grain, rdate):
-        if grain == NONE or rdate is None:
+        if grain == dr.NONE or rdate is None:
             dstr = ''
-        elif grain == ANNUAL:
+        elif grain == dr.ANNUAL:
             dstr = '{0}'.format(
                 rdate.year
             )
-        elif grain == MONTHLY:
+        elif grain == dr.MONTHLY:
             dstr = '{0}-{1:02}'.format(
                 rdate.year, rdate.month
             )
-        elif grain == DAILY:
+        elif grain == dr.DAILY:
             dstr = '{0}-{1:02}-{2:02}'.format(
                 rdate.year, rdate.month, rdate.day
             )
