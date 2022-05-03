@@ -126,7 +126,7 @@ class DataRequestOutput:
                 for varname in list(ds.data_vars):
                     dsvar = ds[varname]
                     for t in dsvar.coords['time'].values:
-                        fname = self._getSingleLayerOutputFileName(dsid, varname, grain, t)
+                        fname = self._getSingleLayerOutputFileName(dsid, varname, request.ds_date_grains[dsid], t)
                         fout_path = output_dir / (fname + request.file_extension)
                         dsvar.sel(time = t).rio.to_raster(fout_path)
                         fout_paths.append(fout_path)
