@@ -137,94 +137,99 @@ class DataRequestHandler:
 
         return ds_subset_geoms
 
+    def _getGrainAndDates(self, request, dsid):
+        # If the dataset is non-temporal, we don't need to iterate over the
+                # request dates. Otherwise, prepare date lists per date grain 
+                # (requested directly and those determined by requested grain_method).
+        ds_grain = request.ds_date_grains[dsid]
+        if request.dsc[dsid].nontemporal:
+            date_list = [None] 
+        else:
+            date_list = request.dates[ds_grain]
+
+        return (ds_grain, date_list)
+
+    def _collectRasterData(
+        self, request, dsid, grain, date_list, geom,
+        target_data
+    ):
+        # Collect requested data in a xarray.Dataset for this requested dataset
+        ds_output_data = xr.Dataset()
+        for varname in request.dsvars[dsid]:
+            var_date_data = []
+            for rdate in date_list:
+                raster_layer = self._getRasterLayer(
+                    request.dsc[dsid], varname, grain, rdate, geom,
+                    request, target_data
+                )
+                if request.harmonization and target_data is None:
+                    target_data = raster_layer
+                # Check if data returned
+                # (sparse daily data not always returned)
+                if raster_layer is not None:
+                    var_date_data.append(raster_layer)        
+            var_date_data = xr.concat(var_date_data, dim='time') 
+            ds_output_data[varname] = var_date_data 
+
+        return (ds_output_data, target_data)
+
+    def _collectPointData(
+        self, request, dsid, grain, date_list, geom
+    ):
+        for varname in request.dsvars[dsid]:
+            var_date_data = []
+            for rdate in date_list:
+                point_layer = self._getPointLayer(
+                    request.dsc[dsid], varname, grain, rdate, geom,
+                    request
+                )
+                # Check if data returned
+                # (sparse daily data not always returned)
+                if point_layer is not None:
+                    var_date_data.append(point_layer)
+        var_date_data = pd.concat(var_date_data)
+
+        return var_date_data
+
     def fulfillRequestSynchronous(self, request):
         """
         Implements synchronous (i.e., blocking) data request fulfillment.
 
         request: A DataRequest instance.
         """
-        dsc = request.dsc
 
         # Get subset geoms in datasets' CRSs
         ds_subset_geoms = self._buildDatasetSubsetGeoms(request)
 
         # Get the requested data.
         output_data = {}
+        target_data = None
+        for dsid in request.dsvars:
 
-        if request.request_type == dr.REQ_RASTER:
-            target_data = None
-            for dsid in request.dsvars:
-                # If the dataset is non-temporal, we don't need to iterate over the
-                # request dates. Otherwise, prepare date lists per date grain 
-                # (requested directly and those determined by requested grain_method). 
-                ds_grain = request.ds_date_grains[dsid]
-                if dsc[dsid].nontemporal:
-                    date_list = [None] 
-                elif ds_grain in dsc[dsid].supported_grains:
-                    date_list = request.dates[ds_grain] 
-                elif (
-                    ds_grain not in dsc[dsid].supported_grains and
-                    request.grain_method == 'skip'
-                ):
-                    # Skip this dataset
-                    continue
-                else:
-                    raise ValueError('Unsupported date grain.') 
+            # Determine the date granularity and request dates 
+            # for this dataset
+            ds_grain, date_list = self._getGrainAndDates(request, dsid)
+            if date_list is None:
+                # Skip this dataset
+                continue
 
-                # Collect requested data in a xarray.Dataset for this requested dataset
-                ds_output_data = xr.Dataset()
-                for varname in request.dsvars[dsid]:
-                    var_date_data = []
-                    for rdate in date_list:
-                        raster_layer = self._getRasterLayer(
-                            dsc[dsid], varname, ds_grain, rdate, ds_subset_geoms[dsid],
-                            request, target_data
-                        )
-                        if request.harmonization and target_data is None:
-                            target_data = raster_layer
-                        # Check if data returned
-                        # (sparse daily data not always returned)
-                        if raster_layer is not None:
-                            var_date_data.append(raster_layer)        
-                    var_date_data = xr.concat(var_date_data, dim='time') 
-                    ds_output_data[varname] = var_date_data 
-                output_data.update({dsid : ds_output_data})
+            if request.request_type == dr.REQ_RASTER:
+                ds_output_data, target_data = self._collectRasterData(
+                    request, dsid, ds_grain, date_list, ds_subset_geoms[dsid],
+                    target_data
+                )
+            elif request.request_type == dr.REQ_POINT:
+                ds_output_data = self._collectPointData(
+                    request, dsid, ds_grain, date_list, ds_subset_geoms[dsid]
+                )
+            else:
+                raise ValueError('Unsupported request type.')
 
-        elif request.request_type == dr.REQ_POINT:
-            for dsid in request.dsvars:
-                # If the dataset is non-temporal, we don't need to iterate over the
-                # request dates. Otherwise, prepare date lists per date grain 
-                # (requested directly and those determined by requested grain_method). 
-                ds_grain = request.ds_date_grains[dsid]
-                if dsc[dsid].nontemporal:
-                    date_list = [None] 
-                elif ds_grain in dsc[dsid].supported_grains:
-                    date_list = request.dates[ds_grain] 
-                elif (
-                    ds_grain not in dsc[dsid].supported_grains and
-                    request.grain_method == 'skip'
-                ):
-                    # Skip this dataset
-                    continue
-                else:
-                    raise ValueError('Unsupported date grain.')
-
-                for varname in request.dsvars[dsid]:
-                    var_date_data = []
-                    for rdate in date_list:
-                        point_layer = self._getPointLayer(
-                            dsc[dsid], varname, ds_grain, rdate, ds_subset_geoms[dsid],
-                            request
-                        )
-                        # Check if data returned
-                        # (sparse daily data not always returned)
-                        if point_layer is not None:
-                            var_date_data.append(point_layer)
-                var_date_data = pd.concat(var_date_data)
-                output_data.update({dsid : var_date_data})
-
-        else:
-            raise ValueError('Unsupported request type.')
+            output_data.update({dsid : ds_output_data})
 
         return output_data
+
+
+
+        
 
