@@ -9,6 +9,7 @@ import pyproj
 
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
+from api_core import DataRequestOutput
 from api_core.helpers import (
     parse_datasets_str, parse_clip_bounds, parse_coords, get_request_metadata
 )
@@ -235,7 +236,10 @@ async def subset_polygon(
         raise HTTPException(status_code=400, detail=str(e))
 
     req_handler = DataRequestHandler()
-    res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
+    res_data = req_handler.fulfillRequestSynchronous(request)
+
+    req_output = DataRequestOutput()
+    res_path = req_output.writeRequestedData(request, res_data, output_dir)
 
     return FileResponse(res_path, filename=res_path.name)
 
@@ -379,7 +383,10 @@ async def subset_points(
         raise HTTPException(status_code=400, detail=str(e))
 
     req_handler = DataRequestHandler()
-    res_path = req_handler.fulfillRequestSynchronous(request, output_dir)
+    res_data = req_handler.fulfillRequestSynchronous(request)
+
+    req_output = DataRequestOutput()
+    res_path = req_output.writeRequestedData(request, res_data, output_dir)
 
     return FileResponse(res_path, filename=res_path.name)
 
