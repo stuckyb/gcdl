@@ -15,7 +15,7 @@ class TestDataRequest(unittest.TestCase):
         self.dr = DataRequest(
             self.dsc, {},
             # Date parameters.
-            '1980', None, None, None, None,
+            '1980', None, None, None, None, None,
             # Subset geometry.
             None,
             # Projection/resolution parameters.
@@ -31,7 +31,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, {},
                 # Date parameters.
-                '1980', None, None, None, None,
+                '1980', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -45,7 +45,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, {},
                 # Date parameters.
-                '1980', None, None, None, None,
+                '1980', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -59,7 +59,21 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, {},
                 # Date parameters.
-                '1980', None, None, None, 'fakemethod',
+                '1980', None, None, None, 'fakemethod', None,
+                # Subset geometry.
+                None,
+                # Projection/resolution parameters.
+                CRS('NAD83'), None, None,
+                # Output parameters.
+                data_request.REQ_RASTER, None,
+                {}
+            )
+
+        with self.assertRaisesRegex(ValueError, 'Invalid date range validation method'):
+            dr = DataRequest(
+                self.dsc, {},
+                # Date parameters.
+                '1980', None, None, None, None, 'fakemethod',
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -73,7 +87,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, {},
                 # Date parameters.
-                '1980', None, None, None, None,
+                '1980', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -763,3 +777,252 @@ class TestDataRequest(unittest.TestCase):
         )
         self.assertEqual(exp, r)
 
+    def test_requestDateAsDatetime(self):
+        dr = self.dr
+
+        # Test daily
+        exp = dt.date(1980,1,1)
+        r = dr._requestDateAsDatetime(
+            RD(1980,1,1), DAILY
+        )
+        self.assertEqual(exp, r)
+
+        # Test monthly
+        exp = dt.date(1980,1,1)
+        r = dr._requestDateAsDatetime(
+            RD(1980,1, None), MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test annual
+        exp = dt.date(1980,1,1)
+        r = dr._requestDateAsDatetime(
+            RD(1980, None, None), ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test mixed RD format and grain
+
+    def test_strictDateRangeCheck(self):
+        dr = self.dr
+
+        # Test fully available dates - ANNUAL
+        exp = True
+        r = dr._strictDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - ANNUAL
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - ANNUAL
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test totally unavailable dates - ANNUAL
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test fully available dates - MONTHLY
+        exp = True
+        r = dr._strictDateRangeCheck(
+            [RD(1980,1,None),RD(1980,2,None)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - MONTHLY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,12,None),RD(1981,1,None)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - MONTHLY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,12,None),RD(1981,1,None)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+ 
+        # Test totally unavailable dates - MONTHLY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,1,None),RD(1980,2,None)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test fully available dates - DAILY
+        exp = True
+        r = dr._strictDateRangeCheck(
+            [RD(1980,1,1),RD(1980,1,2)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - DAILY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,12,31),RD(1981,1,1)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - DAILY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,12,31),RD(1981,1,1)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+ 
+        # Test totally unavailable dates - DAILY
+        exp = False
+        r = dr._strictDateRangeCheck(
+            [RD(1980,1,1),RD(1980,1,2)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+    def test_partialDateRangeCheck(self):
+        dr = self.dr
+
+        # Test fully available dates - ANNUAL
+        exp = [RD(1980,None,None),RD(1981,None,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - ANNUAL
+        exp = [RD(1981,None,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - ANNUAL
+        exp = [RD(1980,None,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test totally unavailable dates - ANNUAL
+        exp = []
+        r = dr._partialDateRangeCheck(
+            [RD(1980,None,None),RD(1981,None,None)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            ANNUAL
+        )
+        self.assertEqual(exp, r)
+
+        # Test fully available dates - MONTHLY
+        exp = [RD(1980,1,None),RD(1980,2,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,1,None),RD(1980,2,None)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - MONTHLY
+        exp = [RD(1981,1,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,12,None),RD(1981,1,None)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - MONTHLY
+        exp = [RD(1980,12,None)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,12,None),RD(1981,1,None)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+ 
+        # Test totally unavailable dates - MONTHLY
+        exp = []
+        r = dr._partialDateRangeCheck(
+            [RD(1980,1,None),RD(1980,2,None)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            MONTHLY
+        )
+        self.assertEqual(exp, r)
+
+        # Test fully available dates - DAILY
+        exp = [RD(1980,1,1),RD(1980,1,2)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,1,1),RD(1980,1,2)],
+            [dt.date(1980,1,1),dt.date(1981,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+        # Test front-end partial available dates - DAILY
+        exp = [RD(1981,1,1)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,12,31),RD(1981,1,1)],
+            [dt.date(1981,1,1),dt.date(1981,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+        # Test back-end partial available dates - DAILY
+        exp = [RD(1980,12,31)]
+        r = dr._partialDateRangeCheck(
+            [RD(1980,12,31),RD(1981,1,1)],
+            [dt.date(1980,1,1),dt.date(1980,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+ 
+        # Test totally unavailable dates - DAILY
+        exp = []
+        r = dr._partialDateRangeCheck(
+            [RD(1980,1,1),RD(1980,1,2)],
+            [dt.date(1982,1,1),dt.date(1982,12,31)],
+            DAILY
+        )
+        self.assertEqual(exp, r)
+
+    #def test_validateDateRange(self):

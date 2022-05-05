@@ -749,11 +749,13 @@ class DataRequest:
         Checks the requested dates against the available date range
         and returns the subset of requested dates available. 
         """
-        available_dates = [] 
+        available_rdates = [] 
         for rdate in requested_dates:
-            available = self._strictDateRangeCheck([rdate], grain)
+            available = self._strictDateRangeCheck(
+                [rdate], available_range, grain
+            )
             if available:
-                available_dates.append(rdate)
+                available_rdates.append(rdate)
         
         return available_rdates
 
