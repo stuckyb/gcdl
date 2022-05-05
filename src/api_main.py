@@ -167,6 +167,15 @@ async def subset_polygon(
         'grain will be returned, with coarser having higher priority over finer.'
         'Non-temporal datasets are always returned.'
     ),
+    validate_method: str = Query(
+        None, title='Validation method for requested date range.',
+        description='How to handle requested dates outside of requested dataset '
+        'available data range. If "strict" (default), '
+        'an error will be returned. If "overlap", the requested dates will be '
+        'truncated to the date range available in all requested datasets. If '
+        '"all", then the requested dates will be truncated to the available date '
+        'range per dataset. Non-temporal datasets are always returned.'
+    ),
     clip: list = Depends(parse_clip_bounds),
     geom_guid: str = Query(
         '', title='GUID of uploaded geometry data',
@@ -228,9 +237,9 @@ async def subset_polygon(
 
 
         request = DataRequest(
-            dsc, datasets, dates, years, months, days, grain_method, clip_geom,
-            target_crs, resolution, resample_method, REQ_RASTER, output_format,
-            req_md
+            dsc, datasets, dates, years, months, days, grain_method, 
+            validate_method, clip_geom, target_crs, resolution, 
+            resample_method, REQ_RASTER, output_format, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -313,6 +322,15 @@ async def subset_points(
         'grain will be returned, with coarser having higher priority over finer.'
         'Non-temporal datasets are always returned.'
     ),
+    validate_method: str = Query(
+        None, title='Validation method for requested date range.',
+        description='How to handle requested dates outside of requested dataset '
+        'available data range. If "strict" (default), '
+        'an error will be returned. If "overlap", the requested dates will be '
+        'truncated to the date range available in all requested datasets. If '
+        '"all", then the requested dates will be truncated to the available date '
+        'range per dataset. Non-temporal datasets are always returned.'
+    ),
     points: str = Query(
         '', title='Geographic points', description='The x and y coordinates '
         'of point locations for extracting from the data, specified '
@@ -376,8 +394,8 @@ async def subset_points(
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method,
-            sub_points, target_crs, None, interp_method, REQ_POINT,
-            output_format, req_md
+            validate_method, sub_points, target_crs, None, interp_method, 
+            REQ_POINT, output_format, req_md
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

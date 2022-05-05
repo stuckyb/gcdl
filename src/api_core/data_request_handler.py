@@ -139,13 +139,13 @@ class DataRequestHandler:
 
     def _getGrainAndDates(self, request, dsid):
         # If the dataset is non-temporal, we don't need to iterate over the
-                # request dates. Otherwise, prepare date lists per date grain 
-                # (requested directly and those determined by requested grain_method).
+        # request dates. Otherwise, prepare date lists per date grain 
+        # (requested directly and those determined by requested grain_method).
         ds_grain = request.ds_date_grains[dsid]
         if request.dsc[dsid].nontemporal:
             date_list = [None] 
         else:
-            date_list = request.dates[ds_grain]
+            date_list = request.ds_dates[dsid]
 
         return (ds_grain, date_list)
 

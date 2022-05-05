@@ -5,6 +5,7 @@ import calendar as cal
 from pyproj.crs import CRS
 from subset_geom import SubsetMultiPoint
 from library.datasets.gsdataset import getCRSMetadata
+import datetime as dt
 
 
 # Date granularity constants.
@@ -26,6 +27,9 @@ POINT_METHODS = ('nearest', 'linear')
 
 # Define supported strings for handling mixed date grains
 GRAIN_METHODS = ('strict', 'skip', 'coarser', 'finer', 'any')
+
+# Define supported strings for validating date ranges
+VALIDATE_METHODS = ('strict', 'overlap', 'all')
 
 # Define supported strings for output formats
 GRID_OUTPUT = ('geotiff','netcdf')
@@ -49,8 +53,9 @@ class DataRequest:
     """
     def __init__(
         self, dataset_catalog, dsvars, dates, years, months, days,
-        grain_method, subset_geom, target_crs, target_resolution, ri_method,
-        request_type, output_format, req_metadata
+        grain_method, validate_method, subset_geom, target_crs, 
+        target_resolution, ri_method, request_type, output_format, 
+        req_metadata
     ):
         """
         dataset_catalog: The DatasetCatalog associated with this request.
@@ -75,6 +80,9 @@ class DataRequest:
         """
         self.dsc = dataset_catalog
         self.dsvars = dsvars
+
+        # Parse requested dates, determine date grain(s), 
+        # and generate date list(s)
         self.dates_raw = dates
         self.dates = {}
         requested_dates, self.inferred_grain = self._parseDates(
@@ -98,6 +106,22 @@ class DataRequest:
             self.inferred_grain, self.ds_date_grains, dates, 
             years, months, days
         ))
+
+        # Validate requested date range against datasets' 
+        # available data date range
+        if validate_method is None:
+            validate_method = 'strict'
+
+        if validate_method not in VALIDATE_METHODS:
+            raise ValueError(
+                f'Invalid date range validation method: "{validate_method}".'
+            )
+
+        self.validate_method = validate_method
+        self.ds_dates = self._validateDateRange(
+            self.validate_method, self.ds_date_grains, self.dates,
+            self.dsc
+        )
 
         self.subset_geom = subset_geom
         self.target_crs = target_crs
@@ -686,4 +710,157 @@ class DataRequest:
             dates, date_grain = self._parseYMD(years, months, days)
 
         return (dates, date_grain)
+
+
+    def _requestDateAsDatetime(self, rdate, grain):
+        if grain == ANNUAL:
+            date = dt.date(rdate.year,1,1)
+        elif grain == MONTHLY:
+            date = dt.date(rdate.year,rdate.month,1)
+        elif grain == DAILY:
+            date = dt.date(rdate.year,rdate.month,rdate.day)
+
+        return date
+
+    def _strictDateRangeCheck(self, requested_dates, available_range, grain):
+        """
+        Checks if the dates requested are fully contained in a date range.
+        Returns boolean indicating if fully contained or not. 
+        """
+        # Is the beginning of date range available?
+        start_request = self._requestDateAsDatetime(
+            requested_dates[0], grain
+        )
+        start_available = available_range[0]
+        start_contained = start_request >= start_available
+
+        # Is the end of date range available?
+        end_request = self._requestDateAsDatetime(
+            requested_dates[-1], grain
+        )
+        end_available = available_range[-1]
+        end_contained = end_request <= end_available
+
+        result = start_contained and end_contained
+        return result
+
+    def _partialDateRangeCheck(self, requested_dates, available_range, grain):
+        """
+        Checks the requested dates against the available date range
+        and returns the subset of requested dates available. 
+        """
+        available_dates = [] 
+        for rdate in requested_dates:
+            available = self._strictDateRangeCheck([rdate], grain)
+            if available:
+                available_dates.append(rdate)
+        
+        return available_rdates
+
+    def _validateDateRange(
+        self, method, req_grains, req_dates, dsc
+    ):
+        """
+        Validates the dates requested against available data ranges
+        using different validation methods. 
+        Assumes dates are chronologically ordered. 
+
+        method : validation method [strict, overlap, all]
+        req_grains : a dictionary of date grain per dataset
+        req_dates : a dictionary of date list per grain
+
+        Returns a dictionary with date list per dataset
+        """
+
+        grain_to_range_key = [None,'year','month','day']
+
+        # For each dataset, check if requested dates are fully
+        # contained in their available date range. Store available
+        # dates.
+        ds_avail_dates = {}
+        all_available = True
+        for dsid in req_grains:
+            ds_grain = req_grains[dsid]
+            ds_req_dates = req_dates[ds_grain]
+            ds_range_key = grain_to_range_key[ds_grain]
+            ds_avail_date_range = dsc[dsid].date_ranges[ds_range_key]
+
+            fully_available = self._strictDateRangeCheck(
+                ds_req_dates, ds_avail_date_range, ds_grain
+            )
+            if fully_available:
+                ds_avail_dates[dsid] = ds_req_dates
+            else:
+                all_available = False
+                if method == 'strict':
+                    #error
+                    pass
+                else:
+                    # Find the subset of requested dates available
+                    ds_avail_dates[dsid] = self._partialDateRangeCheck(
+                        ds_req_dates, ds_avail_date_range, ds_grain
+                    )
+        
+
+        # Based on method, return new date dictionary.
+        # strict: if you got here w/o error, then all requested dates 
+        #   are available so return ds_avail_dates.
+        # all: all available dates have been saved in ds_avail_dates,
+        #   so return it.
+        # overlap: need to find common dates among requested datasets
+        if method in ['strict', 'all'] or all_available:
+            return ds_avail_dates
+        elif method == 'overlap':
+            # For each date grain, accumulate available dates from datasets
+            grain_intersection = {}
+            all_years = []
+            all_months = []
+            all_days = []
+            for grain in req_dates:
+                # Datasets with this grain
+                grain_dsid = [dsid for dsid in req_grains if req_grains[dsid] == grain]
+
+                if grain == ANNUAL:
+                    # Find intersection of available requested years
+                    for dsid in grain_dsid:
+                        all_years.append([rdate.year for rdate in ds_avail_dates[dsid]])
+                elif grain == MONTHLY:
+                    # Convert to datetime.date objects, then find intersection
+                    for dsid in grain_dsid:
+                        all_months.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
+                        all_years.append([rdate.year for rdate in ds_avail_dates[dsid]])
+                elif grain == DAILY:
+                    # Convert to datetime.date objects, then find intersection
+                    for dsid in grain_dsid:
+                        all_days.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
+                        all_months.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
+                        all_years.append([rdate.year for rdate in ds_avail_dates[dsid]])
+            
+            # Per date grain, find intersection of dates
+            # Annual: intersection of years from annual, monthly, and daily dates
+            yr_int = list(set(all_years[0]).intersection(*all_years[1:]))
+            grain_intersection[ANNUAL] = [RequestDate(yr,None,None) for yr in yr_int]
+            # Monthly: intersection of months from monthly and daily dates
+            month_int = list(set(all_months[0]).intersection(*all_months[1:]))
+            grain_intersection[MONTHLY] = [RequestDate(d.year,d.month,None) for d in month_int]
+            # Daily: intersection of days from daily dates
+            day_int = list(set(all_days[0]).intersection(*all_days[1:]))
+            grain_intersection[DAILY] = [RequestDate(d.year,d.month,d.day) for d in day_int]
+                
+            #would still neeed to coompare across grains???? like days not in yeaarss?
+
+            # For each dataset, use grain intersection to fill out
+            # each dataset's dates
+            overlapping_dates = {}
+            for dsid in req_grains:
+                overlapping_dates[dsid] = grain_intersection[req_grains[dsid]]
+            return overlapping_dates
+
+        else:
+            raise ValueError(
+                f'Invalid date range validation method: "{method}".'
+            )
+
+
+
 
