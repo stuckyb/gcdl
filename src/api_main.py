@@ -14,13 +14,13 @@ from api_core.helpers import (
     parse_datasets_str, parse_clip_bounds, parse_coords, get_request_metadata
 )
 from library.catalog import DatasetCatalog
-from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI
+from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 from api_core.upload_cache import DataUploadCache
 
 
 dsc = DatasetCatalog('../local_data')
-dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI)
+dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL)
 
 # Directory for serving output files.
 output_dir = Path('../output')
