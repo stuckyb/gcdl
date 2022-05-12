@@ -100,7 +100,7 @@ class DataRequest:
 
         self.grain_method = grain_method
         self.ds_date_grains = self._verifyGrains(
-            self.inferred_grain, self.grain_method
+            self.dsc, self.dsvars, self.inferred_grain, self.grain_method
         )
         self.dates.update(self._populateDates(
             self.inferred_grain, self.ds_date_grains, dates, 
@@ -237,7 +237,7 @@ class DataRequest:
 
         return grains
 
-    def _verifyGrains(self, inferred_grain, grain_method):
+    def _verifyGrains(self, dsc, dsvars, inferred_grain, grain_method):
         """
         Checks for mixed date granularities and returns a dictionary of date
         grains to use for each temporal dataset
@@ -245,11 +245,11 @@ class DataRequest:
         ds_grains = {}
         allowed_grains = self._listAllowedGrains(inferred_grain, grain_method)
 
-        for dsid in self.dsvars:
-            if not(self.dsc[dsid].nontemporal):
-                if inferred_grain in self.dsc[dsid].supported_grains:
+        for dsid in dsvars:
+            if not(dsc[dsid].nontemporal):
+                if inferred_grain in dsc[dsid].supported_grains:
                     ds_grains[dsid] = inferred_grain
-                if inferred_grain not in self.dsc[dsid].supported_grains:
+                if inferred_grain not in dsc[dsid].supported_grains:
                     if grain_method == 'strict': 
                         raise ValueError(
                             f'{dsid} does not have requested date granularity'
@@ -259,7 +259,7 @@ class DataRequest:
                     else:
                         new_grain = None
                         for ag in allowed_grains:
-                            if ag in self.dsc[dsid].supported_grains:
+                            if ag in dsc[dsid].supported_grains:
                                 new_grain = ag
                                 break
                         if new_grain is not None:

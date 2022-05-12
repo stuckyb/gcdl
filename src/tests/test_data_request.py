@@ -52,10 +52,11 @@ class TestDataRequest(unittest.TestCase):
     def setUp(self):
         self.dsc =  DatasetCatalog('test_data')
         self.dsc.addDatasetsByClass(StubDS1,StubDS2)
+        self.dsvars = {'ds1':'', 'ds2':''}
 
         # Set up a basic DataRequest object.
         self.dr = DataRequest(
-            self.dsc, {'ds1':'', 'ds2':''},
+            self.dsc, self.dsvars,
             # Date parameters.
             '1990', None, None, None, None, None,
             # Subset geometry.
@@ -71,7 +72,7 @@ class TestDataRequest(unittest.TestCase):
         # Test a variety of misconfigurations.
         with self.assertRaisesRegex(ValueError, 'Invalid resampling method'):
             dr = DataRequest(
-                self.dsc, {'ds1':'', 'ds2':''},
+                self.dsc, self.dsvars,
                 # Date parameters.
                 '1990', None, None, None, None, None,
                 # Subset geometry.
@@ -85,7 +86,7 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid point .* method'):
             dr = DataRequest(
-                self.dsc, {'ds1':'', 'ds2':''},
+                self.dsc, self.dsvars,
                 # Date parameters.
                 '1990', None, None, None, None, None,
                 # Subset geometry.
@@ -99,7 +100,7 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid date grain matching method'):
             dr = DataRequest(
-                self.dsc, {'ds1':'', 'ds2':''},
+                self.dsc, self.dsvars,
                 # Date parameters.
                 '1990', None, None, None, 'fakemethod', None,
                 # Subset geometry.
@@ -113,7 +114,7 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid date range validation method'):
             dr = DataRequest(
-                self.dsc, {'ds1':'', 'ds2':''},
+                self.dsc, self.dsvars,
                 # Date parameters.
                 '1990', None, None, None, None, 'fakemethod',
                 # Subset geometry.
@@ -127,7 +128,7 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'No points provided'):
             dr = DataRequest(
-                self.dsc, {'ds1':'', 'ds2':''},
+                self.dsc, self.dsvars,
                 # Date parameters.
                 '1990', None, None, None, None, None,
                 # Subset geometry.
@@ -593,26 +594,36 @@ class TestDataRequest(unittest.TestCase):
         dr = self.dr
 
         # Test strict grain rule with mis-matched available grains.
-        #with self.assertRaisesRegex(
-        #    ValueError, 'does not have requested date granularity'
-        #):
-        #    dr._verifyGrains(ANNUAL, 'strict')
+        with self.assertRaisesRegex(
+            ValueError, 'does not have requested date granularity'
+        ):
+            dr._verifyGrains(self.dsc, self.dsvars, DAILY, 'strict')
 
         # Test strict grain rule with no mis-matched available grains.
-        #exp = {}
-        #r = dr._verifyGrains(ANNUAL,'strict')
-        #self.assertEqual(exp, r)
+        exp = {'ds1' : ANNUAL, 'ds2' : ANNUAL}
+        r = dr._verifyGrains(self.dsc, self.dsvars, ANNUAL, 'strict')
+        self.assertEqual(exp, r)
 
-        # Test single dataset
-        #exp = {}
+        # Test coarser method 
+        exp = {'ds1' : MONTHLY, 'ds2' : MONTHLY}
+        r = dr._verifyGrains(self.dsc, self.dsvars, DAILY, 'coarser')
+        self.assertEqual(exp, r)
 
-        # Test coarser method but no coarser options
-
-        # Test finer method but no finer options
+        # Test finer method 
+        with self.assertRaisesRegex(
+            ValueError, 'has no supported date granularity'
+        ):
+            dr._verifyGrains(self.dsc, self.dsvars, DAILY, 'finer')
 
         # Test any method
+        exp = {'ds1' : ANNUAL, 'ds2' : ANNUAL}
+        r = dr._verifyGrains(self.dsc, self.dsvars, DAILY, 'any')
+        self.assertEqual(exp, r)
 
         # Test skip method
+        exp = {'ds1' : None, 'ds2' : None}
+        r = dr._verifyGrains(self.dsc, self.dsvars, DAILY, 'skip')
+        self.assertEqual(exp, r)
 
     def test_listAllowedGrains(self):
         dr = self.dr
@@ -816,6 +827,61 @@ class TestDataRequest(unittest.TestCase):
         r = dr._populateYMD(
             DAILY, ANNUAL,
             '1980', '1', '1'
+        )
+        self.assertEqual(exp, r)
+
+    def test_populateSimpleDates(self):
+        dr = self.dr
+
+        # Test ANNUAL to MONTHLY
+        exp = [RD(1980, m+1, None) for m in range(12)]
+        r = dr._populateSimpleDates(
+            ANNUAL, MONTHLY,
+            '1980:1980'
+        )
+        self.assertEqual(exp, r)
+
+        # Test ANNUAL to DAILY
+        exp = []
+        for d in range(366):
+            ord_year = dt.date(1980, 1, 1).toordinal()
+            d = dt.date.fromordinal(ord_year + d)
+            exp.append(RD(1980, d.month, d.day)) 
+        r = dr._populateSimpleDates(
+            ANNUAL, DAILY,
+            '1980:1980'
+        )
+        self.assertEqual(exp, r)
+
+        # Test MONHTLY to ANNUAL
+        exp = [RD(1980, None, None)]
+        r = dr._populateSimpleDates(
+            MONTHLY, ANNUAL,
+            '1980-1:1980-1'
+        )
+        self.assertEqual(exp, r)
+
+        # Test MONTHLY to DAILY
+        exp = [RD(1980, 1, d+1) for d in range(31)]
+        r = dr._populateSimpleDates(
+            MONTHLY, DAILY,
+            '1980-1:1980-1'
+        )
+        self.assertEqual(exp, r)
+
+        # Test DAILY to MONTHLY
+        exp = [RD(1980, 1, None)]
+        r = dr._populateSimpleDates(
+            DAILY, MONTHLY,
+            '1980-1-1:1980-1-1'
+        )
+        self.assertEqual(exp, r)
+
+        # Test DAILY to ANNUAL
+        exp = [RD(1980, None, None)]
+        r = dr._populateSimpleDates(
+            DAILY, ANNUAL,
+            '1980-1-1:1980-1-1'
         )
         self.assertEqual(exp, r)
 
