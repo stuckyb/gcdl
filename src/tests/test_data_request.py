@@ -4,18 +4,60 @@ from pyproj.crs import CRS
 from api_core import data_request, RequestDate as RD, DataRequest
 from api_core.data_request import ANNUAL, MONTHLY, DAILY
 from library.catalog import DatasetCatalog
+from library.datasets.gsdataset import GSDataSet
 import datetime as dt
+
+# Two stub GSDataSets with different date ranges are needed 
+# to test date validation methods
+class StubDS1(GSDataSet):
+    """
+    A concrete child class that stubs abstract methods.
+    """
+    def __init__(self, store_path):
+        super().__init__(store_path, 'stub')
+        self.name = 'ds1'
+        self.date_ranges['year'] = [
+            dt.date(1980, 1, 1), dt.date(2020, 1, 1)
+        ]
+        self.date_ranges['month'] = [
+            dt.date(1980, 1, 1), dt.date(2020, 12, 1)
+        ]
+
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        return None
+
+class StubDS2(GSDataSet):
+    """
+    A concrete child class that stubs abstract methods.
+    """
+    def __init__(self, store_path):
+        super().__init__(store_path, 'stub')
+        self.name = 'ds2'
+        self.date_ranges['year'] = [
+            dt.date(1990, 1, 1), dt.date(2020, 1, 1)
+        ]
+        self.date_ranges['month'] = [
+            dt.date(1990, 1, 1), dt.date(2020, 12, 1)
+        ]
+
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        return None
 
 
 class TestDataRequest(unittest.TestCase):
     def setUp(self):
         self.dsc =  DatasetCatalog('test_data')
+        self.dsc.addDatasetsByClass(StubDS1,StubDS2)
 
         # Set up a basic DataRequest object.
         self.dr = DataRequest(
-            self.dsc, {},
+            self.dsc, {'ds1':'', 'ds2':''},
             # Date parameters.
-            '1980', None, None, None, None, None,
+            '1990', None, None, None, None, None,
             # Subset geometry.
             None,
             # Projection/resolution parameters.
@@ -29,9 +71,9 @@ class TestDataRequest(unittest.TestCase):
         # Test a variety of misconfigurations.
         with self.assertRaisesRegex(ValueError, 'Invalid resampling method'):
             dr = DataRequest(
-                self.dsc, {},
+                self.dsc, {'ds1':'', 'ds2':''},
                 # Date parameters.
-                '1980', None, None, None, None, None,
+                '1990', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -43,9 +85,9 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid point .* method'):
             dr = DataRequest(
-                self.dsc, {},
+                self.dsc, {'ds1':'', 'ds2':''},
                 # Date parameters.
-                '1980', None, None, None, None, None,
+                '1990', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -57,9 +99,9 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid date grain matching method'):
             dr = DataRequest(
-                self.dsc, {},
+                self.dsc, {'ds1':'', 'ds2':''},
                 # Date parameters.
-                '1980', None, None, None, 'fakemethod', None,
+                '1990', None, None, None, 'fakemethod', None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -71,9 +113,9 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'Invalid date range validation method'):
             dr = DataRequest(
-                self.dsc, {},
+                self.dsc, {'ds1':'', 'ds2':''},
                 # Date parameters.
-                '1980', None, None, None, None, 'fakemethod',
+                '1990', None, None, None, None, 'fakemethod',
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -85,9 +127,9 @@ class TestDataRequest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, 'No points provided'):
             dr = DataRequest(
-                self.dsc, {},
+                self.dsc, {'ds1':'', 'ds2':''},
                 # Date parameters.
-                '1980', None, None, None, None, None,
+                '1990', None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -1025,4 +1067,182 @@ class TestDataRequest(unittest.TestCase):
         )
         self.assertEqual(exp, r)
 
-    #def test_validateDateRange(self):
+    def test_validateDateRange(self):
+        dr = self.dr
+
+        # Test strict method with good dates - same grain
+        exp = {
+            'ds1' : [RD(1990,None,None)],
+            'ds2' : [RD(1990,None,None)]
+        }
+        r = dr._validateDateRange(
+            "strict",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : ANNUAL
+            },
+            {ANNUAL : [RD(1990,None,None)]},
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test strict method with good dates - mixed grain
+        exp = {
+            'ds1' : [RD(1990,None,None)],
+            'ds2' : [RD(1990,1,None)]
+        }
+        r = dr._validateDateRange(
+            "strict",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : MONTHLY
+            },
+            {
+                ANNUAL : [RD(1990,None,None)],
+                MONTHLY : [RD(1990,1,None)]
+            },
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test strict method with bad dates - all datasets
+        with self.assertRaisesRegex(ValueError, 'Date range not available for'):
+            dr._validateDateRange(
+                "strict",
+                {
+                    'ds1' : ANNUAL,
+                    'ds2' : ANNUAL
+                },
+                {ANNUAL : [RD(2021,None,None)]},
+                self.dsc
+            )
+
+        # Test strict method with bad dates - some datasets
+        with self.assertRaisesRegex(ValueError, 'Date range not available for'):
+            dr._validateDateRange(
+                "strict",
+                {
+                    'ds1' : ANNUAL,
+                    'ds2' : ANNUAL
+                },
+                {ANNUAL : [RD(1989,None,None), RD(1990,None,None)]},
+                self.dsc
+            )
+
+
+        # Test overlap method with good dates - same grain
+        exp = {
+            'ds1' : [RD(1990,None,None)],
+            'ds2' : [RD(1990,None,None)]
+        }
+        r = dr._validateDateRange(
+            "overlap",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : ANNUAL
+            },
+            {ANNUAL : [
+                RD(1979,None,None), RD(1980,None,None),
+                RD(1990,None,None)
+            ]},
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test overlap method with good dates - mixed grains
+        exp = {
+            'ds1' : [RD(1990,None,None)],
+            'ds2' : [RD(1990,1,None)]
+        }
+        r = dr._validateDateRange(
+            "overlap",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : MONTHLY
+            },
+            {
+                ANNUAL : [
+                    RD(1979,None,None), RD(1980,None,None),
+                    RD(1990,None,None)
+                ],
+                MONTHLY : [
+                    RD(1979,1,None), RD(1980,1,None),
+                    RD(1990,1,None)
+                ]
+            },
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test overlap method with bad dates - all datasets
+        with self.assertRaisesRegex(
+            ValueError, 'Date range not available in any requested dataset'
+        ):
+            dr._validateDateRange(
+                "overlap",
+                {
+                    'ds1' : ANNUAL,
+                    'ds2' : ANNUAL
+                },
+                {ANNUAL : [RD(2021,None,None)]},
+                self.dsc
+            )
+
+        # Test all method with good dates - same grain
+        exp = {
+            'ds1' : [RD(1980,None,None),RD(1990,None,None)],
+            'ds2' : [RD(1990,None,None)]
+        }
+        r = dr._validateDateRange(
+            "all",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : ANNUAL
+            },
+            {ANNUAL : [
+                RD(1979,None,None), RD(1980,None,None),
+                RD(1990,None,None)
+            ]},
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test all method with good dates - mixed grains
+        exp = {
+            'ds1' : [RD(1980,None,None),RD(1990,None,None)],
+            'ds2' : [RD(1990,1,None)]
+        }
+        r = dr._validateDateRange(
+            "all",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : MONTHLY
+            },
+            {
+                ANNUAL : [
+                    RD(1979,None,None), RD(1980,None,None),
+                    RD(1990,None,None)
+                ],
+                MONTHLY : [
+                    RD(1979,1,None), RD(1980,1,None),
+                    RD(1990,1,None)
+                ]
+            },
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test all method with bad dates - all datasets
+        with self.assertRaisesRegex(
+            ValueError, 'Date range not available in any requested dataset'
+        ):
+            dr._validateDateRange(
+                "all",
+                {
+                    'ds1' : ANNUAL,
+                    'ds2' : ANNUAL
+                },
+                {ANNUAL : [RD(2021,None,None)]},
+                self.dsc
+            )
+

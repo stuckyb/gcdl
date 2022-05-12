@@ -795,8 +795,9 @@ class DataRequest:
             else:
                 all_available = False
                 if method == 'strict':
-                    #error
-                    pass
+                    raise ValueError(
+                        f'Date range not available for dataset: "{dsid}".'
+                    )
                 else:
                     # Find the subset of requested dates available
                     ds_avail_dates[dsid] = self._partialDateRangeCheck(
@@ -811,7 +812,15 @@ class DataRequest:
         #   so return it.
         # overlap: need to find common dates among requested datasets
         if method in ['strict', 'all'] or all_available:
-            return ds_avail_dates
+            # Are any dates available?
+            num_avail = [len(d) for d in ds_avail_dates.values()]
+            if sum(num_avail) > 0:
+                return ds_avail_dates
+            else:
+                raise ValueError(
+                    f'Date range not available in any requested dataset'
+                )
+            
         elif method == 'overlap':
             # For each date grain, accumulate available dates from datasets
             grain_intersection = {}
@@ -823,16 +832,16 @@ class DataRequest:
                 grain_dsid = [dsid for dsid in req_grains if req_grains[dsid] == grain]
 
                 if grain == ANNUAL:
-                    # Find intersection of available requested years
+                    # Find available requested years
                     for dsid in grain_dsid:
                         all_years.append([rdate.year for rdate in ds_avail_dates[dsid]])
                 elif grain == MONTHLY:
-                    # Convert to datetime.date objects, then find intersection
+                    # Convert to datetime.date objects
                     for dsid in grain_dsid:
                         all_months.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
                         all_years.append([rdate.year for rdate in ds_avail_dates[dsid]])
                 elif grain == DAILY:
-                    # Convert to datetime.date objects, then find intersection
+                    # Convert to datetime.date objects
                     for dsid in grain_dsid:
                         all_days.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
                         all_months.append([self._requestDateAsDatetime(rdate, grain) for rdate in ds_avail_dates[dsid]])
@@ -840,22 +849,34 @@ class DataRequest:
             
             # Per date grain, find intersection of dates
             # Annual: intersection of years from annual, monthly, and daily dates
-            yr_int = list(set(all_years[0]).intersection(*all_years[1:]))
-            grain_intersection[ANNUAL] = [RequestDate(yr,None,None) for yr in yr_int]
+            if ANNUAL in req_dates.keys():
+                yr_int = list(set(all_years[0]).intersection(*all_years[1:]))
+                grain_intersection[ANNUAL] = [RequestDate(yr,None,None) for yr in yr_int]
             # Monthly: intersection of months from monthly and daily dates
-            month_int = list(set(all_months[0]).intersection(*all_months[1:]))
-            grain_intersection[MONTHLY] = [RequestDate(d.year,d.month,None) for d in month_int]
+            if MONTHLY in req_dates.keys():
+                month_int = list(set(all_months[0]).intersection(*all_months[1:]))
+                grain_intersection[MONTHLY] = [RequestDate(d.year,d.month,None) for d in month_int]
             # Daily: intersection of days from daily dates
-            day_int = list(set(all_days[0]).intersection(*all_days[1:]))
-            grain_intersection[DAILY] = [RequestDate(d.year,d.month,d.day) for d in day_int]
+            if DAILY in req_dates.keys():
+                day_int = list(set(all_days[0]).intersection(*all_days[1:]))
+                grain_intersection[DAILY] = [RequestDate(d.year,d.month,d.day) for d in day_int]
                 
-            #would still neeed to coompare across grains???? like days not in yeaarss?
-
             # For each dataset, use grain intersection to fill out
             # each dataset's dates
             overlapping_dates = {}
+            empty_dates = False
             for dsid in req_grains:
-                overlapping_dates[dsid] = grain_intersection[req_grains[dsid]]
+                g_int = grain_intersection[req_grains[dsid]]
+                if g_int:
+                    overlapping_dates[dsid] = g_int
+                else:
+                    empty_dates = True
+
+            if empty_dates:
+                raise ValueError(
+                    f'Date range not available in any requested dataset'
+                )
+
             return overlapping_dates
 
         else:
