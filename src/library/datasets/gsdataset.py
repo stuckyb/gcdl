@@ -131,11 +131,13 @@ class GSDataSet(ABC):
                 return self.grid_size
             else:
                 return self.grid_size*111000
-        elif gs_unit == 'degrees':
+        elif gs_unit in ['degrees','degree']:
             if self.grid_unit == 'degrees':
                 return self.grid_size
             else:
                 return self.grid_size/111000
+        else:
+            raise ValueError('Unsupported dataset grid unit.')
 
 
     def getMetadata(self):

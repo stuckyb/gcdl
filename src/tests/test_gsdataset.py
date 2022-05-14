@@ -38,3 +38,29 @@ class TestGSDataSet(unittest.TestCase):
 
         self.assertFalse(ds.nontemporal)
 
+    def test_getGridSize(self):
+        ds = StubDS('.')
+
+        ds.grid_size = 4000
+        ds.grid_unit = 'meters'
+
+        exp = 4000
+        r = ds.getGridSize()
+        self.assertEqual(r,exp)
+
+        exp = 4000/111000
+        r = ds.getGridSize('degrees')
+        self.assertEqual(r,exp)
+
+        ds.grid_size = 0.05
+        ds.grid_unit = 'degrees'
+
+        exp = 0.05
+        r = ds.getGridSize()
+        self.assertEqual(r,exp)
+
+        exp = 0.05*111000
+        r = ds.getGridSize('metre')
+        self.assertEqual(r,exp)
+
+
