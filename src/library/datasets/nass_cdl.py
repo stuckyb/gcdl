@@ -71,9 +71,9 @@ class NASS_CDL(GSDataSet):
         if isinstance(subset_geom, SubsetPolygon):
             # Drop unnecessary 'band' dimension because rioxarray
             # can't handle >3 dimensions in some later operations
-            data = data.squeeze('band')
-
-            data = data.rio.clip([subset_geom.json], all_touched = True)
+            data = data.rio.clip([subset_geom.json], 
+                all_touched = True,
+                from_disk=True)
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
             # information about how/why this works, see
