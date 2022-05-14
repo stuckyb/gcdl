@@ -27,7 +27,7 @@ class NASS_CDL(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'cdls': 'cropland data layer'
+            'cdl': 'cropland data layer'
         }
 
         # Temporal coverage of the dataset.
@@ -37,7 +37,7 @@ class NASS_CDL(GSDataSet):
 
         # File name patterns for each variable. 
         self.fpatterns = {
-            'cdls': '{0}_30m_cdls.tif'
+            'cdl': '{0}_30m_cdls.tif'
         }
 
     def getData(
