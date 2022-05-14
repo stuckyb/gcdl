@@ -17,15 +17,17 @@ class DataRequestHandler:
     def _requestDateAsString(self, grain, rdate):
         if grain == dr.NONE or rdate is None:
             dstr = ''
-        elif grain == dr.ANNUAL:
+        elif grain == dr.ANNUAL and rdate.year is not None:
             dstr = '{0}'.format(
                 rdate.year
             )
-        elif grain == dr.MONTHLY:
+        elif (grain == dr.MONTHLY and rdate.year is not None 
+            and rdate.month is not None):
             dstr = '{0}-{1:02}'.format(
                 rdate.year, rdate.month
             )
-        elif grain == dr.DAILY:
+        elif (grain == dr.DAILY and rdate.year is not None 
+            and rdate.month is not None and rdate.day is not None):
             dstr = '{0}-{1:02}-{2:02}'.format(
                 rdate.year, rdate.month, rdate.day
             )
@@ -106,7 +108,7 @@ class DataRequestHandler:
         else:
             return None
 
-    def _buildDatasetSubsetGeoms(self, request):
+    def _buildDatasetSubsetGeoms(self, dsc, dsvars, subset_geom, request_type):
         """
         Build a set of subset geometries, reprojected as needed, that match
         the source dataset CRSs. A buffer width of the coarsest grid size 
@@ -115,24 +117,27 @@ class DataRequestHandler:
         the data retrievals.
         """
 
-        # If raster-type request, buffer subet geometry
-        if request.request_type == dr.REQ_RASTER:
-            geom_unit = request.subset_geom.geom.crs.axis_info[0].unit_name
+        # If raster-type request, buffer subset geometry
+        if request_type == dr.REQ_RASTER:
+            # Unit of requested SubsetGeom
+            geom_unit = subset_geom.geom.crs.axis_info[0].unit_name
+            # Grid sizes of requested datasets in that SubsetGeom unit
             grid_sizes = [
-                    request.dsc[dsid].getGridSize(geom_unit) for dsid in request.dsvars
+                    dsc[dsid].getGridSize(geom_unit) for dsid in dsvars
                 ]
-            rsg = request.subset_geom.buffer(max(grid_sizes))
+            # Buffer SubsetGeom by the largest grid size
+            rsg = subset_geom.buffer(max(grid_sizes))
         else:
-            rsg = request.subset_geom
+            rsg = subset_geom
 
         # Reproject to datasets' CRS
         ds_subset_geoms = {}
-        for dsid in request.dsvars:
-            if request.subset_geom.crs.equals(request.dsc[dsid].crs):
+        for dsid in dsvars:
+            if subset_geom.crs.equals(dsc[dsid].crs):
                 ds_subset_geoms[dsid] = rsg
             else:
                 ds_subset_geoms[dsid] = rsg.reproject(
-                    request.dsc[dsid].crs
+                    dsc[dsid].crs
                 )
 
         return ds_subset_geoms
@@ -199,7 +204,9 @@ class DataRequestHandler:
         """
 
         # Get subset geoms in datasets' CRSs
-        ds_subset_geoms = self._buildDatasetSubsetGeoms(request)
+        ds_subset_geoms = self._buildDatasetSubsetGeoms(
+            request.dsc, request.dsvars, request.subset_geom, request.request_type
+        )
 
         # Get the requested data.
         output_data = {}
