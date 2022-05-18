@@ -5,6 +5,8 @@ import datetime
 import rioxarray
 import api_core.data_request as dr
 from subset_geom import SubsetPolygon, SubsetMultiPoint
+import rasterio
+from osgeo import gdal
 
 
 class NASS_CDL(GSDataSet):
@@ -40,6 +42,20 @@ class NASS_CDL(GSDataSet):
             'cdl': '{0}_30m_cdls.tif'
         }
 
+        # Categorical dataset, 
+        # with RAT and colormap read with methods
+        self.categorical = True
+
+    def _getColorMap(self, fname):
+        ds = rasterio.open(fname)
+        self.colormap = ds.colormap(1)
+        ds.close()
+
+    def _getRAT(self, fname):
+        ds = gdal.Open(str(fname))
+        self.RAT = ds.GetRasterBand(1).GetDefaultRAT()
+        ds = None
+
     def getData(
         self, varname, date_grain, request_date, ri_method, subset_geom=None
     ):
@@ -59,6 +75,13 @@ class NASS_CDL(GSDataSet):
             raise ValueError('Invalid date grain specification.')
 
         fpath = self.ds_path / fname
+
+        # Read in colormap and RAT if not already available
+        if self.colormap is None:
+            self._getColorMap(fpath)
+
+        if self.RAT is None:
+            self._getRAT(fpath)
 
         # Open data file
         data = rioxarray.open_rasterio(fpath, masked=True)

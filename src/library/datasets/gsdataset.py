@@ -73,6 +73,12 @@ class GSDataSet(ABC):
             'day': [None, None]
         }
 
+        # If the dataset is categorical and if it has a raster attribute
+        # table and/or colormap.  
+        self.categorical = False
+        self.RAT = None
+        self.colormap = None
+
     @property
     def id(self):
         if self._id is None:
