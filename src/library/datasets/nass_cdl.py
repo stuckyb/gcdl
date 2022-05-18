@@ -61,7 +61,8 @@ class NASS_CDL(GSDataSet):
         nrows = RAT.GetRowCount()
         class_names = [RAT.GetValueAsString(i,0) for i in range(nrows)]
         hist = [int(RAT.GetValueAsString(i,1)) for i in range(nrows)]
-        class_id = [i if hist[i]>0 else -1 for i in range(nrows)]
+        #if hist[i]>0 else -1
+        class_id = [i for i in range(nrows)]
         self.RAT = {k:v for k,v in zip(class_id,class_names)}
         ds = None
 

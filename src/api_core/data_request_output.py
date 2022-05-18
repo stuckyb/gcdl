@@ -5,6 +5,8 @@ import json
 import api_core.data_request as dr
 from pathlib import Path
 import xarray as xr
+from osgeo import gdal
+import rasterio
 
 
 # Characters for generating random file names.
@@ -79,8 +81,30 @@ class DataRequestOutput:
         # Write to netCDF
         data.to_netcdf(fout_path)
 
-    def _writeGeoTIFF(self, data_xrda, rdate, fout_path):
+    def _writeGeoTIFF(self, data_xrda, rdate, fout_path, RAT=None, colormap=None):
         data_xrda.sel(time = rdate).rio.to_raster(fout_path)
+        all_fpaths = [fout_path]
+
+        if RAT is not None:
+            ds = gdal.Open(str(fout_path))
+            rb = ds.GetRasterBand(1)
+            rat = gdal.RasterAttributeTable()
+            rat.SetRowCount(256)
+            rat.CreateColumn('CLASS', gdal.GFT_String, gdal.GFU_Generic)
+            for i in RAT:
+                rat.SetValueAsString(i, 0, RAT[i])
+
+            rb.SetDefaultRAT(rat)
+            ds = None
+            rat_path = fout_path.parent / (fout_path.name + '.aux.xml')
+            all_fpaths.append(rat_path)
+
+            if colormap is not None:
+                with rasterio.open(fout_path, 'r+') as dst:
+                    dst.write_colormap(1, colormap)
+
+
+        return all_fpaths
 
     def _writePointFiles(self, ds_output_dict, request, output_dir):
         fname = '_'.join(request.dsvars.keys())
@@ -121,8 +145,12 @@ class DataRequestOutput:
                     for t in dsvar.coords['time'].values:
                         fname = self._getSingleLayerOutputFileName(dsid, varname, t)
                         fout_path = output_dir / (fname + request.file_extension)
-                        self._writeGeoTIFF(dsvar, t, fout_path)
-                        fout_paths.append(fout_path)
+                        aux_fout_paths = self._writeGeoTIFF(
+                            dsvar, t, fout_path, request.dsc[dsid].RAT, 
+                            request.dsc[dsid].colormap
+                        )
+                        for fp in aux_fout_paths:
+                            fout_paths.append(fp)
         elif request.file_extension == ".nc":
             # Write a netcdf per dataset. 
             for dsid in ds_output_dict:
