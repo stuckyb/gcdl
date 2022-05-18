@@ -47,13 +47,22 @@ class NASS_CDL(GSDataSet):
         self.categorical = True
 
     def _getColorMap(self, fname):
+        # Creates a dictionary with integer keys and 
+        # rgba tuples as values
         ds = rasterio.open(fname)
         self.colormap = ds.colormap(1)
         ds.close()
 
     def _getRAT(self, fname):
+        # Creates a dictionary with integer keys and 
+        # class names as values
         ds = gdal.Open(str(fname))
-        self.RAT = ds.GetRasterBand(1).GetDefaultRAT()
+        RAT = ds.GetRasterBand(1).GetDefaultRAT()
+        nrows = RAT.GetRowCount()
+        class_names = [RAT.GetValueAsString(i,0) for i in range(nrows)]
+        hist = [int(RAT.GetValueAsString(i,1)) for i in range(nrows)]
+        class_id = [i if hist[i]>0 else -1 for i in range(nrows)]
+        self.RAT = {k:v for k,v in zip(class_id,class_names)}
         ds = None
 
     def getData(

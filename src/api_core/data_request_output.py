@@ -42,8 +42,24 @@ class DataRequestOutput:
     def _writeShapefile(self, data_gdf, fout_path):
         data_gdf.to_file(fout_path, index=False)
 
-    def _writeNetCDF(self, data,fout_path):
-        if not(isinstance(data, xr.Dataset)):
+    def _writeNetCDF(self, data, fout_path, RAT=None, colormap=None):
+        if isinstance(data, xr.Dataset):
+            if RAT is not None:
+                trim_RAT = {k:v for (k,v) in RAT.items() if k > -1}
+                # NetCDF convention has flag_values formatted as
+                # a single string of comma-separated integers and 
+                # flag_meanings as a single string of space-separated
+                # names where spaces in names are underscores.
+                data.attrs['flag_values'] = ','.join([str(k) for k in trim_RAT.keys()])
+                data.attrs['flag_meanings'] = ' '.join(
+                    [class_id.replace(' ','_') for class_id in trim_RAT.values()]
+                )
+                if colormap is not None:
+                    rat_colors = []
+                    for class_id in trim_RAT.keys():
+                        rat_colors.append('#{:02x}{:02x}{:02x}'.format(*colormap[class_id]))
+                    data.attrs['flag_colors'] = ' '.join(rat_colors)
+        else:
             # Modify geometry to list coordinates in x,y columns
             g_crs = data.geometry.crs
             data['x'] = data.geometry.x
@@ -113,7 +129,10 @@ class DataRequestOutput:
                 fname = dsid
                 fout_path = output_dir / (fname + request.file_extension)
                 ds_dataset = ds_output_dict[dsid]
-                self._writeNetCDF(ds_dataset,fout_path)
+                self._writeNetCDF(
+                    ds_dataset,fout_path, request.dsc[dsid].RAT, 
+                    request.dsc[dsid].colormap
+                )
                 fout_paths.append(fout_path)
         else:
             raise ValueError('Unsupported raster output format.')
