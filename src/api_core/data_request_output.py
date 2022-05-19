@@ -47,7 +47,9 @@ class DataRequestOutput:
     def _writeNetCDF(self, data, fout_path, RAT=None, colormap=None):
         if isinstance(data, xr.Dataset):
             if RAT is not None:
-                trim_RAT = {k:v for (k,v) in RAT.items() if k > -1}
+                # Geotiffs generally store 256 values in RAT even if 
+                # there are less than 256 classes, so ignore the empty ones
+                trim_RAT = {k:v for (k,v) in RAT.items() if v == ''}
                 # NetCDF convention has flag_values formatted as
                 # a single string of comma-separated integers and 
                 # flag_meanings as a single string of space-separated
@@ -89,7 +91,7 @@ class DataRequestOutput:
             ds = gdal.Open(str(fout_path))
             rb = ds.GetRasterBand(1)
             rat = gdal.RasterAttributeTable()
-            rat.SetRowCount(256)
+            rat.SetRowCount(len(RAT)) 
             rat.CreateColumn('CLASS', gdal.GFT_String, gdal.GFU_Generic)
             for i in RAT:
                 rat.SetValueAsString(i, 0, RAT[i])
