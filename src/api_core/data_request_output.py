@@ -44,25 +44,50 @@ class DataRequestOutput:
     def _writeShapefile(self, data_gdf, fout_path):
         data_gdf.to_file(fout_path, index=False)
 
+    def _assignCategories(self, RAT, colormap, xr_data=None, data_path=None):
+        # If the data are given, add RAT and colormap as attributes. 
+        # If path is given, write them to files.  
+        if data is not None:
+            # Geotiffs generally store 256 values in RAT even if 
+            # there are less than 256 classes, so ignore the empty ones
+            trim_RAT = {k:v for (k,v) in RAT.items() if v == ''}
+            # NetCDF convention has flag_values formatted as
+            # a single string of comma-separated integers and 
+            # flag_meanings as a single string of space-separated
+            # names where spaces in names are underscores.
+            data.attrs['flag_values'] = ','.join([str(k) for k in trim_RAT.keys()])
+            data.attrs['flag_meanings'] = ' '.join(
+                [class_id.replace(' ','_') for class_id in trim_RAT.values()]
+            )
+            rat_colors = []
+            for class_id in trim_RAT.keys():
+                rat_colors.append('#{:02x}{:02x}{:02x}'.format(*colormap[class_id]))
+            data.attrs['flag_colors'] = ' '.join(rat_colors)
+        elif data_path is not None:
+            ds = gdal.Open(str(data_path))
+            rb = ds.GetRasterBand(1)
+            rat = gdal.RasterAttributeTable()
+            rat.SetRowCount(len(RAT)) 
+            rat.CreateColumn('CLASS', gdal.GFT_String, gdal.GFU_Generic)
+            for i in RAT:
+                rat.SetValueAsString(i, 0, RAT[i])
+
+            rb.SetDefaultRAT(rat)
+            ds = None
+            rat_path = data_path.parent / (data_path.name + '.aux.xml')
+
+            if colormap is not None:
+                with rasterio.open(data_path, 'r+') as dst:
+                    dst.write_colormap(1, colormap)
+        else:
+             raise ValueError('Unsupported RAT output method.')
+
+        return data, rat_path
+
     def _writeNetCDF(self, data, fout_path, RAT=None, colormap=None):
         if isinstance(data, xr.Dataset):
             if RAT is not None:
-                # Geotiffs generally store 256 values in RAT even if 
-                # there are less than 256 classes, so ignore the empty ones
-                trim_RAT = {k:v for (k,v) in RAT.items() if v == ''}
-                # NetCDF convention has flag_values formatted as
-                # a single string of comma-separated integers and 
-                # flag_meanings as a single string of space-separated
-                # names where spaces in names are underscores.
-                data.attrs['flag_values'] = ','.join([str(k) for k in trim_RAT.keys()])
-                data.attrs['flag_meanings'] = ' '.join(
-                    [class_id.replace(' ','_') for class_id in trim_RAT.values()]
-                )
-                if colormap is not None:
-                    rat_colors = []
-                    for class_id in trim_RAT.keys():
-                        rat_colors.append('#{:02x}{:02x}{:02x}'.format(*colormap[class_id]))
-                    data.attrs['flag_colors'] = ' '.join(rat_colors)
+                data, rp = self._assignCategories(RAT, colormap, xr_data=data)
         else:
             # Modify geometry to list coordinates in x,y columns
             g_crs = data.geometry.crs
@@ -88,23 +113,10 @@ class DataRequestOutput:
         all_fpaths = [fout_path]
 
         if RAT is not None:
-            ds = gdal.Open(str(fout_path))
-            rb = ds.GetRasterBand(1)
-            rat = gdal.RasterAttributeTable()
-            rat.SetRowCount(len(RAT)) 
-            rat.CreateColumn('CLASS', gdal.GFT_String, gdal.GFU_Generic)
-            for i in RAT:
-                rat.SetValueAsString(i, 0, RAT[i])
-
-            rb.SetDefaultRAT(rat)
-            ds = None
-            rat_path = fout_path.parent / (fout_path.name + '.aux.xml')
+            d, rat_path = self._assignCategories(
+                RAT, colormap, data_path=fout_path
+            )
             all_fpaths.append(rat_path)
-
-            if colormap is not None:
-                with rasterio.open(fout_path, 'r+') as dst:
-                    dst.write_colormap(1, colormap)
-
 
         return all_fpaths
 
