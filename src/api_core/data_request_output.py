@@ -32,6 +32,9 @@ class DataRequestOutput:
 
         return fname
 
+    def _rgbaToHex(self, rgba):
+        # Converts a single rgba tuple to hex string
+        return '#{:02x}{:02x}{:02x}'.format(*rgba)
 
     def _writeCSV(self, data_gdf, fout_path):
         # Modify geometry to list coordinates in x,y columns
@@ -61,7 +64,7 @@ class DataRequestOutput:
             )
             rat_colors = []
             for class_id in trim_RAT.keys():
-                rat_colors.append('#{:02x}{:02x}{:02x}'.format(*colormap[class_id]))
+                rat_colors.append(self._rgbaToHex(colormap[class_id]))
             data.attrs['flag_colors'] = ' '.join(rat_colors)
         elif data_path is not None:
             ds = gdal.Open(str(data_path))
@@ -125,7 +128,6 @@ class DataRequestOutput:
         fout_path = output_dir / (fname + request.file_extension)
 
         # Merge list of geodataframes into one geodataframe
-        # Assuming long format for now:
         ds_output_list = [gdf for gdf in ds_output_dict.values()]
         final_gdf = ds_output_list[0]
         for gdf in ds_output_list[1:]:

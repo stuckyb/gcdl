@@ -103,7 +103,7 @@ class NASS_CDL(GSDataSet):
             # can't handle >3 dimensions in some later operations
             data = data.rio.clip([subset_geom.json], 
                 all_touched = True,
-                from_disk=True)
+                from_disk = True)
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
             # information about how/why this works, see
@@ -112,7 +112,9 @@ class NASS_CDL(GSDataSet):
                 x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
                 method=ri_method
             )
-            data = res.values[0]
+
+            # Convert crop index to name
+            data = [self.RAT[class_id] for class_id in res.values[0]] 
 
         return data
 
