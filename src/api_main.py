@@ -223,18 +223,30 @@ async def subset_polygon(
     try:
         datasets = parse_datasets_str(datasets, dsc)
 
-        if crs is None:
-            # Use the CRS of the first dataset in the request as the target CRS
-            # if none was specified.
-            target_crs = dsc[list(datasets.keys())[0]].crs
+        # Assume the user geometry CRS from request info
+        # in case not provided with uploaded geometry
+        if crs is not None:
+        	assumed_crs = pyproj.crs.CRS(crs)
         else:
-            target_crs = pyproj.crs.CRS(crs)
-
+            # Use the CRS of the first dataset in the request 
+            # as the target CRS 
+            assumed_crs = dsc[list(datasets.keys())[0]].crs
+        
         if clip != '':
-            clip_geom = SubsetPolygon(clip, target_crs)
+            clip_geom = SubsetPolygon(clip, assumed_crs)
         else:
-            clip_geom = ul_cache.getPolygon(geom_guid, target_crs)
+            clip_geom = ul_cache.getPolygon(geom_guid, assumed_crs)
 
+        # Determine the target CRS, if applicable
+        if crs is not None:
+        	target_crs = pyproj.crs.CRS(crs)
+        elif crs is None and res is not None:
+        	# Use the CRS of the user geometry, which is
+        	# the uploaded geometry CRS or that of the 
+        	# first dataset, that was decided above 
+        	# in the clip geometry. 
+        	target_crs = clip_geom.geom.crs
+        	
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method, 
@@ -379,18 +391,30 @@ async def subset_points(
     try:
         datasets = parse_datasets_str(datasets, dsc)
 
-        if crs is None:
-            # Use the CRS of the first dataset in the request as the target CRS if
-            # none was specified.
-            target_crs = dsc[list(datasets.keys())[0]].crs
+        # Assume the user geometry CRS from request info
+        # in case not provided with uploaded geometry
+        if crs is not None:
+        	assumed_crs = pyproj.crs.CRS(crs)
         else:
-            target_crs = pyproj.crs.CRS(crs)
-
+            # Use the CRS of the first dataset in the request 
+            # as the target CRS 
+            assumed_crs = dsc[list(datasets.keys())[0]].crs
+        
         if points != '':
             coords = parse_coords(points)
-            sub_points = SubsetMultiPoint(coords, target_crs)
+            sub_points = SubsetMultiPoint(coords, assumed_crs)
         else:
-            sub_points = ul_cache.getMultiPoint(geom_guid, target_crs)
+            sub_points = ul_cache.getPolygon(geom_guid, assumed_crs)
+
+        # Determine the target CRS, if applicable
+        if crs is not None:
+        	target_crs = pyproj.crs.CRS(crs)
+        elif crs is None and res is not None:
+        	# Use the CRS of the user geometry, which is
+        	# the uploaded geometry CRS or that of the 
+        	# first dataset, that was decided above 
+        	# in the clip geometry. 
+        	target_crs = sub_points.geom.crs
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method,

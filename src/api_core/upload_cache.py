@@ -407,7 +407,7 @@ class DataUploadCache:
         if len(points) == 0:
             raise Exception(f'No uploaded polygon data found for GUID {guid}.')
         
-        if crs_str is None:
+        if data_crs is not None:
             crs_str = data_crs
 
         if crs_str is None:
