@@ -1,7 +1,7 @@
 
 from fastapi import Query, HTTPException
 from datetime import datetime, timezone
-
+from pyproj.crs import CRS
 
 def parse_datasets_str(datasets_str, ds_catalog):
     """
@@ -128,4 +128,39 @@ def get_request_metadata(req):
     }
 
     return req_md
+
+def assume_crs(dsc, datasets, input_crs_str):
+    """
+    Determines what CRS to use for user geomtry if not specified
+    in an uploaded file.
+    """
+    if input_crs_str is not None:
+        assumed_crs = CRS(input_crs_str)
+    else:
+        # Use the CRS of the first dataset in the request 
+        # as the target CRS 
+        assumed_crs = dsc[list(datasets.keys())[0]].crs
+
+    return assumed_crs
+
+def get_target_crs(input_crs_str, resolution, user_geom):
+    """
+    Determines the target CRS 
+    """
+
+    # If crs parameter provided, use that. Else,
+    # use the CRS of the user geometry, which is
+    # the uploaded geometry CRS or that of the 
+    # first dataset, that was decided above 
+    # in the clip geometry.
+    if input_crs_str is not None:
+        target_crs = CRS(input_crs_str)
+    elif input_crs_str is None and resolution is not None:
+        target_crs = user_geom.geom.crs
+    else:
+        target_crs = None
+
+    return target_crs
+
+
 
