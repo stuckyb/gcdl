@@ -386,7 +386,7 @@ async def subset_points(
             coords = parse_coords(points)
             sub_points = SubsetMultiPoint(coords, assumed_crs)
         else:
-            sub_points = ul_cache.getPolygon(geom_guid, assumed_crs)
+            sub_points = ul_cache.getMultiPoint(geom_guid, assumed_crs)
 
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, None, sub_points)
