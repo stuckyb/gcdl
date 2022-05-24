@@ -5,8 +5,24 @@ from api_core.helpers import (
     parse_datasets_str, parse_clip_bounds, parse_coords, get_request_metadata,
     assume_crs, get_target_crs
 )
+from library.catalog import DatasetCatalog
+from library.datasets.gsdataset import GSDataSet
 from subset_geom import SubsetPolygon
 
+# Stub GSDataSet with CRS
+class StubDS(GSDataSet):
+    """
+    A concrete child class that stubs abstract methods.
+    """
+    def __init__(self, store_path):
+        super().__init__(store_path, 'stub1')
+        self.name = 'ds1'
+        self.crs = CRS.from_epsg(4326)
+
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        return None
 
 class TestHelpers(unittest.TestCase):
 
@@ -23,11 +39,22 @@ class TestHelpers(unittest.TestCase):
         pass
 
     def test_assume_crs(self):
-        pass
-        # 
+        
+        # Test catalog and datasets
+        ds = {'ds1' : ''}
+        dsc =  DatasetCatalog('test_data')
+        dsc.addDatasetsByClass(StubDS)
+
+        exp = CRS('EPSG:4326')
+        r = assume_crs(dsc, ds, None)
+        self.assertTrue(exp.equals(r))
+
+        exp = CRS('EPSG:3857')
+        r = assume_crs(dsc, ds, 'EPSG:3857')
+        self.assertTrue(exp.equals(r))
+
 
     def test_get_target_crs(self):
-        pass
         
         # Test user geometries
         poly_geom1 = SubsetPolygon(
@@ -49,13 +76,17 @@ class TestHelpers(unittest.TestCase):
 
         exp = CRS('EPSG:4326')
         r = get_target_crs('EPSG:4326', None, poly_geom1)
+        self.assertTrue(exp.equals(r))
 
         exp = CRS('EPSG:4326')
         r = get_target_crs('EPSG:4326', 1, poly_geom1)
+        self.assertTrue(exp.equals(r))
 
         exp = CRS('EPSG:4326')
         r = get_target_crs('EPSG:4326', None, poly_geom2)
+        self.assertTrue(exp.equals(r))
 
         exp = CRS('EPSG:4326')
         r = get_target_crs('EPSG:4326', 1, poly_geom2)
+        self.assertTrue(exp.equals(r))
     
