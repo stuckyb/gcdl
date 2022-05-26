@@ -9,3 +9,4 @@ pydap
 requests
 python-multipart
 pyshp >= 2.2.0
+osgeo
