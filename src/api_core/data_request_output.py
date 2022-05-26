@@ -50,7 +50,7 @@ class DataRequestOutput:
     def _assignCategories(self, RAT, colormap, xr_data=None, data_path=None):
         # If the data are given, add RAT and colormap as attributes. 
         # If path is given, write them to files.  
-        if data is not None:
+        if xr_data is not None:
             # Geotiffs generally store 256 values in RAT even if 
             # there are less than 256 classes, so ignore the empty ones
             trim_RAT = {k:v for (k,v) in RAT.items() if v == ''}
@@ -58,14 +58,14 @@ class DataRequestOutput:
             # a single string of comma-separated integers and 
             # flag_meanings as a single string of space-separated
             # names where spaces in names are underscores.
-            data.attrs['flag_values'] = ','.join([str(k) for k in trim_RAT.keys()])
-            data.attrs['flag_meanings'] = ' '.join(
+            xr_data.attrs['flag_values'] = ','.join([str(k) for k in trim_RAT.keys()])
+            xr_data.attrs['flag_meanings'] = ' '.join(
                 [class_id.replace(' ','_') for class_id in trim_RAT.values()]
             )
             rat_colors = []
             for class_id in trim_RAT.keys():
                 rat_colors.append(self._rgbaToHex(colormap[class_id]))
-            data.attrs['flag_colors'] = ' '.join(rat_colors)
+            xr_data.attrs['flag_colors'] = ' '.join(rat_colors)
         elif data_path is not None:
             ds = gdal.Open(str(data_path))
             rb = ds.GetRasterBand(1)
@@ -85,7 +85,7 @@ class DataRequestOutput:
         else:
              raise ValueError('Unsupported RAT output method.')
 
-        return data, rat_path
+        return xr_data, rat_path
 
     def _writeNetCDF(self, data, fout_path, RAT=None, colormap=None):
         if isinstance(data, xr.Dataset):
