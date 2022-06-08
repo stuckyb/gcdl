@@ -13,6 +13,10 @@ pyshp >= 2.2.0
 # The gdal package is required, but commented out because it requires compiling
 # against the GDAL development libraries and so is not always easy to install
 # via pip. If your Linux distro package manager includes a pre-built gdal
-# python package, that will likely be easier.
+# python package, that will likely be easier.  Otherwise, you will need to be
+# sure to install a version of the gdal package that matches the version of the
+# gdal development libraries on your system.  E.g.,
+# pip install gdal==$(gdal-config --version)
+#
 #gdal
 
