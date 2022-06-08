@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       debug_enabled:
-        description: 'Run the build with tmate shell access enabled (https://github.com/marketplace/actions/debugging-with-tmate)'     
+        description: 'Type "true" below to run the build with tmate shell access enabled (https://github.com/marketplace/actions/debugging-with-tmate).'
         required: false
         default: false
 
@@ -28,7 +28,7 @@ jobs:
     - uses: actions/checkout@v3
 
     # Enable tmate shell access for manually-triggered workflows if
-    # "debug_enabled" is True.
+    # "debug_enabled" is "true".
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
