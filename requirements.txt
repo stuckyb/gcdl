@@ -9,4 +9,10 @@ pydap
 requests
 python-multipart
 pyshp >= 2.2.0
-gdal
+
+# The gdal package is required, but commented out because it requires compiling
+# against the GDAL development libraries and so is not always easy to install
+# via pip. If your Linux distro package manager includes a pre-built gdal
+# python package, that will likely be easier.
+#gdal
+
