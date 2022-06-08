@@ -17,7 +17,7 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -31,9 +31,9 @@ jobs:
 
     - name: Install GDAL
       run: |
-        sudo apt-get install -y gdal-bin libgdal-dev
-        gdal-config --version
-        gcc --version
+        sudo apt-get install -y python3-gdal
+        #gdal-config --version
+        #gcc --version
 
     - name: Install dependencies
       run: |
