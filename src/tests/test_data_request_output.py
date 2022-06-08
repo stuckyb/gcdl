@@ -223,14 +223,17 @@ class TestDataRequestOutput(unittest.TestCase):
             data_request.REQ_POINT, 'shapefile',
             {}
         )
-        exp = [
+        exp = sorted([
             shp_outdir / 'ds1_ds2.shx',
             shp_outdir / 'ds1_ds2.shp',
             shp_outdir / 'ds1_ds2.cpg',
             shp_outdir / 'ds1_ds2.dbf',
-            shp_outdir / 'ds1_ds2.prj']
-        r = dro._writePointFiles(test_output_dict, test_req, shp_outdir)
-        self.assertEqual(exp,r)
+            shp_outdir / 'ds1_ds2.prj'
+        ])
+        r = sorted(
+            dro._writePointFiles(test_output_dict, test_req, shp_outdir)
+        )
+        self.assertEqual(exp, r)
         self.assertTrue(exp[0].exists())
 
         # NetCDF
