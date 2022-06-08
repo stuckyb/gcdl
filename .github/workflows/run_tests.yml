@@ -31,7 +31,7 @@ jobs:
 
     - name: Install GDAL
       run: |
-        sudo apt-get install gdal-bin
+        sudo apt-get install -y gdal-bin
 
     - name: Install dependencies
       run: |
