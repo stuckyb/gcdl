@@ -10,19 +10,28 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate shell access enabled (https://github.com/marketplace/actions/debugging-with-tmate)'     
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v3
+
+    # Enable tmate shell access for manually-triggered workflows if
+    # "debug_enabled" is True.
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
 
     - name: Set up Python 3.9
       uses: actions/setup-python@v3
