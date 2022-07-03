@@ -17,7 +17,8 @@ class NASS_CDL(GSDataSet):
         super().__init__(store_path, 'nass_cdl')
 
         # Basic dataset information.
-        self.name = 'NASS_CDL'
+        self.id = 'NASS_CDL'
+        self.name = 'NASS Cropland Data Layer'
         self.url = 'https://www.nass.usda.gov/Research_and_Science/Cropland/SARS1a.php'
 
         # CRS information.
