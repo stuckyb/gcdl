@@ -77,7 +77,7 @@ class DataRequestHandler:
             # Reproject to the target resolution, target projection, or both, if
             # needed.
             if (
-                not(request.target_crs.equals(dataset.crs)) or
+                request.target_crs is not None or
                 request.target_resolution is not None
             ):
                 # Check if we need to match a reprojection
