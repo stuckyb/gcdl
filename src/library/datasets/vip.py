@@ -10,7 +10,7 @@ from subset_geom import SubsetPolygon, SubsetMultiPoint
 class VIP(GSDataSet):
     def __init__(self, store_path):
         """
-        store_path (Path): The location of remote dataset storage.
+        store_path (Path): The location of on-disk dataset storage.
         """
         super().__init__(store_path, 'vip')
 
