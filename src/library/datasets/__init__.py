@@ -6,4 +6,5 @@ from .gtopo import GTOPO
 from .srtm import SRTM
 from .modis_ndvi import MODIS_NDVI
 from .nass_cdl import NASS_CDL
+from .vip import VIP
 
