@@ -73,9 +73,8 @@ class GSDataSet(ABC):
             'day': [None, None]
         }
 
-        # If the dataset is categorical and if it has a raster attribute
-        # table and/or colormap.  
-        self.categorical = False
+        # If the dataset has any raster attribute
+        # tables and/or colormaps.  
         self.RAT = None
         self.colormap = None
 

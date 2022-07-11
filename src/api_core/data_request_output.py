@@ -62,10 +62,12 @@ class DataRequestOutput:
             xr_data.attrs['flag_meanings'] = ' '.join(
                 [class_id.replace(' ','_') for class_id in trim_RAT.values()]
             )
-            rat_colors = []
-            for class_id in trim_RAT.keys():
-                rat_colors.append(self._rgbaToHex(colormap[class_id]))
-            xr_data.attrs['flag_colors'] = ' '.join(rat_colors)
+            if colormap is not None:
+                rat_colors = []
+                for class_id in trim_RAT.keys():
+                    rat_colors.append(self._rgbaToHex(colormap[class_id]))
+                xr_data.attrs['flag_colors'] = ' '.join(rat_colors)
+            rat_path = None
         elif data_path is not None:
             ds = gdal.Open(str(data_path))
             rb = ds.GetRasterBand(1)
@@ -90,7 +92,19 @@ class DataRequestOutput:
     def _writeNetCDF(self, data, fout_path, RAT=None, colormap=None):
         if isinstance(data, xr.Dataset):
             if RAT is not None:
-                data, rp = self._assignCategories(RAT, colormap, xr_data=data)
+                
+                if any([dv in RAT.keys() for dv in data.data_vars]):
+                    layer_RAT = RAT[[dv for dv in data.data_vars if dv in RAT.keys()][0]]
+                else:
+                    layer_RAT = None
+                if colormap is not None:
+                    if any([dv in colormap.keys() for dv in data.data_vars]):
+                        layer_colormap = colormap[[dv for dv in data.data_vars if dv in colormap.keys()][0]]
+                    else:
+                        layer_colormap = None
+                data, rp = self._assignCategories(
+                    layer_RAT, layer_colormap, xr_data=data
+                )
         else:
             # Modify geometry to list coordinates in x,y columns
             g_crs = data.geometry.crs
@@ -116,8 +130,17 @@ class DataRequestOutput:
         all_fpaths = [fout_path]
 
         if RAT is not None:
+            if data_xrda.name in RAT.keys():
+                layer_RAT = RAT[data_xrda.name]
+            else:
+                layer_RAT = None
+            if colormap is not None:
+                if data_xrda.name in colormap.keys():
+                    layer_colormap = colormap[data_xrda.name]
+                else:
+                    layer_colormap = None
             d, rat_path = self._assignCategories(
-                RAT, colormap, data_path=fout_path
+                layer_RAT, layer_colormap, data_path=fout_path
             )
             all_fpaths.append(rat_path)
 

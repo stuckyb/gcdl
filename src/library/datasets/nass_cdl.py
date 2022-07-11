@@ -44,16 +44,18 @@ class NASS_CDL(GSDataSet):
         }
 
         # Categorical dataset, 
-        # with RAT and colormap read with methods
-        self.categorical = True
+        # with one band with RAT and colormap read with methods
+        self.categorical_vars = ['cdl']
+        self.RAT = None
+        self.colormap = None
 
-    def _getColorMap(self, fname):
+    def _getColorMap(self, fname, varname):
         # Reads in a dictionary with integer keys and 
         # rgba tuples as values
         with rasterio.open(fname) as ds:
-            self.colormap = ds.colormap(1)
+            self.colormap = {varname: ds.colormap(1)}
 
-    def _getRAT(self, fname):
+    def _getRAT(self, fname, varname):
         # Creates a dictionary with integer keys and 
         # class names as values
         ds = gdal.Open(str(fname))
@@ -61,7 +63,7 @@ class NASS_CDL(GSDataSet):
         nrows = RAT.GetRowCount()
         class_names = [RAT.GetValueAsString(i,0) for i in range(nrows)]
         class_id = [i for i in range(nrows)]
-        self.RAT = {k:v for k,v in zip(class_id,class_names)}
+        self.RAT = {varname: {k:v for k,v in zip(class_id,class_names)}}
         ds = None
 
     def getData(
@@ -86,10 +88,10 @@ class NASS_CDL(GSDataSet):
 
         # Read in colormap and RAT if not already available
         if self.colormap is None:
-            self._getColorMap(fpath)
+            self._getColorMap(fpath, varname)
 
         if self.RAT is None:
-            self._getRAT(fpath)
+            self._getRAT(fpath, varname)
 
         # Open data file
         data = rioxarray.open_rasterio(fpath, masked=True)
