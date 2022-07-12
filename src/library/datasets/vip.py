@@ -52,7 +52,8 @@ class VIP(GSDataSet):
         ]
 
         # File name patterns for each variable.
-        self.fpatterns = 'VIP01.A{0}{1}.004.2016178021533.hdf' ## need a way to leave out those num
+        # Partial filename
+        self.fpatterns = 'VIP01.A{0}{1}.004.*' 
         
 
     def getData(
@@ -80,7 +81,11 @@ class VIP(GSDataSet):
         else:
             raise ValueError('Invalid date grain specification.')
 
-        fpath = self.ds_path / fname
+        fpath = list(self.ds_path.glob(fname))
+        if len(fpath) > 1:
+            raise ValueError('Non-unique filename')
+        else:
+            fpath = fpath[0]
         
         # Open data file
         data = rioxarray.open_rasterio(
