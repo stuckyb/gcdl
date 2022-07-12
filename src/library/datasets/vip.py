@@ -53,7 +53,7 @@ class VIP(GSDataSet):
 
         # File name patterns for each variable.
         # Partial filename
-        self.fpatterns = 'VIP01.A{0}{1}.004.*' 
+        self.fpatterns = 'VIP{0}.A{1}{2}.004.*' 
         
 
     def getData(
@@ -72,12 +72,15 @@ class VIP(GSDataSet):
         if date_grain == dr.ANNUAL:
             raise NotImplementedError()
         elif date_grain == dr.MONTHLY:
-            raise NotImplementedError()
+            doy = datetime.date(
+                request_date.year, request_date.month, 1
+            ).strftime('%j')
+            fname = self.fpatterns.format('30',request_date.year,doy)
         elif date_grain == dr.DAILY:
             doy = datetime.date(
                 request_date.year, request_date.month, request_date.day
             ).strftime('%j')
-            fname = self.fpatterns.format(request_date.year,doy)
+            fname = self.fpatterns.format('01',request_date.year,doy)
         else:
             raise ValueError('Invalid date grain specification.')
 
