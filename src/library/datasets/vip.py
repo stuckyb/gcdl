@@ -77,10 +77,11 @@ class VIP(GSDataSet):
             ).strftime('%j')
             fname = self.fpatterns.format('30',request_date.year,doy)
         elif date_grain == dr.DAILY:
-            doy = datetime.date(
-                request_date.year, request_date.month, request_date.day
-            ).strftime('%j')
-            fname = self.fpatterns.format('01',request_date.year,doy)
+            raise NotImplementedError()
+            #doy = datetime.date(
+            #    request_date.year, request_date.month, request_date.day
+            #).strftime('%j')
+            #fname = self.fpatterns.format('01',request_date.year,doy)
         else:
             raise ValueError('Invalid date grain specification.')
 
