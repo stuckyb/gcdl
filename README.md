@@ -26,7 +26,7 @@
     ```
     singularity build --fakeroot geocdl.sif geocdl.def
     ```
-1. Run the GeoCDL in a Singularity container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage and is also mounted read-only inside the container; the output directory is mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
+1. Run the GeoCDL in a Singularity container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output directory is mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
     ```
     singularity run \
       --mount type=bind,src=/path/to/geocdl/src,dst=/geocdl/src,ro \
