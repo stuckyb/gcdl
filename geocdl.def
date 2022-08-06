@@ -1,13 +1,20 @@
 
 Bootstrap: docker
-From: python:3.9-slim
+From: ubuntu:22.04
 
 %files
   requirements.txt /geocdl/
-  src /geocdl/
 
 %post
+  apt-get update
+  apt-get install -y python3 python-is-python3 python3-pip python3-gdal
   pip install -r /geocdl/requirements.txt
+
+  # The pydap package that installs with Python 3.10.4 has several bugs
+  # related to abstract base class imports.  The following two commands fix
+  # those bugs.
+  sed -i 's/from collections import OrderedDict, Mapping/from collections import OrderedDict\nfrom collections.abc import Mapping/g' /usr/local/lib/python3.10/dist-packages/pydap/model.py
+  sed -i 's/from collections import Iterable/from collections.abc import Iterable/g' /usr/local/lib/python3.10/dist-packages/pydap/responses/das.py
 
 %runscript
   cd /geocdl/src
