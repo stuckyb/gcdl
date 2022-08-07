@@ -7,6 +7,7 @@ import geopandas as gpd
 from pathlib import Path
 import pandas as pd
 import datetime as dt
+import tempfile
 from api_core import data_request, DataRequest, DataRequestOutput
 from library.datasets.gsdataset import GSDataSet
 from subset_geom import SubsetPolygon, SubsetMultiPoint
@@ -45,11 +46,6 @@ class StubDS2(GSDataSet):
         return None
 
 class TestDataRequestOutput(unittest.TestCase):
-
-    # Write test output files to temp output folder
-    outdir = Path('../../output/testing')
-    outdir.mkdir(exist_ok=True)
-
     # Test point data
     test_gdf = gpd.GeoDataFrame(
         {
@@ -115,54 +111,61 @@ class TestDataRequestOutput(unittest.TestCase):
     def test_writeCSV(self):
         dro = self.dro
 
-        fname = self.outdir / 'writeCSV.csv'
-        dro._writeCSV(self.test_gdf, fname)
+        with tempfile.TemporaryDirectory() as tdir:
+            outdir = Path(tdir)
+            fname = outdir / 'writeCSV.csv'
+            dro._writeCSV(self.test_gdf, fname)
 
-        exp = pd.DataFrame(
-            {
-                'time': [1980, 1980],
-                'dataset': ['ds1', 'ds1'],
-                'variable': ['var1', 'var1'],
-                'value': [11, 22], 
-                'x': [1,2],
-                'y': [2,1]
-            }
-        )
-        r = pd.read_csv(fname)
+            exp = pd.DataFrame(
+                {
+                    'time': [1980, 1980],
+                    'dataset': ['ds1', 'ds1'],
+                    'variable': ['var1', 'var1'],
+                    'value': [11, 22], 
+                    'x': [1,2],
+                    'y': [2,1]
+                }
+            )
+            r = pd.read_csv(fname)
 
-        # x,y columns equivalent to point coordinates
-        self.assertEqual(r['x'].tolist(), self.test_gdf.geometry.x.tolist())
-        self.assertEqual(r['y'].tolist(), self.test_gdf.geometry.y.tolist())
+            # x,y columns equivalent to point coordinates
+            self.assertEqual(
+                r['x'].tolist(), self.test_gdf.geometry.x.tolist()
+            )
+            self.assertEqual(
+                r['y'].tolist(), self.test_gdf.geometry.y.tolist()
+            )
 
-        # Values are the same
-        self.assertEqual(exp['value'].tolist(), r['value'].tolist())
-    
-        # Column names are the same
-        self.assertEqual(exp.columns.tolist(), r.columns.tolist())
+            # Values are the same
+            self.assertEqual(exp['value'].tolist(), r['value'].tolist())
+        
+            # Column names are the same
+            self.assertEqual(exp.columns.tolist(), r.columns.tolist())
 
-        # No geometry column in file
-        self.assertFalse('geometry' in r.columns)
+            # No geometry column in file
+            self.assertFalse('geometry' in r.columns)
 
     def test_writeShapefile(self):
         dro = self.dro
 
-        fname = self.outdir / 'writeShapefile.shp'
-        dro._writeShapefile(self.test_gdf, fname)
+        with tempfile.TemporaryDirectory() as tdir:
+            outdir = Path(tdir)
+            fname = outdir / 'writeShapefile.shp'
+            dro._writeShapefile(self.test_gdf, fname)
 
-        exp = self.test_gdf
-        r = gpd.read_file(fname)
+            exp = self.test_gdf
+            r = gpd.read_file(fname)
 
-        # Same CRS
-        self.assertEqual(exp.geometry.crs, r.geometry.crs)
+            # Same CRS
+            self.assertEqual(exp.geometry.crs, r.geometry.crs)
 
-        # Same geometry
-        self.assertEqual(exp.geom_type.tolist(), r.geom_type.tolist())
-        self.assertEqual(exp.geometry.x.tolist(), r.geometry.x.tolist())
-        self.assertEqual(exp.geometry.y.tolist(), r.geometry.y.tolist())
+            # Same geometry
+            self.assertEqual(exp.geom_type.tolist(), r.geom_type.tolist())
+            self.assertEqual(exp.geometry.x.tolist(), r.geometry.x.tolist())
+            self.assertEqual(exp.geometry.y.tolist(), r.geometry.y.tolist())
 
-        # Same values
-        self.assertEqual(exp['value'].tolist(), r['value'].tolist())
-
+            # Same values
+            self.assertEqual(exp['value'].tolist(), r['value'].tolist())
 
     def test_assignCategories(self):
         pass
@@ -170,12 +173,14 @@ class TestDataRequestOutput(unittest.TestCase):
     def test_writeNetCDF(self):
         dro = self.dro
 
-        fname = self.outdir / 'writeNetCDF.nc'
+        with tempfile.TemporaryDirectory() as tdir:
+            outdir = Path(tdir)
+            fname = outdir / 'writeNetCDF.nc'
 
-        # Point data
-        r = dro._writeNetCDF(self.test_gdf, fname)
+            # Point data
+            r = dro._writeNetCDF(self.test_gdf, fname)
 
-        #exp = 
+            #exp = 
 
 
 
@@ -203,42 +208,44 @@ class TestDataRequestOutput(unittest.TestCase):
             data_request.REQ_POINT, 'csv',
             {}
         )
-        exp = [self.outdir / 'ds1_ds2.csv']
-        r = dro._writePointFiles(test_output_dict, test_req, self.outdir)
-        self.assertEqual(exp,r)
-        self.assertTrue(exp[0].exists())
 
-        # Shapefile
-        shp_outdir = self.outdir / 'shp'
-        shp_outdir.mkdir(exist_ok=True)
-        test_req = DataRequest(
-            self.dsc, {'ds1' : 'var1', 'ds2' : 'var2'},
-            # Date parameters.
-            '1980', None, None, None, None, None,
-            # Subset geometry.
-            SubsetMultiPoint([[1,2],[2,1]], 'EPSG:4326'),
-            # Projection/resolution parameters.
-            CRS('EPSG:4326'), None, None,
-            # Output parameters.
-            data_request.REQ_POINT, 'shapefile',
-            {}
-        )
-        exp = sorted([
-            shp_outdir / 'ds1_ds2.shx',
-            shp_outdir / 'ds1_ds2.shp',
-            shp_outdir / 'ds1_ds2.cpg',
-            shp_outdir / 'ds1_ds2.dbf',
-            shp_outdir / 'ds1_ds2.prj'
-        ])
-        r = sorted(
-            dro._writePointFiles(test_output_dict, test_req, shp_outdir)
-        )
-        self.assertEqual(exp, r)
-        self.assertTrue(exp[0].exists())
+        with tempfile.TemporaryDirectory() as tdir:
+            outdir = Path(tdir)
 
-        # NetCDF
+            exp = [outdir / 'ds1_ds2.csv']
+            r = dro._writePointFiles(test_output_dict, test_req, outdir)
+            self.assertEqual(exp,r)
+            self.assertTrue(exp[0].exists())
 
+            # Shapefile
+            shp_outdir = outdir / 'shp'
+            shp_outdir.mkdir()
+            test_req = DataRequest(
+                self.dsc, {'ds1' : 'var1', 'ds2' : 'var2'},
+                # Date parameters.
+                '1980', None, None, None, None, None,
+                # Subset geometry.
+                SubsetMultiPoint([[1,2],[2,1]], 'EPSG:4326'),
+                # Projection/resolution parameters.
+                CRS('EPSG:4326'), None, None,
+                # Output parameters.
+                data_request.REQ_POINT, 'shapefile',
+                {}
+            )
+            exp = sorted([
+                shp_outdir / 'ds1_ds2.shx',
+                shp_outdir / 'ds1_ds2.shp',
+                shp_outdir / 'ds1_ds2.cpg',
+                shp_outdir / 'ds1_ds2.dbf',
+                shp_outdir / 'ds1_ds2.prj'
+            ])
+            r = sorted(
+                dro._writePointFiles(test_output_dict, test_req, shp_outdir)
+            )
+            self.assertEqual(exp, r)
+            self.assertTrue(exp[0].exists())
 
+            # NetCDF
 
     def test_writeRasterFiles(self):
         pass
@@ -248,3 +255,4 @@ class TestDataRequestOutput(unittest.TestCase):
 
     def test_writeRequestedData(self):
         pass
+
