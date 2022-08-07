@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import time
 import zipfile
+import shapefile
 from pyproj import CRS
 from api_core.upload_cache import DataUploadCache
 
@@ -338,12 +339,24 @@ class TestDataUploadCache(unittest.TestCase):
     def test_readShapefilePolygon(self):
         uc = DataUploadCache('data/upload_cache', 1024)
 
-        exp = [(0.0, 0.1), (2.0, 0.2), (1.0, 2.1), (0.0, 0.1)]
+        exp = [(0.0, 0.1), (1.0, 2.1), (2.0, 0.2), (0.0, 0.1)]
 
         # Polygon with no holes, no CRS information.
         gfile = Path('data/upload_cache/shapefile_polygon-no_crs-no_holes.zip')
         r, crs = uc._readShapefilePolygon(gfile)
-        self.assertEqual(exp, r)
+
+        # A problematic detail of file formats is that the ESRI shapefile
+        # specification requires the outer ring of a polygon to have the
+        # vertices listed in clockwise order, whereas the most recent GeoJSON
+        # specification requires the outer ring vertices to be listed in
+        # counterclockwise order.  Some versions of pyshp enforce this (2.2);
+        # others do not (more recent versions); see
+        # https://github.com/GeospatialPython/pyshp/commit/a9ba72da52743850164185dd8db5fd821494fd11.
+        # A solution for testing is to put the middle two vertices in sorted
+        # order.  This will ensure that the tested polygon definition is still
+        # correct while ignoring winding order.
+        self.assertEqual(len(exp), len(r))
+        self.assertEqual(exp, r[0:1] + sorted(r[1:3]) + r[3:])
         self.assertIsNone(crs)
 
         # Polygon with one hole, no CRS information.
@@ -351,7 +364,7 @@ class TestDataUploadCache(unittest.TestCase):
             'data/upload_cache/shapefile_polygon-no_crs-with_holes.zip'
         )
         r, crs = uc._readShapefilePolygon(gfile)
-        self.assertEqual(exp, r)
+        self.assertEqual(exp, r[0:1] + sorted(r[1:3]) + r[3:])
         self.assertIsNone(crs)
 
     def test_getPolygon(self):
