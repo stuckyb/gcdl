@@ -6,7 +6,6 @@ from pathlib import Path
 import os
 import time
 import zipfile
-import shapefile
 from pyproj import CRS
 from api_core.upload_cache import DataUploadCache
 
@@ -80,7 +79,7 @@ class TestDataUploadCache(unittest.TestCase):
             tpath = Path(tdir)
 
             # Upload file data.
-            uc = DataUploadCache(tdir, 1024)
+            uc = DataUploadCache(tpath, 1024)
             guid = uc.addFile(finput, 'tfile.csv')
 
             self.assertFalse(uc.contains('invalid_guid'))
@@ -106,7 +105,7 @@ class TestDataUploadCache(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tdir:
             tpath = Path(tdir)
 
-            uc = DataUploadCache(tdir, 1024)
+            uc = DataUploadCache(tpath, 1024)
 
             # Upload one file and verify cache stats.
             finput = io.BytesIO(self.fdata1)
