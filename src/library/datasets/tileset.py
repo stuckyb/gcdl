@@ -77,7 +77,6 @@ class TileSet:
         subset_geom: An instance of SubsetGeom.
         """
         fpaths = self.getTilePaths(subset_geom)
-        print(fpaths)
         tiles = []
         
         for fpath in fpaths:
@@ -95,7 +94,6 @@ class TileSet:
             if j > len(tiles):
                 j = len(tiles)
 
-            print(i, j)
             inter_merged.append(merge.merge_arrays(tiles[i:j]))
 
             i += 4
