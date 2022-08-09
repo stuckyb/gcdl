@@ -43,9 +43,14 @@
     ```
     docker build -t geocdl[:tag] .
     ```
-1. Run the GeoCDL in a Docker container.  Local data storage is mounted read-only inside the container and the output directory is mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
+1. Run the GeoCDL in a Docker container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output directory is mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
     ```
-    docker run --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro --mount type=bind,src=/path/to/output,dst=/geocdl/output --network host geocdl
+    docker run \
+      --mount type=bind,src=/path/to/geocdl/src,dst=/geocdl/src,ro \
+      --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro \
+      --mount type=bind,src=/path/to/output,dst=/geocdl/output \
+      --network host \
+      geocdl
     ```
 
 
