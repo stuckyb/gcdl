@@ -8,6 +8,9 @@ from pathlib import Path
 import pandas as pd
 import datetime as dt
 import tempfile
+import xarray as xr
+import rioxarray
+import numpy as np
 from api_core import data_request, DataRequest, DataRequestOutput
 from library.datasets.gsdataset import GSDataSet
 from subset_geom import SubsetPolygon, SubsetMultiPoint
@@ -168,7 +171,48 @@ class TestDataRequestOutput(unittest.TestCase):
             self.assertEqual(exp['value'].tolist(), r['value'].tolist())
 
     def test_assignCategories(self):
-        pass
+        dro = self.dro
+
+        # Test RAT w/o colormap for geotiff 
+        dro._assignCategories(test_RAT, None, None, fname)
+
+        # Test RAT and colormap for geotiff, single band
+        dro._assignCategories(test_RAT, test_cm, None, fname)
+
+        # Test colormap w/o RAT for geotiff
+        dro._assignCategories(None, test_cm, None, fname)
+
+
+        # Test RAT w/o colormap for netcdf
+        dro._assignCategories(test_RAT, None, test_data, None)
+
+        # Test RAT and colormap for netcdf, single band
+        dro._assignCategories(test_RAT, None, test_data, None)
+
+        # Test colormap w/o RAT for netcdf
+        dro._assignCategories(test_RAT, None, test_data, None)
+
+
+        # Test RAT w/o colormap for shapefile
+        dro._assignCategories(test_RAT, None, test_data, None)
+
+        # Test RAT and colormap for shapefile, single band
+        dro._assignCategories(test_RAT, test_cm, test_data, None)
+
+        # Test RAT and colormap for shapefile, multiple bands
+
+        # Test colormap w/o RAT for shapefile
+
+
+        # Test RAT w/o colormap for csv
+
+        # Test RAT and colormap for csv, single band
+
+        # Test RAT and colormap for csv, multiple bands
+
+        # Test colormap w/o RAT for csv
+
+        
 
     def test_writeNetCDF(self):
         dro = self.dro
@@ -178,10 +222,28 @@ class TestDataRequestOutput(unittest.TestCase):
             fname = outdir / 'writeNetCDF.nc'
 
             # Point data
-            r = dro._writeNetCDF(self.test_gdf, fname)
+            dro._writeNetCDF(self.test_gdf, fname)
 
-            #exp = 
+            exp = pd.DataFrame(
+                {
+                    'time': [1980, 1980],
+                    'ds1_var': [11, 22], 
+                    'x': [1,2],
+                    'y': [2,1]
+                }
+            ).set_index(['x','y','time']).to_xarray()
+            exp.rio.write_crs(self.test_gdf.geometry.crs, inplace=True)
+            r = xr.open_dataset(fname)
 
+            # Same CRS
+            self.assertEqual(exp['spatial_ref'].crs_wkt, r['spatial_ref'].crs_wkt)
+
+            # Same geometry
+            self.assertTrue((exp['x'] == r['x']).all())
+            self.assertTrue((exp['y'] == r['y']).all())
+
+            # Same values
+            self.assertTrue((exp['ds1_var'] == r['ds1_var']).all())
 
 
     def test_writeGeoTIFF(self):
