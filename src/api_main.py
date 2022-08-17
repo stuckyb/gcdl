@@ -5,6 +5,8 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 from pathlib import Path
+import logging
+import time
 
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
@@ -14,7 +16,9 @@ from api_core.helpers import (
     assume_crs, get_target_crs
 )
 from library.catalog import DatasetCatalog
-from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP
+from library.datasets import (
+    PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP
+)
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 from api_core.upload_cache import DataUploadCache
 
@@ -25,8 +29,19 @@ dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP)
 # Directory for serving output files.
 output_dir = Path('../output')
 
+# Directory for log files.
+logging_dir = Path('../logs')
+
 # Data upload cache.
 ul_cache = DataUploadCache('../upload', 1024 * 1024)
+
+logger = logging.getLogger('api_main')
+logger.setLevel(logging.INFO)
+cl_handler = logging.StreamHandler()
+cl_handler.setLevel(logging.INFO)
+l_formatter = logging.Formatter('%(message)s')
+cl_handler.setFormatter(l_formatter)
+logger.addHandler(cl_handler)
 
 
 app = FastAPI(
@@ -38,6 +53,39 @@ app = FastAPI(
     'our higher-level interfaces, including a web GUI interface and packages '
     'for Python and R.'
 )
+
+@app.middleware('http')
+async def log_request(request: Request, call_next):
+    """
+    A "middleware" function that logs details for every incoming API request.
+    Log entries for requests follow the "Combined Log Format" standard in
+    common use for HTTP servers (see, e.g.,
+    https://httpd.apache.org/docs/2.4/logs.html).
+    """
+    req_time = time.time()
+    req_time_str = time.strftime('%d/%b/%Y:%H:%M:%S %z', time.localtime())
+    response = await call_next(request)
+
+    # Some notes on how information for the log entry is retrieved.  Getting
+    # the HTTP version takes advantage of Starlette Request objects acting as
+    # mappings that pass keys on to the underlying scope object.  This does not
+    # seem to be described well in the documentation, but see
+    # https://github.com/encode/starlette/blob/master/starlette/requests.py.
+    # The scope key for HTTP version also mirrors that used by uvicorn; see
+    # httptools_impl.py in the uvicorn source code.  Note that the "scope"
+    # dictionary is also a requirement of the ASGI specification, although
+    # protocol-specific keys are not mandated
+    # (https://asgi.readthedocs.io/en/latest/specs/main.html).
+    if 'user-agent' in request.headers:
+        ua_str = '"' + request.headers['user-agent'] + '"'
+    else:
+        ua_str = '-'
+    logger.info('{0}:{1} - - [{2}] "{3} {4} HTTP/{5}" {6} - - {7}'.format(
+        request.client.host, request.client.port, req_time_str, request.method,
+        request.url, request['http_version'], response.status_code, ua_str
+    ))
+
+    return response
 
 @app.get(
     '/list_datasets', tags=['Library catalog operations'],
