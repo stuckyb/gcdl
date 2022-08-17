@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 import logging
 import time
+import yaml
 
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
@@ -29,28 +30,18 @@ dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP)
 # Directory for serving output files.
 output_dir = Path('../output')
 
-# Directory for log files.
-logging_dir = Path('../logs')
+# Location of access log files.
+access_log_path = Path('../logs/access.log')
 
 # Data upload cache.
 ul_cache = DataUploadCache('../upload', 1024 * 1024)
 
+# Configure logging and get requests logger.
+with open('logging_config.yaml') as fin:
+    logging_conf = yaml.safe_load(fin)
+logging_conf['handlers']['file']['filename'] = access_log_path
+logging.config.dictConfig(logging_conf)
 logger = logging.getLogger('api_main')
-logger.setLevel(logging.INFO)
-cl_handler = logging.StreamHandler()
-cl_handler.setLevel(logging.INFO)
-f_handler = logging.handlers.RotatingFileHandler(
-    logging_dir / 'access.log', mode='a',
-    # Rotate to a new log file once the current file hits 100 MiB.
-    maxBytes=104857600,
-    backupCount=1000, encoding='utf-8'
-)
-l_formatter = logging.Formatter('%(message)s')
-cl_handler.setFormatter(l_formatter)
-f_handler.setFormatter(l_formatter)
-#logger.addHandler(cl_handler)
-logger.addHandler(f_handler)
-
 
 app = FastAPI(
     title='Geospatial Common Data Library REST API',
@@ -74,6 +65,7 @@ async def log_request(request: Request, call_next):
     """
     req_time = time.time()
     req_time_str = time.strftime('%d/%b/%Y:%H:%M:%S %z', time.localtime())
+
     response = await call_next(request)
 
     # Some notes on how information for the log entry is retrieved.  Getting

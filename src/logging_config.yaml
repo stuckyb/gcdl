@@ -1,0 +1,29 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  access_log_formatter:
+    format: '%(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: access_log_formatter
+    level: 'INFO'
+  file:
+    # Note that the "filename" key needs to be set externally.
+    class: logging.handlers.RotatingFileHandler
+    formatter: access_log_formatter
+    level: 'INFO'
+    # Rotate to a new log file once the current file hits 100 MiB.
+    maxBytes: 104857600
+    backupCount: 1000
+    encoding: 'utf-8'
+
+loggers:
+  api_main:
+    level: 'INFO'
+    handlers:
+      #- console
+      - file
+
