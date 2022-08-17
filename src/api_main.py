@@ -39,9 +39,17 @@ logger = logging.getLogger('api_main')
 logger.setLevel(logging.INFO)
 cl_handler = logging.StreamHandler()
 cl_handler.setLevel(logging.INFO)
+f_handler = logging.handlers.RotatingFileHandler(
+    logging_dir / 'access.log', mode='a',
+    # Rotate to a new log file once the current file hits 100 MiB.
+    maxBytes=104857600,
+    backupCount=1000, encoding='utf-8'
+)
 l_formatter = logging.Formatter('%(message)s')
 cl_handler.setFormatter(l_formatter)
-logger.addHandler(cl_handler)
+f_handler.setFormatter(l_formatter)
+#logger.addHandler(cl_handler)
+logger.addHandler(f_handler)
 
 
 app = FastAPI(
