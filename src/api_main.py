@@ -60,7 +60,9 @@ async def log_request(request: Request, call_next):
     A "middleware" function that logs details for every incoming API request.
     Log entries for requests follow the "Combined Log Format" standard in
     common use for HTTP servers (see, e.g.,
-    https://httpd.apache.org/docs/2.4/logs.html).
+    https://httpd.apache.org/docs/2.4/logs.html), with one non-standard, extra
+    field at the end indicating the total time required to answer the request,
+    in seconds.
     """
     req_time = time.time()
     req_time_str = time.strftime('%d/%b/%Y:%H:%M:%S %z', time.localtime())
@@ -80,9 +82,10 @@ async def log_request(request: Request, call_next):
         ua_str = '"' + request.headers['user-agent'] + '"'
     else:
         ua_str = '-'
-    logger.info('{0}:{1} - - [{2}] "{3} {4} HTTP/{5}" {6} - - {7}'.format(
+    logger.info('{0}:{1} - - [{2}] "{3} {4} HTTP/{5}" {6} - - {7} {8}'.format(
         request.client.host, request.client.port, req_time_str, request.method,
-        request.url, request['http_version'], response.status_code, ua_str
+        request.url, request['http_version'], response.status_code, ua_str,
+        time.time() - req_time
     ))
 
     return response
