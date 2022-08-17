@@ -206,8 +206,9 @@ async def subset_polygon(
     output_format: str = Query(
         None, title='Output file format.',
         description='The file format of the gridded output. Available options '
-        'are: "geotiff" which will be one file per variable and time or "netcdf" '
-        'which will be one file with a time dimension per variable. '
+        'are: "geotiff", which will be one file per variable and time step, '
+        'or "netcdf", which will be one file with a time dimension per '
+        'variable.'
     )
 ):
     req_md = get_request_metadata(req)
@@ -357,7 +358,8 @@ async def subset_points(
     output_format: str = Query(
         None, title='Output file format.',
         description='The file format of the point output. Available options '
-        'are: "csv", "shapefile", or "netcdf". each option will rreturn one file. '
+        'are: "csv", "shapefile", or "netcdf". Each option will return one '
+        'file.'
     )
 ):
     if points == '' and geom_guid == '':
