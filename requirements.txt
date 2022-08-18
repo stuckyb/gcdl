@@ -10,6 +10,7 @@ requests
 python-multipart
 pyshp >= 2.2.0
 netCDF4
+pyyaml
 
 # The gdal package is required, but commented out because it requires compiling
 # against the GDAL development libraries and so is not always easy to install

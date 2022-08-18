@@ -5,6 +5,9 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 from pathlib import Path
+import logging
+import time
+import yaml
 
 from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
@@ -14,7 +17,9 @@ from api_core.helpers import (
     assume_crs, get_target_crs
 )
 from library.catalog import DatasetCatalog
-from library.datasets import PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP
+from library.datasets import (
+    PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP
+)
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 from api_core.upload_cache import DataUploadCache
 
@@ -25,9 +30,18 @@ dsc.addDatasetsByClass(PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP)
 # Directory for serving output files.
 output_dir = Path('../output')
 
+# Location of access log files.
+access_log_path = Path('../logs/access.log')
+
 # Data upload cache.
 ul_cache = DataUploadCache('../upload', 1024 * 1024)
 
+# Configure logging and get requests logger.
+with open('logging_config.yaml') as fin:
+    logging_conf = yaml.safe_load(fin)
+logging_conf['handlers']['file']['filename'] = access_log_path
+logging.config.dictConfig(logging_conf)
+logger = logging.getLogger('api_main')
 
 app = FastAPI(
     title='Geospatial Common Data Library REST API',
@@ -38,6 +52,43 @@ app = FastAPI(
     'our higher-level interfaces, including a web GUI interface and packages '
     'for Python and R.'
 )
+
+@app.middleware('http')
+async def log_request(request: Request, call_next):
+    """
+    A "middleware" function that logs details for every incoming API request.
+    Log entries for requests follow the "Combined Log Format" standard in
+    common use for HTTP servers (see, e.g.,
+    https://httpd.apache.org/docs/2.4/logs.html), with one non-standard, extra
+    field at the end indicating the total time required to answer the request,
+    in seconds.
+    """
+    req_time = time.time()
+    req_time_str = time.strftime('%d/%b/%Y:%H:%M:%S %z', time.localtime())
+
+    response = await call_next(request)
+
+    # Some notes on how information for the log entry is retrieved.  Getting
+    # the HTTP version takes advantage of Starlette Request objects acting as
+    # mappings that pass keys on to the underlying scope object.  This does not
+    # seem to be described well in the documentation, but see
+    # https://github.com/encode/starlette/blob/master/starlette/requests.py.
+    # The scope key for HTTP version also mirrors that used by uvicorn; see
+    # httptools_impl.py in the uvicorn source code.  Note that the "scope"
+    # dictionary is also a requirement of the ASGI specification, although
+    # protocol-specific keys are not mandated
+    # (https://asgi.readthedocs.io/en/latest/specs/main.html).
+    if 'user-agent' in request.headers:
+        ua_str = '"' + request.headers['user-agent'] + '"'
+    else:
+        ua_str = '-'
+    logger.info('{0}:{1} - - [{2}] "{3} {4} HTTP/{5}" {6} - - {7} {8}'.format(
+        request.client.host, request.client.port, req_time_str, request.method,
+        request.url, request['http_version'], response.status_code, ua_str,
+        time.time() - req_time
+    ))
+
+    return response
 
 @app.get(
     '/list_datasets', tags=['Library catalog operations'],
@@ -206,8 +257,9 @@ async def subset_polygon(
     output_format: str = Query(
         None, title='Output file format.',
         description='The file format of the gridded output. Available options '
-        'are: "geotiff" which will be one file per variable and time or "netcdf" '
-        'which will be one file with a time dimension per variable. '
+        'are: "geotiff", which will be one file per variable and time step, '
+        'or "netcdf", which will be one file with a time dimension per '
+        'variable.'
     )
 ):
     req_md = get_request_metadata(req)
@@ -357,7 +409,8 @@ async def subset_points(
     output_format: str = Query(
         None, title='Output file format.',
         description='The file format of the point output. Available options '
-        'are: "csv", "shapefile", or "netcdf". each option will rreturn one file. '
+        'are: "csv", "shapefile", or "netcdf". Each option will return one '
+        'file.'
     )
 ):
     if points == '' and geom_guid == '':
