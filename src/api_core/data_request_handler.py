@@ -51,14 +51,27 @@ class DataRequestHandler:
             # Not a great solution to be creating a new base dataframe on every
             # call, but multi-format output handling will eventually take care of
             # this.
-            out_df = gpd.GeoDataFrame({
-                'time': my_date, 
-                'dataset': dataset.id,
-                'variable': varname,
-                'value': data
-                }, 
-                geometry = request.subset_geom.geom,
-            )
+
+            # Check if category color also returned
+            if isinstance(data, dict):
+                out_df = gpd.GeoDataFrame({
+                    'time': my_date, 
+                    'dataset': dataset.id,
+                    'variable': varname,
+                    'value': data['data'],
+                    'color': data['color']
+                    }, 
+                    geometry = request.subset_geom.geom,
+            )   
+            else:
+                out_df = gpd.GeoDataFrame({
+                    'time': my_date, 
+                    'dataset': dataset.id,
+                    'variable': varname,
+                    'value': data
+                    }, 
+                    geometry = request.subset_geom.geom,
+                )
 
             return out_df 
         else:
