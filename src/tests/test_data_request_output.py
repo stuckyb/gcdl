@@ -228,7 +228,7 @@ class TestDataRequestOutput(unittest.TestCase):
             exp = pd.DataFrame(
                 {
                     'time': [1980, 1980],
-                    'ds1_var': [11, 22], 
+                    'ds1_var1': [11,22], 
                     'x': [1,2],
                     'y': [2,1]
                 }
@@ -244,7 +244,12 @@ class TestDataRequestOutput(unittest.TestCase):
             self.assertTrue((exp['y'] == r['y']).all())
 
             # Same values
-            self.assertTrue((exp['ds1_var'] == r['ds1_var']).all())
+            exp_vals = exp['ds1_var1'].values
+            r_vals = r['ds1_var1'].values
+            same = [exp_vals[i] == r_vals[i] for i in [0,1]]
+            exp_nan = np.isnan(exp_vals)
+            r_nan = np.isnan(r_vals)
+            self.assertTrue((same | (exp_nan & r_nan)).all())
 
 
     def test_writeGeoTIFF(self):
