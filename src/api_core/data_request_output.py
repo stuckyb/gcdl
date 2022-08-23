@@ -7,7 +7,7 @@ from pathlib import Path
 import xarray as xr
 from osgeo import gdal
 import rasterio
-
+import geopandas as gpd
 
 # Characters for generating random file names.
 fname_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -152,8 +152,10 @@ class DataRequestOutput:
 
         # Merge list of geodataframes into one geodataframe
         ds_output_list = [gdf for gdf in ds_output_dict.values()]
-        final_gdf = ds_output_list[0]
-        for gdf in ds_output_list[1:]:
+        final_gdf = gpd.GeoDataFrame()
+        for gdf in ds_output_list:
+            if 'color' in gdf.columns:
+                gdf['color'] = [self._rgbaToHex(rgb) for rgb in gdf['color']]
             final_gdf = final_gdf.append(gdf)
 
         if request.file_extension == ".csv":
