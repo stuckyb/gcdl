@@ -117,7 +117,7 @@ class NASS_CDL(GSDataSet):
             )
 
             # Convert crop index to name
-            data = [self.RAT[class_id] for class_id in res.values[0]] 
+            data = [self.RAT[varname][int(class_id)] for class_id in res.values[0]] 
 
         return data
 
