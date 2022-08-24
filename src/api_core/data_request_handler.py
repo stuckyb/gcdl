@@ -160,10 +160,7 @@ class DataRequestHandler:
         # request dates. Otherwise, prepare date lists per date grain 
         # (requested directly and those determined by requested grain_method).
         ds_grain = request.ds_date_grains[dsid]
-        if request.dsc[dsid].nontemporal:
-            date_list = [None] 
-        else:
-            date_list = request.ds_dates[dsid]
+        date_list = request.ds_dates[dsid]
 
         return (ds_grain, date_list)
 
@@ -229,9 +226,6 @@ class DataRequestHandler:
             # Determine the date granularity and request dates 
             # for this dataset
             ds_grain, date_list = self._getGrainAndDates(request, dsid)
-            if date_list is None:
-                # Skip this dataset
-                continue
 
             if request.request_type == dr.REQ_RASTER:
                 ds_output_data, target_data = self._collectRasterData(
