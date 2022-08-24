@@ -47,6 +47,19 @@ class StubDS2(GSDataSet):
     ):
         return None
 
+class StubDS3(GSDataSet):
+    """
+    A concrete child class that stubs abstract methods.
+    """
+    def __init__(self, store_path):
+        super().__init__(store_path, 'stub')
+        self.name = 'ds3'
+
+    def getData(
+        self, varname, date_grain, request_date, ri_method, subset_geom=None
+    ):
+        return None
+
 
 class TestDataRequest(unittest.TestCase):
     def setUp(self):
@@ -1311,4 +1324,33 @@ class TestDataRequest(unittest.TestCase):
                 {ANNUAL : [RD(2021,None,None)]},
                 self.dsc
             )
+
+        # Test non-temporal dataset
+        exp = {'ds3' : [None]}
+        r = dr._validateDateRange(
+            "all",
+            {'ds3' : None},
+            {ANNUAL : [RD(1990,None,None)]},
+            self.dsc
+        )
+        self.assertEqual(exp, r)
+
+        # Test strict method with good dates - same grain,
+        # plus non-temporal dataset
+        exp = {
+            'ds1' : [RD(1990,None,None)],
+            'ds2' : [RD(1990,None,None)],
+            'ds3' : [None]
+        }
+        r = dr._validateDateRange(
+            "strict",
+            {
+                'ds1' : ANNUAL,
+                'ds2' : ANNUAL,
+                'ds3' : None
+            },
+            {ANNUAL : [RD(1990,None,None)]},
+            self.dsc
+        )
+        self.assertEqual(exp, r)
 

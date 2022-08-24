@@ -240,13 +240,15 @@ class DataRequest:
     def _verifyGrains(self, dsc, dsvars, inferred_grain, grain_method):
         """
         Checks for mixed date granularities and returns a dictionary of date
-        grains to use for each temporal dataset
+        grains to use for each dataset
         """
         ds_grains = {}
         allowed_grains = self._listAllowedGrains(inferred_grain, grain_method)
 
         for dsid in dsvars:
-            if not(dsc[dsid].nontemporal):
+            if dsc[dsid].nontemporal:
+                ds_grains[dsid] = None
+            else:
                 if inferred_grain in dsc[dsid].supported_grains:
                     ds_grains[dsid] = inferred_grain
                 if inferred_grain not in dsc[dsid].supported_grains:
@@ -783,6 +785,9 @@ class DataRequest:
         all_available = True
         for dsid in req_grains:
             ds_grain = req_grains[dsid]
+            if ds_grain is None:
+                ds_avail_dates[dsid] = [None]
+                continue
             ds_req_dates = req_dates[ds_grain]
             ds_range_key = grain_to_range_key[ds_grain]
             ds_avail_date_range = dsc[dsid].date_ranges[ds_range_key]
@@ -803,7 +808,7 @@ class DataRequest:
                     ds_avail_dates[dsid] = self._partialDateRangeCheck(
                         ds_req_dates, ds_avail_date_range, ds_grain
                     )
-        
+
 
         # Based on method, return new date dictionary.
         # strict: if you got here w/o error, then all requested dates 
