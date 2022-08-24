@@ -64,25 +64,38 @@ class DaymetV4(GSDataSet):
         Loads the data from disk, if needed.  Will re-use already loaded (and
         subsetted) data whenever possible.
         """
+        # DaymetV4 data comes in both TIFF and NetCDF format; we will support
+        # both, but define a preferred format for each date grain.
+        exts = ('.tif', '.nc')
+
         # Get the file name of the requested data.
         if date_grain == dr.ANNUAL:
             fname = self.fpatterns[varname].format('ann', request_date.year)
-            fname += '.tif'
+            pref_ext = 1
         elif date_grain == dr.MONTHLY:
             fname = self.fpatterns[varname].format('mon',request_date.year)
-            fname += '.nc'
+            pref_ext = 0
         elif date_grain == dr.DAILY:
             raise NotImplementedError()
         else:
             raise ValueError('Invalid date grain specification.')
 
+        # See if the data file is available in the preferred format; if not,
+        # try the other format.
+        fpath = self.ds_path / (fname + exts[pref_ext])
+        if not(fpath.is_file()):
+            fpath = self.ds_path / (fname + exts[(pref_ext + 1) % 2])
+
         # Load the data from disk, if needed.
         data_needed = (fname, varname)
         if data_needed != self.data_loaded:
-            fpath = self.ds_path / fname
             data = rioxarray.open_rasterio(fpath, masked=True)
 
-            if date_grain == dr.MONTHLY:
+            # Opening the .nc version of the data will return a list with the
+            # relevant xarray Dataset as the second element, so we need to
+            # extract the xarray DataArray for the target variable.  Opening
+            # the .tif version will give us the DataArray directly.
+            if isinstance(data, list):
                 data = data[1][varname]
 
             # Update the cache.
@@ -130,7 +143,7 @@ class DaymetV4(GSDataSet):
         data = self._loadData(varname, date_grain, request_date, subset_geom)
 
         if date_grain == dr.MONTHLY:
-            data = data.isel(time=request_date.month-1)
+            data = data.isel(time=request_date.month - 1)
 
         # If the subset request is a polygon, the data will already be
         # subsetted by _loadData(), so we don't need to handle that here.
@@ -146,5 +159,4 @@ class DaymetV4(GSDataSet):
             data = res.values[0]
 
         return data
-
 
