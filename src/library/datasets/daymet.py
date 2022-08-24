@@ -71,7 +71,7 @@ class DaymetV4(GSDataSet):
         # Get the file name of the requested data.
         if date_grain == dr.ANNUAL:
             fname = self.fpatterns[varname].format('ann', request_date.year)
-            pref_ext = 1
+            pref_ext = 0
         elif date_grain == dr.MONTHLY:
             fname = self.fpatterns[varname].format('mon',request_date.year)
             pref_ext = 0
@@ -111,7 +111,8 @@ class DaymetV4(GSDataSet):
                 # Clip the data and update the cache.
                 self.cur_data_clipped = data.rio.clip(
                     [subset_geom.json], 
-                    all_touched = True
+                    all_touched = True,
+                    from_disk=True
                 )
                 self.current_clip = subset_geom
 
