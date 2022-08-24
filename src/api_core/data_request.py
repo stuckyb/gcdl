@@ -240,13 +240,15 @@ class DataRequest:
     def _verifyGrains(self, dsc, dsvars, inferred_grain, grain_method):
         """
         Checks for mixed date granularities and returns a dictionary of date
-        grains to use for each temporal dataset
+        grains to use for each dataset
         """
         ds_grains = {}
         allowed_grains = self._listAllowedGrains(inferred_grain, grain_method)
 
         for dsid in dsvars:
-            if not(dsc[dsid].nontemporal):
+            if dsc[dsid].nontemporal:
+                ds_grains[dsid] = None
+            else:
                 if inferred_grain in dsc[dsid].supported_grains:
                     ds_grains[dsid] = inferred_grain
                 if inferred_grain not in dsc[dsid].supported_grains:
