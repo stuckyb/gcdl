@@ -5,7 +5,7 @@
 1. Make sure you have a recent release of Python 3 installed.
 1. Clone this git repository.
 1. Run `pip install -r requirements.txt`.
-1. You will need to create directories for dataset build outputs and logging.
+1. You will need to create directories for local data, dataset build outputs, the dataset upload cache, and logging.
 
 
 ## Running the GeoCDL
@@ -27,12 +27,13 @@
     ```
     singularity build --fakeroot geocdl.sif geocdl.def
     ```
-1. Run the GeoCDL in a Singularity container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output and logging directories are mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
+1. Run the GeoCDL in a Singularity container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output, upload cache, and logging directories are mounted read/write inside the container.  Be default, the container is bound directly to the host's network, so explicit port mapping is not required.
     ```
     singularity run \
       --mount type=bind,src=/path/to/geocdl/src,dst=/geocdl/src,ro \
       --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro \
       --mount type=bind,src=/path/to/output,dst=/geocdl/output \
+      --mount type=bind,src=/path/to/uploads,dst=/geocdl/upload \
       --mount type=bind,src=/path/to/logdir,dst=/geocdl/logs \
       geocdl.sif
     ```
@@ -45,12 +46,13 @@
     ```
     docker build -t geocdl[:tag] .
     ```
-1. Run the GeoCDL in a Docker container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output and logging directories are mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
+1. Run the GeoCDL in a Docker container.  To avoid needing to rebuild the container image every time the source code changes, the source directory is maintained outside of the container image and mounted read-only inside the container at run time.  Local data storage is also mounted read-only inside the container; the output, upload cache, and logging directories are mounted read/write inside the container.  Here, we bind the container directly to the host's network, which is convenient for testing/development purposes, but not ideal for all production situations.  For production, mapping specific ports might be preferred.
     ```
     docker run \
       --mount type=bind,src=/path/to/geocdl/src,dst=/geocdl/src,ro \
       --mount type=bind,src=/path/to/local_data,dst=/geocdl/local_data,ro \
       --mount type=bind,src=/path/to/output,dst=/geocdl/output \
+      --mount type=bind,src=/path/to/uploads,dst=/geocdl/upload \
       --mount type=bind,src=/path/to/logdir,dst=/geocdl/logs \
       --network host \
       geocdl
