@@ -9,6 +9,17 @@ from library.datasets.tileset import TileSet
 
 
 class GTOPO(GSDataSet):
+    """
+    Dataset for USGS EROS Global 30 Arc-Second Elevation (GTOPO30) data.
+    ONE CRITICAL DETAIL TO NOTE: When gathering data files for this dataset,
+    there will be an extra tile with the name "gt30antarcps".  This is, per the
+    official README, an "additional tile that covers all of Antarctica with
+    data in a polar stereographic projection."  (The projection in this case is
+    EPSG:3031, "Antarctic Polar Stereographic".)  All other tiles (which
+    include tiles for Antarctica) are in simple WGS84 coordinates.  Including
+    the special Antarctica tile will cause cryptic request failures because of
+    CRS confusion.  Do not include this tile in the on-disk data!
+    """
     def __init__(self, store_path):
         """
         store_path (Path): The location of on-disk dataset storage.
