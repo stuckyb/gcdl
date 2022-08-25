@@ -26,27 +26,32 @@ class VIP(GSDataSet):
         self.grid_unit = 'degrees'
 
         # The variables/layers/bands in the dataset.
+        # Note that the prefix 'CMG 0.05 Deg...' is not 
+        # included in variable names here since the
+        # date granularity is included. The prefix is
+        # appended in getData() when the data granularity
+        # is known
         self.vars = {
             'NDVI': 'Normalized Difference Vegetation Index',
-            'View Zenith Angle': '',
-            'Relative Azimuth Angle': '',
-            'EVI2': '',
-            'VI Quality': '',
-            'Pixel Reliability': '',
-            'RED reflectance': '',
-            'NIR reflectance': '',
-            'BLUE reflectance': '',
-            'MIR reflectance': '',
-            'Solar Zenith Angle': ''
+            'View Zenith Angle': 'View Zenith Angle',
+            'Relative Azimuth Angle': 'Relative Azimuth Angle',
+            'EVI2': 'EVI2',
+            'VI Quality': 'VI Quality',
+            'Pixel Reliability': 'Pixel Reliability',
+            'RED reflectance': 'RED reflectance',
+            'NIR reflectance': 'NIR reflectance',
+            'BLUE reflectance': 'BLUE reflectance',
+            'MIR reflectance': 'MIR reflectance',
+            'Solar Zenith Angle': 'Solar Zenith Angle'
         }
 
         # Temporal coverage of the dataset.
-        #self.date_ranges['year'] = [
-        #    datetime.date(1980, 1, 1), datetime.date(2020, 1, 1)
-        #]
-        #self.date_ranges['month'] = [
-        #    datetime.date(2000, 1, 1), datetime.date(2015, 12, 1)
-        #]
+        self.date_ranges['year'] = [
+           datetime.date(1981, 1, 1), datetime.date(2014, 12, 31)
+        ]
+        self.date_ranges['month'] = [
+           datetime.date(1981, 1, 1), datetime.date(2014, 12, 31)
+        ]
         self.date_ranges['day'] = [
             datetime.date(1981, 1, 1), datetime.date(2014, 12, 31)
         ]
@@ -95,7 +100,9 @@ class VIP(GSDataSet):
         data = rioxarray.open_rasterio(
             fpath, 
             masked=True
-        )['CMG 0.05 Deg Daily ' + varname].squeeze('band')
+        )
+        long_name = [name for name in list(data.data_vars) if varname in name]
+        data = data[long_name].squeeze('band').to_array()
 
         if subset_geom is not None and not(self.crs.equals(subset_geom.crs)):
             raise ValueError(
