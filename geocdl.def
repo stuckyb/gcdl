@@ -8,13 +8,13 @@ From: ubuntu:22.04
 %post
   apt-get update
   apt-get install -y python3 python-is-python3 python3-pip python3-gdal
-  pip install -r /geocdl/requirements.txt
 
-  # The pydap package that installs with Python 3.10.4 has several bugs
-  # related to abstract base class imports.  The following two commands fix
-  # those bugs.
-  sed -i 's/from collections import OrderedDict, Mapping/from collections import OrderedDict\nfrom collections.abc import Mapping/g' /usr/local/lib/python3.10/dist-packages/pydap/model.py
-  sed -i 's/from collections import Iterable/from collections.abc import Iterable/g' /usr/local/lib/python3.10/dist-packages/pydap/responses/das.py
+  # Don't install pydap from pypi because the latest release is not available
+  # there (as of 2022-08-24).  Instead, comment it out in requirements.txt and
+  # install directly from the release archive.
+  sed -i 's/pydap/#pydap/g' /geocdl/requirements.txt
+  python -m pip install -r /geocdl/requirements.txt
+  python -m pip install https://github.com/pydap/pydap/archive/refs/tags/3.3.0.tar.gz
 
 %runscript
   cd /geocdl/src
