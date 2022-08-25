@@ -107,6 +107,9 @@ class NASS_CDL(GSDataSet):
             data = data.rio.clip([subset_geom.json], 
                 all_touched = True,
                 from_disk = True)
+            
+            return data 
+            
         elif isinstance(subset_geom, SubsetMultiPoint):
             # Interpolate all (x,y) points in the subset geometry.  For more
             # information about how/why this works, see
@@ -120,5 +123,5 @@ class NASS_CDL(GSDataSet):
             data = [self.RAT[varname][int(class_id)] for class_id in res.values[0]]
             color = [self.colormap[varname][int(class_id)] for class_id in res.values[0]]
 
-        return {'data': data, 'color': color}
+            return {'data': data, 'color': color}
 
