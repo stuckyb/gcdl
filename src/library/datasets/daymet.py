@@ -32,7 +32,7 @@ class DaymetV4(GSDataSet):
         # The variables/layers/bands in the dataset.
         self.vars = {
             'prcp': 'precipitation', 
-            'tmin:': 'minimum temperature',
+            'tmin': 'minimum temperature',
             'tmax': 'maximum temperature', 
             'swe': 'snow water equivalent',
             'vp': 'water vapor pressure'
