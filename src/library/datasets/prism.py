@@ -27,8 +27,13 @@ class PRISM(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'ppt': 'precipitation', 'tav': 'mean temperature',
-            'tmin': 'minimum temperature', 'tmax': 'maximum temperature'
+            'ppt': 'total precipitation (rain+melted snow)', 
+            'tmean': 'mean temperature (mean of tmin and tmax)',
+            'tmin': 'minimum temperature', 
+            'tmax': 'maximum temperature',
+            'tdmean': 'mean dew point temperature',
+            'vpdmin': 'minimum vapor pressure deficit',
+            'vpdmax': 'maximum vapor pressure deficit'
         }
 
         # Temporal coverage of the dataset.
