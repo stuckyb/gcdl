@@ -1,10 +1,11 @@
 
-Bootstrap: docker
-From: ubuntu:22.04
+Bootstrap: localimage
+From: geocdl-base.sif
 
 
 %files
   requirements.txt /geocdl/
+  bin/geocdl.sh /geocdl/
 
 %post
   apt-get update
@@ -16,13 +17,15 @@ From: ubuntu:22.04
   # install directly from the release archive.
   sed -i 's/pydap/#pydap/g' /geocdl/requirements.txt
 
-  # Don't install install rasterio from the binaries on pypi because they have
-  # a minimal gdal that lacks HDF5 or HDF4 support.  Instead, build rasterio
-  # from source to ensure we have HDF4/5 support.
+  # Don't install rasterio from the binaries on pypi because they have a
+  # minimal gdal that lacks HDF5 or HDF4 support.  Instead, build rasterio from
+  # source to ensure we have HDF4/5 support.
   python -m pip install -r /geocdl/requirements.txt --no-binary rasterio
   python -m pip install https://github.com/pydap/pydap/archive/refs/tags/3.3.0.tar.gz
 
+  chmod ugo+x /geocdl/geocdl.sh
+
 %runscript
   cd /geocdl/src
-  uvicorn api_main:app
+  exec /geocdl/geocdl.sh "$@"
 

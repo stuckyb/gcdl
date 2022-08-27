@@ -4,6 +4,7 @@ FROM ubuntu:22.04
 WORKDIR /geocdl
 
 COPY requirements.txt .
+COPY bin/geocdl.sh .
 
 RUN apt-get update
 RUN apt-get install -y python3 python-is-python3 python3-pip
@@ -20,6 +21,8 @@ RUN sed -i 's/pydap/#pydap/g' /geocdl/requirements.txt
 RUN python -m pip install -r /geocdl/requirements.txt --no-binary rasterio
 RUN python -m pip install https://github.com/pydap/pydap/archive/refs/tags/3.3.0.tar.gz
 
+RUN chmod ugo+x /geocdl/geocdl.sh
+
 WORKDIR /geocdl/src
-CMD ["uvicorn", "api_main:app"]
+ENTRYPOINT ["/geocdl/geocdl.sh"]
 
