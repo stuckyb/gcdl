@@ -68,15 +68,15 @@ class PRISM(GSDataSet):
         """
         # Get the path to the required data file.
         if date_grain == dr.ANNUAL:
-            fname = self.fpatterns.format(varname, request_date.year, 'M3')
+            fname = self.fpatterns.format(varname, 'M3', request_date.year)
         elif date_grain == dr.MONTHLY:
             datestr = '{0}{1:02}'.format(request_date.year, request_date.month)
-            fname = self.fpatterns.format(varname, datestr, 'M3')
+            fname = self.fpatterns.format(varname, 'M3', datestr)
         elif date_grain == dr.DAILY:
             datestr = '{0}{1:02}{2:02}'.format(
                 request_date.year, request_date.month. request_date.day
             )
-            fname = self.fpatterns.format(varname, datestr, 'D2')
+            fname = self.fpatterns.format(varname, 'D2', datestr)
         else:
             raise ValueError('Invalid date grain specification.')
 
