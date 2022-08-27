@@ -47,10 +47,7 @@ class PRISM(GSDataSet):
         # "M3" for years >= 1981.  See
         # https://prism.oregonstate.edu/documents/PRISM_datasets.pdf for
         # details.
-        self.fpatterns = {
-            'ppt': 'PRISM_ppt_stable_4kmM3_{0}_bil.bil',
-            'tmax': 'PRISM_tmax_stable_4kmM3_{0}_bil.bil',
-        }
+        self.fpatterns = 'PRISM_{0}_stable_4kmM3_{1}_bil.bil'
 
     def getData(
         self, varname, date_grain, request_date, ri_method, subset_geom=None
@@ -66,10 +63,10 @@ class PRISM(GSDataSet):
         """
         # Get the path to the required data file.
         if date_grain == dr.ANNUAL:
-            fname = self.fpatterns[varname].format(request_date.year)
+            fname = self.fpatterns.format(varname, request_date.year)
         elif date_grain == dr.MONTHLY:
             datestr = '{0}{1:02}'.format(request_date.year, request_date.month)
-            fname = self.fpatterns[varname].format(datestr)
+            fname = self.fpatterns.format(varname, datestr)
         elif date_grain == dr.DAILY:
             raise NotImplementedError()
         else:
