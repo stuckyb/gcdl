@@ -28,7 +28,7 @@ class PRISM(GSDataSet):
         # The variables/layers/bands in the dataset.
         self.vars = {
             'ppt': 'precipitation', 'tav': 'mean temperature',
-            'tmin:': 'minimum temperature', 'tmax': 'maximum temperature'
+            'tmin': 'minimum temperature', 'tmax': 'maximum temperature'
         }
 
         # Temporal coverage of the dataset.
