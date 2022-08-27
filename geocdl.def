@@ -2,18 +2,24 @@
 Bootstrap: docker
 From: ubuntu:22.04
 
+
 %files
   requirements.txt /geocdl/
 
 %post
   apt-get update
-  apt-get install -y python3 python-is-python3 python3-pip python3-gdal
+  apt-get install -y python3 python-is-python3 python3-pip
+  apt-get install -y python3-gdal libgdal-dev
 
   # Don't install pydap from pypi because the latest release is not available
   # there (as of 2022-08-24).  Instead, comment it out in requirements.txt and
   # install directly from the release archive.
   sed -i 's/pydap/#pydap/g' /geocdl/requirements.txt
-  python -m pip install -r /geocdl/requirements.txt
+
+  # Don't install install rasterio from the binaries on pypi because they have
+  # a minimal gdal that lacks HDF5 or HDF4 support.  Instead, build rasterio
+  # from source to ensure we have HDF4/5 support.
+  python -m pip install -r /geocdl/requirements.txt --no-binary rasterio
   python -m pip install https://github.com/pydap/pydap/archive/refs/tags/3.3.0.tar.gz
 
 %runscript
