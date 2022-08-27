@@ -74,7 +74,7 @@ class PRISM(GSDataSet):
             fname = self.fpatterns.format(varname, 'M3', datestr)
         elif date_grain == dr.DAILY:
             datestr = '{0}{1:02}{2:02}'.format(
-                request_date.year, request_date.month. request_date.day
+                request_date.year, request_date.month, request_date.day
             )
             fname = self.fpatterns.format(varname, 'D2', datestr)
         else:
