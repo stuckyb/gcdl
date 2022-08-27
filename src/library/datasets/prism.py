@@ -52,7 +52,7 @@ class PRISM(GSDataSet):
         # "M3" for years >= 1981.  See
         # https://prism.oregonstate.edu/documents/PRISM_datasets.pdf for
         # details.
-        self.fpatterns = 'PRISM_{0}_stable_4kmM3_{1}_bil.bil'
+        self.fpatterns = 'PRISM_{0}_stable_4km{1}_{2}_bil.bil'
 
     def getData(
         self, varname, date_grain, request_date, ri_method, subset_geom=None
@@ -68,12 +68,15 @@ class PRISM(GSDataSet):
         """
         # Get the path to the required data file.
         if date_grain == dr.ANNUAL:
-            fname = self.fpatterns.format(varname, request_date.year)
+            fname = self.fpatterns.format(varname, request_date.year, 'M3')
         elif date_grain == dr.MONTHLY:
             datestr = '{0}{1:02}'.format(request_date.year, request_date.month)
-            fname = self.fpatterns.format(varname, datestr)
+            fname = self.fpatterns.format(varname, datestr, 'M3')
         elif date_grain == dr.DAILY:
-            raise NotImplementedError()
+            datestr = '{0}{1:02}{2:02}'.format(
+                request_date.year, request_date.month. request_date.day
+            )
+            fname = self.fpatterns.format(varname, datestr, 'D2')
         else:
             raise ValueError('Invalid date grain specification.')
 
@@ -81,7 +84,9 @@ class PRISM(GSDataSet):
         # and "M3" for years >= 1981.  See
         # https://prism.oregonstate.edu/documents/PRISM_datasets.pdf for
         # details.
-        if request_date.year < 1981 and varname == 'ppt':
+        if (request_date.year < 1981 and date_grain is not dr.DAILY and 
+            varname == 'ppt'
+        ):
             fname = fname.replace('M3', 'M2')
 
         fpath = self.ds_path / fname
