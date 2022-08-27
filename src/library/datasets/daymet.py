@@ -31,9 +31,11 @@ class DaymetV4(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'prcp': 'precipitation', 'tmin:': 'minimum temperature',
-            'tmax': 'maximum temperature', 'swe': 'snow water equivalent',
-            'vp': 'vapor pressure'
+            'prcp': 'precipitation', 
+            'tmin:': 'minimum temperature',
+            'tmax': 'maximum temperature', 
+            'swe': 'snow water equivalent',
+            'vp': 'water vapor pressure'
         }
 
         # Temporal coverage of the dataset.
@@ -50,7 +52,10 @@ class DaymetV4(GSDataSet):
         # File name patterns for each DaymetV4 variable.
         self.fpatterns = {
             'prcp': 'daymet_v4_prcp_{0}ttl_na_{1}',
+            'tmin': 'daymet_v4_tmin_{0}avg_na_{1}',
             'tmax': 'daymet_v4_tmax_{0}avg_na_{1}',
+            'swe': 'daymet_v4_swe_{0}avg_na_{1}',
+            'vp': 'daymet_v4_vp_{0}avg_na_{1}'
         }
 
         # Attributes for caching loaded and subsetted data.
