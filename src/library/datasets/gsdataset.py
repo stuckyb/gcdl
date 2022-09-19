@@ -89,6 +89,10 @@ class GSDataSet(ABC):
         self.RAT = None
         self.colormap = None
 
+        # Additional information about the dataset's configuration
+        # in GeoCDL
+        self.notes = ''
+
     @property
     def id(self):
         if self._id is None:
@@ -199,6 +203,9 @@ class GSDataSet(ABC):
 
         # Generate CRS metadata.
         resp['crs'] = getCRSMetadata(self.crs)
+
+        # Add any dataset notes at the end
+        resp['notes'] = self.notes
 
         return resp
 

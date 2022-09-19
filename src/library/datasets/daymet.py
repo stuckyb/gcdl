@@ -69,6 +69,11 @@ class DaymetV4(GSDataSet):
         self.current_clip = None
         self.cur_data_clipped = None
 
+        # Additional information about the dataset's configuration
+        # in GeoCDL
+        self.notes = ('DaymetV4 original timestamps are in YYYY-MM-DD HH '
+        'but are truncated to YYYY-MM.')
+
     def _loadData(self, varname, date_grain, request_date, subset_geom):
         """
         Loads the data from disk, if needed.  Will re-use already loaded (and
