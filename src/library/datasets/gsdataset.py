@@ -73,6 +73,17 @@ class GSDataSet(ABC):
             'day': [None, None]
         }
 
+        # Temporal resolution. In concrete subclasses, resolutions
+        # should be provided as strings.
+        self.temporal_resolution = {
+            # Resolution of annual data.
+            'year': None,
+            # Resolution of monthly data.
+            'month': None,
+            # Resolution of daily data.
+            'day': None
+        }
+
         # If the dataset has any raster attribute
         # tables and/or colormaps.  
         self.RAT = None
