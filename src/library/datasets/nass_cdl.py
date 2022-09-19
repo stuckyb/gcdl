@@ -38,6 +38,9 @@ class NASS_CDL(GSDataSet):
             datetime.date(2008, 1, 1), datetime.date(2021, 1, 1)
         ]
 
+        # Temporal resolution
+        self.temporal_resolution['year'] = '1 year'
+
         # File name patterns for each variable. 
         self.fpatterns = {
             'cdl': '{0}_30m_cdls.tif'

@@ -47,6 +47,11 @@ class PRISM(GSDataSet):
             datetime.date(1981, 1, 1), datetime.date(2021, 1, 31)
         ]
 
+        # Temporal resolution
+        self.temporal_resolution['year'] = '1 year'
+        self.temporal_resolution['month'] = '1 month'
+        self.temporal_resolution['day'] = '1 day'
+
         # File name patterns for each PRISM variable.  Note that for
         # precipation data, the current version of "M2" for years < 1981 and
         # "M3" for years >= 1981.  See

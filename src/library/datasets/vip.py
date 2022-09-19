@@ -56,6 +56,11 @@ class VIP(GSDataSet):
             datetime.date(1981, 1, 1), datetime.date(2014, 12, 31)
         ]
 
+        # Temporal resolution
+        self.temporal_resolution['year'] = '1 year'
+        self.temporal_resolution['month'] = '1 month'
+        self.temporal_resolution['day'] = '1 day'
+
         # File name patterns for each variable.
         # Partial filename
         self.fpatterns = 'VIP{0}.A{1}{2}.004.*' 

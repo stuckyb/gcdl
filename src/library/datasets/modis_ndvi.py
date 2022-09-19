@@ -44,15 +44,12 @@ class MODIS_NDVI(GSDataSet):
         }
 
         # Temporal coverage of the dataset.
-        #self.date_ranges['year'] = [
-        #    datetime.date(1980, 1, 1), datetime.date(2020, 1, 1)
-        #]
-        #self.date_ranges['month'] = [
-        #    datetime.date(2000, 1, 1), datetime.date(2015, 12, 1)
-        #]
         self.date_ranges['day'] = [
             datetime.date(2000, 1, 1), datetime.date(2015, 12, 31)
         ]
+
+        # Temporal resolution
+        self.temporal_resolution['day'] = '8 days'
 
         # File name patterns for each variable.
         self.fpatterns = {
