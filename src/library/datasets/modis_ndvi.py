@@ -21,13 +21,13 @@ class MODIS_NDVI(GSDataSet):
         self.name = 'MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015'
         self.url = 'https://doi.org/10.3334/ORNLDAAC/1299'
         
-        self.description = 'This data set provides Moderate Resolution Imaging Spectroradiometer '
+        self.description = ('This data set provides Moderate Resolution Imaging Spectroradiometer '
         '(MODIS) normalized difference vegetation index (NDVI) data, smoothed and gap-filled, ' 
         'for the conterminous US for the period 2000-01-01 through 2015-12-31. The data were '  
         'generated using the NASA Stennis Time Series Product Tool (TSPT) to generate NDVI ' 
         'data streams from the Terra satellite (MODIS MOD13Q1 product) and Aqua satellite ' 
         '(MODIS MYD13Q1 product) instruments. TSPT produces NDVI data that are less affected' 
-        ' by clouds and bad pixels.'
+        ' by clouds and bad pixels.')
         self.provider_name = 'ORNL DAAC'
         self.provider_url = 'https://daac.ornl.gov'
 
