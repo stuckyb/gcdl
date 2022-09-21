@@ -40,9 +40,15 @@ class DataRequestHandler:
         self, dataset, varname, grain, rdate, subset_geom, request
     ):
 
+        # Determine if variable is categorical or continuous
+        if varname in dataset.categorical_vars:
+            ri_method = request.ri_method['categorical']
+        else:
+            ri_method = request.ri_method['continuous']
+
         # Retrieve the point data.
         data = dataset.getData(
-            varname, grain, rdate, request.ri_method, subset_geom
+            varname, grain, rdate, ri_method, subset_geom
         )
 
         my_date = self._requestDateAsString(grain, rdate)
