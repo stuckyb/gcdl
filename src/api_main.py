@@ -13,8 +13,8 @@ from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
 from api_core import DataRequestOutput
 from api_core.helpers import (
-    parse_datasets_str, parse_clip_bounds, parse_coords, get_request_metadata,
-    assume_crs, get_target_crs
+    parse_datasets_str, parse_clip_bounds, parse_coords, parse_ri_method_str,
+    get_request_metadata, assume_crs, get_target_crs
 )
 from library.catalog import DatasetCatalog
 from library.datasets import (
@@ -252,7 +252,12 @@ async def subset_polygon(
         description='The resampling method used for reprojection. Available '
         'methods: "nearest", "bilinear", "cubic", "cubic-spline", "lanczos", '
         '"average", or "mode". Default is "nearest".  Only used if target CRS '
-        'and/or spatial resolution are provided. '
+        'and/or spatial resolution are provided. If two methods are provided '
+        '(comma separated, e.g. "bilinear,nearest"), the first will be used '
+        'for continuous variables and the second will be used for categorical '
+        'variables. An error will be returned when methods requested for '
+        'categorical variables are not applicable (any besides "nearest" or'
+        '"mode").', 
     ),
     output_format: str = Query(
         None, title='Output file format.',
@@ -286,6 +291,10 @@ async def subset_polygon(
 
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, resolution, clip_geom)
+
+        # Parse resample methods for continuous and categorical
+        # variables
+        resample_method = parse_ri_method_str(resample_method)
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method, 
@@ -404,7 +413,11 @@ async def subset_points(
         None, title='Point interpolation method.',
         description='The interpolation method used for extracting point '
         'values. Available methods: "nearest" or "linear". Default is '
-        '"nearest".'
+        '"nearest". If two methods are provided '
+        '(comma separated, e.g. "bilinear,nearest"), the first will be used '
+        'for continuous variables and the second will be used for categorical '
+        'variables. An error will be returned when methods requested for '
+        'categorical variables are not applicable ("linear").'
     ),
     output_format: str = Query(
         None, title='Output file format.',
@@ -444,6 +457,9 @@ async def subset_points(
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, None, sub_points)
 
+        # Parse interpolations methods for continuous and categorical
+        # variables
+        interp_method = parse_ri_method_str(interp_method)
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method,

@@ -19,10 +19,12 @@ REQ_RASTER = 0
 REQ_POINT = 1
 
 # Define valid resampling/interpolation algorithms.
+RESAMPLE_CATEGORICAL_METHODS = ('nearest','mode')
 RESAMPLE_METHODS = (
     'nearest', 'bilinear', 'cubic', 'cubic-spline', 'lanczos', 'average',
     'mode'
 )
+POINT_CATEGORICAL_METHODS = ('nearest')
 POINT_METHODS = ('nearest', 'linear')
 
 # Define supported strings for handling mixed date grains
@@ -137,24 +139,31 @@ class DataRequest:
 
         self.request_type = request_type
 
-        if ri_method is None:
-            ri_method = 'nearest'
+        if request_type == REQ_RASTER:
+            if ri_method['continuous'] not in RESAMPLE_METHODS:
+                method = ri_method['continuous']
+                raise ValueError(
+                    f'Invalid resampling method: "{method}".'
+                )
+            if ri_method['categorical'] not in RESAMPLE_CATEGORICAL_METHODS:
+                method = ri_method['categorical']
+                raise ValueError(
+                    f'Invalid categorical resampling method: "{method}".'
+                )
 
-        if (
-            request_type == REQ_RASTER and
-            ri_method not in RESAMPLE_METHODS
-        ):
-            raise ValueError(
-                f'Invalid resampling method: "{ri_method}".'
-            )
 
-        if (
-            request_type == REQ_POINT and
-            ri_method not in POINT_METHODS
-        ):
-            raise ValueError(
-                f'Invalid point interpolation method: "{ri_method}".'
-            )
+        if request_type == REQ_POINT:
+            if ri_method['continuous'] not in POINT_METHODS:
+                method = ri_method['continuous']
+                raise ValueError(
+                    f'Invalid interpolation method: "{method}".'
+                )
+            if ri_method['categorical'] not in POINT_CATEGORICAL_METHODS:
+                method = ri_method['categorical']
+                raise ValueError(
+                    f'Invalid categorical interpolation method: "{method}".'
+                )
+
 
         if (
             request_type == REQ_POINT and

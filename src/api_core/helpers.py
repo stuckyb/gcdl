@@ -118,6 +118,36 @@ def parse_clip_bounds(
 
     return clip_coords
 
+def parse_ri_method_str(method_str):
+    """
+    Parses a comma-separated list of methods of the form
+    "method1" or "method1,method2".
+    """
+    if method_str is None:  
+        return {
+                'continuous': 'nearest',
+                'categorical': 'nearest'
+            }
+
+    if ',' in method_str:
+        method_parts = method_str.split(',')
+        method_parts = [part.strip() for part in method_parts]
+        if len(method_parts) > 2:
+            raise HTTPException(
+                status_code=400,
+                detail='Too many resampling or interpolation methods.'
+            )
+        elif len(method_parts) == 2:
+            return {
+                'continuous': method_parts[0],
+                'categorical': method_parts[1]
+            }
+    else:
+        return {
+            'continuous': method_str,
+            'categorical': method_str
+        }
+
 def get_request_metadata(req):
     """
     Generates a dictionary of basic metadata for an API request.

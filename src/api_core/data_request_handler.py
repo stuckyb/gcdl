@@ -81,9 +81,16 @@ class DataRequestHandler:
         self, dataset, varname, grain, rdate, subset_geom, request,
         target_data = None
     ):
+        
+        # Determine if variable is categorical or continuous
+        if varname in dataset.categorical_vars:
+            ri_method = request.ri_method['categorical']
+        else:
+            ri_method = request.ri_method['continuous']
+        
         # Retrieve the (subsetted) data layer.
         data = dataset.getData(
-            varname, grain, rdate, request.ri_method, subset_geom
+            varname, grain, rdate, ri_method, subset_geom
         )
 
         if data is not None:
@@ -97,13 +104,13 @@ class DataRequestHandler:
                 if target_data is None:
                     data = data.rio.reproject(
                         dst_crs=request.target_crs,
-                        resampling=Resampling[request.ri_method],
+                        resampling=Resampling[ri_method],
                         resolution=request.target_resolution
                     )
                 else:
                     data = data.rio.reproject_match(
                         match_data_array=target_data,
-                        resampling=Resampling[request.ri_method]
+                        resampling=Resampling[ri_method]
                     )
 
                 # Clip to the non-modified requested geometry

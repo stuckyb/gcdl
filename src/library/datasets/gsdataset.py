@@ -86,6 +86,7 @@ class GSDataSet(ABC):
 
         # If the dataset has any raster attribute
         # tables and/or colormaps.  
+        self.categorical_vars = []
         self.RAT = None
         self.colormap = None
 
