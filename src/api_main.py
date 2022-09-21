@@ -286,8 +286,12 @@ async def subset_polygon(
 
         if clip != '':
             clip_geom = SubsetPolygon(clip, assumed_crs)
-        else:
+        elif geom_guid != '':
             clip_geom = ul_cache.getPolygon(geom_guid, assumed_crs)
+        else:
+            raise ValueError(
+                'One of clip or geom_guid needs to be provided.'
+            )
 
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, resolution, clip_geom)
@@ -447,8 +451,12 @@ async def subset_points(
         if points != '':
             coords = parse_coords(points)
             sub_points = SubsetMultiPoint(coords, assumed_crs)
-        else:
+        elif geom_guid != '':
             sub_points = ul_cache.getMultiPoint(geom_guid, assumed_crs)
+        else:
+            raise ValueError(
+                'One of points or geom_guid needs to be provided.'
+            )
 
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, None, sub_points)

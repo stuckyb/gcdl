@@ -68,7 +68,7 @@ def parse_clip_bounds(
         'for the subset operation.  The boundary can be specified in one of '
         'two ways: 1) The upper left and lower right corners of a '
         'bounding box for subsetting the data, specifed as a comma-separated '
-        'list of the form "(UPPER_LEFT_X,UPPER_LEFT_Y)'
+        'list of the form "(UPPER_LEFT_X,UPPER_LEFT_Y),'
         '(LOWER_RIGHT_X,LOWER_RIGHT_Y)" or a semicolon-separated list of the '
         'form "UPPER_LEFT_X,UPPER_LEFT_Y;LOWER_RIGHT_X,LOWER_RIGHT_Y"; 2) A '
         'comma-separated or semicolon-separated list of coordinates defining '
