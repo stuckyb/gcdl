@@ -228,7 +228,9 @@ class TestDataRequestOutput(unittest.TestCase):
             exp = pd.DataFrame(
                 {
                     'time': [1980, 1980],
-                    'ds1_var1': [11,22], 
+                    'dataset': ['ds1', 'ds1'],
+                    'variable': ['var1', 'var1'],
+                    'value': [11, 22],  
                     'x': [1,2],
                     'y': [2,1]
                 }
@@ -244,8 +246,8 @@ class TestDataRequestOutput(unittest.TestCase):
             self.assertTrue((exp['y'] == r['y']).all())
 
             # Same values
-            exp_vals = exp['ds1_var1'].values
-            r_vals = r['ds1_var1'].values
+            exp_vals = exp['value'].values
+            r_vals = r['value'].values
             same = [exp_vals[i] == r_vals[i] for i in [0,1]]
             exp_nan = np.isnan(exp_vals)
             r_nan = np.isnan(r_vals)
