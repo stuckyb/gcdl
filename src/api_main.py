@@ -13,7 +13,7 @@ from api_core import DataRequest, REQ_RASTER, REQ_POINT
 from api_core import DataRequestHandler
 from api_core import DataRequestOutput
 from api_core.helpers import (
-    parse_datasets_str, parse_clip_bounds, parse_coords, parse_ri_method_str,
+    parse_datasets_str, parse_clip_bounds, parse_coords, 
     get_request_metadata, assume_crs, get_target_crs
 )
 from library.catalog import DatasetCatalog
@@ -292,10 +292,6 @@ async def subset_polygon(
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, resolution, clip_geom)
 
-        # Parse resample methods for continuous and categorical
-        # variables
-        resample_method = parse_ri_method_str(resample_method)
-
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method, 
             validate_method, clip_geom, target_crs, resolution, 
@@ -456,10 +452,6 @@ async def subset_points(
 
         # Set the target CRS, if applicable
         target_crs = get_target_crs(crs, None, sub_points)
-
-        # Parse interpolations methods for continuous and categorical
-        # variables
-        interp_method = parse_ri_method_str(interp_method)
 
         request = DataRequest(
             dsc, datasets, dates, years, months, days, grain_method,

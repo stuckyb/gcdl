@@ -139,6 +139,10 @@ class DataRequest:
 
         self.request_type = request_type
 
+        # Parse resample methods for continuous and categorical
+        # variables
+        ri_method = self._parse_ri_method_str(ri_method)
+
         if request_type == REQ_RASTER:
             if ri_method['continuous'] not in RESAMPLE_METHODS:
                 method = ri_method['continuous']
@@ -897,6 +901,35 @@ class DataRequest:
             raise ValueError(
                 f'Invalid date range validation method: "{method}".'
             )
+
+    def _parse_ri_method_str(self, method_str):
+        """
+        Parses a comma-separated list of methods of the form
+        "method1" or "method1,method2".
+        """
+        if method_str is None:  
+            return {
+                    'continuous': 'nearest',
+                    'categorical': 'nearest'
+                }
+
+        if ',' in method_str:
+            method_parts = method_str.split(',')
+            method_parts = [part.strip() for part in method_parts]
+            if len(method_parts) > 2:
+                raise ValueError(
+                    'Too many resampling or interpolation methods.'
+                )
+            elif len(method_parts) == 2:
+                return {
+                    'continuous': method_parts[0],
+                    'categorical': method_parts[1]
+                }
+        else:
+            return {
+                'continuous': method_str,
+                'categorical': method_str
+            }
 
 
 

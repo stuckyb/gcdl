@@ -75,7 +75,7 @@ class TestDataRequest(unittest.TestCase):
             # Subset geometry.
             None,
             # Projection/resolution parameters.
-            CRS('NAD83'), None, 'bilinear',
+            CRS('NAD83'), None, 'nearest',
             # Output parameters.
             data_request.REQ_RASTER, None,
             {}
@@ -97,7 +97,7 @@ class TestDataRequest(unittest.TestCase):
                 {}
             )
 
-        with self.assertRaisesRegex(ValueError, 'Invalid point .* method'):
+        with self.assertRaisesRegex(ValueError, 'Invalid interpolation method'):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
@@ -147,7 +147,7 @@ class TestDataRequest(unittest.TestCase):
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
-                CRS('NAD83'), None, 'linear',
+                CRS('NAD83'), None, 'nearest',
                 # Output parameters.
                 data_request.REQ_POINT, None,
                 {}
@@ -1353,4 +1353,37 @@ class TestDataRequest(unittest.TestCase):
             self.dsc
         )
         self.assertEqual(exp, r)
+
+    def test_parse_ri_method_str(self):
+        dr = self.dr
+
+        # Test default method
+        exp = {
+            'continuous': 'nearest',
+            'categorical': 'nearest'
+        }
+        r = dr._parse_ri_method_str(None)
+        self.assertEqual(exp, r)
+
+        # Test single method
+        exp = {
+            'continuous': 'mode',
+            'categorical': 'mode'
+        }
+        r = dr._parse_ri_method_str('mode')
+        self.assertEqual(exp, r)
+
+        # Test two methods
+        exp = {
+            'continuous': 'cubic',
+            'categorical': 'mode'
+        }
+        r = dr._parse_ri_method_str('cubic, mode')
+        self.assertEqual(exp, r)
+
+        # Test more than two methods
+        with self.assertRaisesRegex(ValueError, 
+            'Too many resampling or interpolation methods.'
+        ):
+           dr._parse_ri_method_str('bilinear,nearest,mode')
 
