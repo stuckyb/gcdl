@@ -53,7 +53,7 @@ class DataRequestOutput:
         if xr_data is not None:
             # Geotiffs generally store 256 values in RAT even if 
             # there are less than 256 classes, so ignore the empty ones
-            trim_RAT = {k:v for (k,v) in RAT.items() if v == ''}
+            trim_RAT = {k:v for (k,v) in RAT.items() if v != ''}
             # NetCDF convention has flag_values formatted as
             # a single string of comma-separated integers and 
             # flag_meanings as a single string of space-separated
@@ -112,13 +112,7 @@ class DataRequestOutput:
             data['y'] = data.geometry.y
             data = data.drop(columns=['geometry'])
             data = data.set_index(['x', 'y', 'time'])
-            # Pivot wider
-            data['dsvar'] = data['dataset'] + '_' + data['variable']
-            data = data.pivot(
-                columns = 'dsvar',
-                values = 'value'
-            )
-            # Convert to xarray DataArray
+            # Convert to xarray Dataset
             data = data.to_xarray()
             data.rio.write_crs(g_crs, inplace=True)
 
