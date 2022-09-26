@@ -29,7 +29,23 @@ class GTOPO(GSDataSet):
         # Basic dataset information.
         self.id = 'GTOPO30'
         self.name = 'Global 30 Arc-Second Elevation'
-        self.url = 'https://www.usgs.gov/centers/eros/science/usgs-eros-archive-digital-elevation-global-30-arc-second-elevation-gtopo30'
+        self.url = 'https://doi.org/10.5066/F7DF6PQS'
+        self.description = ("GTOPO30 is a global digital elevation model (DEM) "
+        "resulting from a collaborative effort led by the staff at the U.S. "
+        "Geological Survey's EROS Data Center in Sioux Falls, South Dakota. "
+        "Elevations in GTOPO30 are regularly spaced at 30-arc seconds (approximately "
+        "1 kilometer). GTOPO30 was developed to meet the needs of the geospatial data "
+        "user community for regional and continental scale topographic data. This "
+        "release represents the completion of global coverage of 30-arc second "
+        "elevation data that have been available from the EROS Data Center beginning "
+        "in 1993. Several areas have been updated and the entire global data set has "
+        "been repackaged, so these data supersede the previously released continental "
+        "data sets.")
+
+        # Provider information
+        self.provider_name = ('U.S. Geological Survey (USGS) Earth Resources Observation '
+        'and Science (EROS) Center')
+        self.provider_url = 'https://www.usgs.gov/centers/eros'
 
         # CRS information.
         self.crs = CRS.from_epsg(4326)

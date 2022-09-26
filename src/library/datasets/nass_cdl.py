@@ -20,6 +20,15 @@ class NASS_CDL(GSDataSet):
         self.id = 'NASS_CDL'
         self.name = 'NASS Cropland Data Layer'
         self.url = 'https://www.nass.usda.gov/Research_and_Science/Cropland/SARS1a.php'
+        self.description = ("The CDL is a raster, geo-referenced, crop-specific "
+        "land cover data layer created annually for the continental United States "
+        "using moderate resolution satellite imagery and extensive agricultural "
+        "ground truth.")
+
+        # Provider information
+        self.provider_name = ('United States Department of Agriculture (USDA) National '
+        'Agricultural Statistics Service (NASS)')
+        self.provider_url = 'https://www.nass.usda.gov/'
 
         # CRS information.
         self.crs = CRS.from_epsg(5070)

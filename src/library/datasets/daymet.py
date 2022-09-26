@@ -18,6 +18,20 @@ class DaymetV4(GSDataSet):
         self.id = 'DaymetV4'
         self.name = 'Daymet Version 4'
         self.url = 'https://daymet.ornl.gov/'
+        self.description = ('Daymet provides long-term, continuous, gridded estimates '
+        'of daily weather and climatology variables by interpolating and extrapolating '
+        'ground-based observations through statistical modeling techniques. The Daymet '
+        'data products provide driver data for biogeochemical terrestrial modeling and '
+        'have myriad applications in many Earth science, natural resource, biodiversity, '
+        'and agricultural research areas. Daymet weather variables include daily minimum '
+        'and maximum temperature, precipitation, vapor pressure, shortwave radiation, '
+        'snow water equivalent, and day length produced on a 1 km x 1 km gridded surface '
+        'over continental North America and Hawaii from 1980 and over Puerto Rico from '
+        '1950 through the end of the most recent full calendar year.')
+
+        # Provider information
+        self.provider_name = 'ORNL DAAC'
+        self.provider_url = 'https://daac.ornl.gov/'
 
         # CRS information.
         self.crs = CRS.from_proj4(

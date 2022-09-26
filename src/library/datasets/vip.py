@@ -18,6 +18,23 @@ class VIP(GSDataSet):
         self.id = 'VIP'
         self.name = 'Vegetation Index and Phenology (VIP) Vegetation Indices Daily Global 0.05Deg CMG V004'
         self.url = 'https://doi.org/10.5067/MEaSUREs/VIP/VIP01.004'
+        self.description = ("The NASA Making Earth System Data Records for Use in Research "
+        "Environments (MEaSUREs) Vegetation Index and Phenology (VIP) global datasets were "
+        "created using Advanced Very High Resolution Radiometer (AVHRR) N07, N09, N11, and "
+        "N14 datasets (1981 - 1999) and Moderate Resolution Imaging Spectroradiometer "
+        "(MODIS)/Terra MOD09 surface reflectance data (2000 - 2014). The VIP Vegetation "
+        "Index (VI) product was developed to provide consistent measurements of the "
+        "Normalized Difference Vegetation Index (NDVI) and modified Enhanced Vegetation "
+        "Index (EVI2) spanning more than 30 years of data from multiple sensors. The EVI2 "
+        "is a backward extension of AVHRR. Vegetation indices such as NDVI and EVI2 are "
+        "useful for assessing the biophysical properties of the land surface, and are "
+        "used to characterize vegetation phenology. Phenology tracks the seasonal life "
+        "cycle of vegetation, and provides information on the biotic response to "
+        "environmental changes.")
+
+        # Provider information
+        self.provider_name = ('NASA EOSDIS Land Processes DAAC')
+        self.provider_url = 'https://lpdaac.usgs.gov/'
 
         # CRS information.
         self.crs = CRS.from_wkt('GEOGCS["Unknown datum based upon the Clarke 1866 ellipsoid",DATUM["Not specified (based on Clarke 1866 spheroid)",SPHEROID["Clarke 1866",6378206.4,294.978698213898,AUTHORITY["EPSG","7008"]]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],AXIS["Longitude",EAST]]')

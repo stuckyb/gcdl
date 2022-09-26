@@ -19,6 +19,15 @@ class SRTM(GSDataSet):
         self.id = 'SRTM'
         self.name = 'SRTM 1 Arc-Second Global Digital Elevation Model'
         self.url = 'https://doi.org/10.5066/F7PR7TFT'
+        self.description = ("SRTM 1 Arc-Second Global (Digital Object Identifier (DOI) "
+        "number: /10.5066/F7PR7TFT) elevation data offer worldwide coverage of void filled "
+        "data at a resolution of 1 arc-second (30 meters) and provide open distribution of "
+        "this high-resolution global data set. Some tiles may still contain voids.")
+
+        # Provider information
+        self.provider_name = ('U.S. Geological Survey (USGS) Earth Resources Observation '
+        'and Science (EROS) Center')
+        self.provider_url = 'https://www.usgs.gov/centers/eros'
 
         # CRS information.
         self.crs = CRS.from_epsg(4326)
