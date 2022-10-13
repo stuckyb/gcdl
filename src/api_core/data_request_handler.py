@@ -119,16 +119,16 @@ class DataRequestHandler:
                         resampling=Resampling[ri_method]
                     )
 
-                # Clip to the non-modified requested geometry
-                data = data.rio.clip([request.subset_geom.json], all_touched = True)
+            # Clip to the non-modified requested geometry
+            data = data.rio.clip([request.subset_geom.json], all_touched = True)
 
-                # Assign time coordinate to request date. 
-                # Overwrite native time format if present.
-                date_series = pd.Series(self._requestDateAsString(grain, rdate))
-                time_dim = xr.DataArray(date_series, [('time',date_series)])
-                if 'time' in list(data.coords):
-                    data = data.drop_vars('time')
-                data = data.expand_dims(time=time_dim)
+            # Assign time coordinate to request date. 
+            # Overwrite native time format if present.
+            date_series = pd.Series(self._requestDateAsString(grain, rdate))
+            time_dim = xr.DataArray(date_series, [('time',date_series)])
+            if 'time' in list(data.coords):
+                data = data.drop_vars('time')
+            data = data.expand_dims(time=time_dim)
 
             return data
         else:
