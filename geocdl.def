@@ -1,6 +1,6 @@
 
-Bootstrap: localimage
-From: geocdl-base.sif
+Bootstrap: docker
+From: ubuntu:22.04
 
 
 %files
