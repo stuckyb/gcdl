@@ -9,6 +9,7 @@ if [ "$#" -ne 2 ]; then
 fi
 
 gunicorn api_main:app \
+    --timeout 120 \
     --workers $1 \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind $2
