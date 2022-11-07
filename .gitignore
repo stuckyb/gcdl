@@ -1,4 +1,7 @@
 
+# Singularity containers.
+*.sif
+
 # VIM swap files.
 *.swp
 
