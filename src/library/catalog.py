@@ -43,7 +43,7 @@ class DatasetCatalog:
                 dsl.append({'id': key, 'name': self.datasets[key].name})
 
         # Sort by dataset name.
-        dsl.sort(key=lambda item: item['name'])
+        dsl.sort(key=lambda item: item['name'].lower())
 
         return dsl
 
