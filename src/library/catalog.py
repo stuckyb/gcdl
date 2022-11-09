@@ -27,13 +27,20 @@ class DatasetCatalog:
         """
         self.datasets[dataset.id] = dataset
 
-    def getCatalogEntries(self):
+    def getCatalogEntries(self, published_only=True):
         """
         Returns a list of dataset id/name pairings.
+
+        published_only: If True, only return datasets with the "publish" flag
+            set.
         """
         dsl = []
         for key in self.datasets:
-            dsl.append({'id': key, 'name': self.datasets[key].name})
+            if published_only:
+                if self.datasets[key].publish:
+                    dsl.append({'id': key, 'name': self.datasets[key].name})
+            else:
+                dsl.append({'id': key, 'name': self.datasets[key].name})
 
         # Sort by dataset name.
         dsl.sort(key=lambda item: item['name'])

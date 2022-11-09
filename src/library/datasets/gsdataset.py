@@ -44,6 +44,10 @@ class GSDataSet(ABC):
         self.url = ''
         self.description = ''
 
+        # Whether the dataset should be "published"; that is, included in the
+        # set of datasets returned by the /list_datasets endpoint.
+        self.publish = True
+
         # An optional, internal identifier string that should only be
         # externally accessed through the "id" property.
         self._id = None
@@ -73,8 +77,8 @@ class GSDataSet(ABC):
             'day': [None, None]
         }
 
-        # Temporal resolution. In concrete subclasses, resolutions
-        # should be provided as strings.
+        # Temporal resolution. In concrete subclasses, resolutions should be
+        # provided as strings.
         self.temporal_resolution = {
             # Resolution of annual data.
             'year': None,
@@ -84,14 +88,12 @@ class GSDataSet(ABC):
             'day': None
         }
 
-        # If the dataset has any raster attribute
-        # tables and/or colormaps.  
+        # If the dataset has any raster attribute tables and/or colormaps.  
         self.categorical_vars = []
         self.RAT = None
         self.colormap = None
 
-        # Additional information about the dataset's configuration
-        # in GeoCDL
+        # Additional information about the dataset's configuration in GeoCDL.
         self.notes = ''
 
     @property
@@ -159,7 +161,6 @@ class GSDataSet(ABC):
                 return self.grid_size/111000
         else:
             raise ValueError('Unsupported dataset grid unit.')
-
 
     def getMetadata(self):
         """
