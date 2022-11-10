@@ -15,6 +15,10 @@ class SRTM(GSDataSet):
         """
         super().__init__(store_path, 'srtm')
 
+        # Set the dataset as unpublished for now until the tileset performance
+        # issues are resolved.
+        self.publish = False
+
         # Basic dataset information.
         self.id = 'SRTM'
         self.name = 'SRTM 1 Arc-Second Global Digital Elevation Model'
