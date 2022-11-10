@@ -8,7 +8,10 @@ class Timeout(GSDataSet):
     """
     Unpublished dataset for testing behavior of long-running queries without
     imposing a heavy computational/memory burden.  Calls to getData() will run
-    for self.query_time seconds before returning.
+    for self.default_query_time seconds before returning.  To dynamically
+    specify a query time, provide a value for varname that can be parsed as a
+    floating-point number.  Custom query times cannot exceed
+    self.max_query_time.
     """
     def __init__(self, store_path):
         """
@@ -23,8 +26,9 @@ class Timeout(GSDataSet):
         # Do not publish this dataset in the catalog.
         self.publish = False
 
-        # The "query" time, in seconds.
-        self.query_time = 300
+        # The default and maximum "query" times, in seconds.
+        self.default_query_time = 120
+        self.max_query_time = 600
 
         # CRS information: WGS84 lat/long coordinates.
         self.crs = CRS.from_epsg(4326)
@@ -51,7 +55,14 @@ class Timeout(GSDataSet):
         subset_geom: An instance of SubsetGeom.  If the CRS does not match the
             dataset, an exception is raised.
         """
-        time.sleep(self.query_time)
+        try:
+            qtime = float(varname)
+            if qtime > self.max_query_time or not(qtime > 0):
+                qtime = self.default_query_time
+        except:
+            qtime = self.default_query_time
+
+        time.sleep(qtime)
 
         return None
 
