@@ -195,9 +195,10 @@ class DataRequestHandler:
                 # Check if data returned
                 # (sparse daily data not always returned)
                 if raster_layer is not None:
-                    var_date_data.append(raster_layer)        
-            var_date_data = xr.concat(var_date_data, dim='time') 
-            ds_output_data[varname] = var_date_data 
+                    var_date_data.append(raster_layer)     
+            if len(var_date_data) > 0:
+                var_date_data = xr.concat(var_date_data, dim='time') 
+                ds_output_data[varname] = var_date_data 
 
         return (ds_output_data, target_data)
 
