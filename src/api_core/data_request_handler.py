@@ -193,7 +193,7 @@ class DataRequestHandler:
                 if request.harmonization and target_data is None:
                     target_data = raster_layer
                 # Check if data returned
-                # (sparse daily data not always returned)
+                # (sparse data not always returned)
                 if raster_layer is not None:
                     var_date_data.append(raster_layer)     
             if len(var_date_data) > 0:
