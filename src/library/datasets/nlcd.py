@@ -16,10 +16,6 @@ class NLCD(GSDataSet):
         """
         super().__init__(store_path, 'nlcd')
 
-        # Set the dataset as unpublished for now until lingering implementation
-        # issues are resolved.
-        self.publish = False
-
         # Basic dataset information.
         self.id = 'NLCD'
         self.name = 'National Land Cover Database'
@@ -48,8 +44,8 @@ class NLCD(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'land_cover': 'land cover classification',
-            'change_index': 'land cover change index'
+            'land_cover': 'land cover classification'#,
+            #'change_index': 'land cover change index'
         }
 
         # Temporal coverage of the dataset.
@@ -64,13 +60,13 @@ class NLCD(GSDataSet):
 
         # File name patterns for each variable. 
         self.fpatterns = {
-            'land_cover': 'nlcd_{0}_land_cover_l48_20210604.img',
-            'change_index': 'nlcd_2001_2019_land_cover_l48_20210604.img'
+            'land_cover': 'nlcd_{0}_land_cover_l48_20210604.img'#,
+            #'change_index': 'nlcd_2001_2019_land_cover_l48_20210604.img'
         }
 
         # Categorical dataset, 
         # with one band with RAT and colormap read with methods
-        self.categorical_vars = ['land_cover','change_index']
+        self.categorical_vars = ['land_cover'] #,'change_index']
         self.RAT = None
         self.colormap = None
 
