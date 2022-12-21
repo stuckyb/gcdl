@@ -72,11 +72,7 @@ class NLCD(GSDataSet):
 
         # Additional information about the dataset's configuration
         # in GeoCDL
-        self.notes = ('The irregular temporal resolution applies to the '
-        'land_cover variable, while the change_index variable represents '
-        'changes between the first and last year available for land_cover.'
-        'Requests for change_index will only be returned when the request'
-        'is for the latest year.')
+        self.notes = ('')
 
     def _getColorMap(self, fname, varname):
         # Reads in a dictionary with integer keys and 
