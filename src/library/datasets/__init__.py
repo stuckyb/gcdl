@@ -9,4 +9,5 @@ from .nass_cdl import NASS_CDL
 from .vip import VIP
 from .nlcd import NLCD
 from .timeout import Timeout
+from .soilgrids import Soilgrids250mV2
 
