@@ -69,7 +69,6 @@ class Soilgrids250mV2(GSDataSet):
         self.pdq_list = [list(self.properties.keys()), self.depths, list(self.quantiles.keys())]
         self.pdq_list = list(itertools.product(*self.pdq_list))
         self.var_names = ['{0}_{1}_{2}'.format(*pdq) for pdq in self.pdq_list]
-        [print(pdq) for pdq in self.pdq_list]
         self.pdq_list = [[self.properties[pdq[0]], pdq[1], self.quantiles[pdq[2]]] for pdq in self.pdq_list]
         self.var_descriptions = ['{0} at {1} - {2}'.format(*pdq) for pdq in self.pdq_list]
         self.vars = dict(zip(self.var_names,self.var_descriptions))
