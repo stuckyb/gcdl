@@ -59,17 +59,15 @@
     ```
 
 
-## Using the GeoCDL
+## Current datasets
 
-Results for different combinations of optional spatial parameters (output structure column is hypothetical at the moment):
-
-| *bbox* or *points*	| *crs*	| *resolution*	| Outcome 	| Output raster strucure 	|
-| :---:					| :---:	| :---:			|  :---		| :---						|
-| 						|		|				| Full extent of each raster layer is returned in native CRS and spatial resolution. | Can combine variables and/or time, but not datasets due to differing CRS, spatial resolutions and extents. | 
-| x						|		|				| Each layer is spatially subsetted but not reprojected in CRS or spatial resolution. *bbox*/*points* assumed to be defined in the first dataset's CRS.| Can combine variables and/or time, but not datasets due to differing CRS and spatial resolutions. |
-| x						| x		|				| Each layer is spatially subsetted and reprojected to *crs*, but the spatial resolutions are not changed. *bbox*/*points* assumed to be defined in *crs*.| Can combine variables and/or time, but not datasets due to differing spatial rsolutions. |
-| x						|		| x				| Each layer is spatially subsetted and reprojected to *resolution* and the first dataset's CRS, assuming *resolution* is in the units of that CRS. *bbox*/*points* assumed to be defined in that same CRS.| Can combine variables and/or time, AND datasets. |
-| x						| x		| x				| Each layer is spatially subsetted and reprojected to *resolution* and *crs*, assuming *resolution* is in the units of *crs*. *bbox*/*points* assumed to be defined in *crs*.| Can combine variables and/or time, AND datasets. |
-| 						| x		|				| Full extent of each raster layer is returned in native spatial resolution, but reprojected to *crs*. | Can combine variables and/or time, but not datasets due to differing spatial resolutions and extents. |
-| 						|		| x				| Full extent of each raster layer is reprojected to *resolution* and the first dataset's CRS, assuming *resolution* is in the units of that CRS. *bbox*/*points* assumed to be defined in that same CRS. | Can combine variables and/or time, but not datasets due to differing CRS and spatial extents. |
-| 						| x		| x				| Full extent of each raster layer is reprojected to *resolution* and *crs*, assuming *resolution* is in the units of *crs*. *bbox*/*points* assumed to be defined in *crs*. | Can combine variables and/or time, but not datasets due to differing spatial extents. |
+| id |          name |
+| :---			|   :---	| 
+| DaymetV4 |    Daymet Version 4 |
+| GTOPO30 |     Global 30 Arc-Second Elevation | 
+| MODIS_NDVI |  MODIS NDVI Data, Smoothed and Gap-filled, for the Conterminous US: 2000-2015 |
+| NASS_CDL |    NASS Cropland Data Layer |
+| NLCD |        National Land Cover Database |
+| PRISM |       PRISM |
+| Soilgrids250mV2 | SoilGrids — global gridded soil information |
+| VIP |         Vegetation Index and Phenology (VIP) Vegetation Indices Daily Global 0.05Deg CMG V004 | 
