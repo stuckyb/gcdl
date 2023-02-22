@@ -147,15 +147,18 @@ class GSDataSet(ABC):
         """
         gs_unit = unit
         if gs_unit is None:
-            gs_unit = self.grid_unit
+            gs_unit = self.grid_unit.lower()
+        
+        meter_units = ['meters','meter','metre']
+        degree_units = ['degrees','degree']
 
-        if gs_unit in ['meters','metre']:
-            if self.grid_unit in ['meters','metre']:
+        if gs_unit in meter_units:
+            if self.grid_unit in meter_units:
                 return self.grid_size
             else:
                 return self.grid_size*111000
-        elif gs_unit in ['degrees','degree']:
-            if self.grid_unit == 'degrees':
+        elif gs_unit in degree_units:
+            if self.grid_unit in degree_units:
                 return self.grid_size
             else:
                 return self.grid_size/111000

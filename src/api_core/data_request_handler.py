@@ -146,7 +146,7 @@ class DataRequestHandler:
         # If raster-type request, buffer subset geometry
         if request_type == dr.REQ_RASTER:
             # Unit of requested SubsetGeom
-            geom_unit = subset_geom.geom.crs.axis_info[0].unit_name
+            geom_unit = subset_geom.geom.crs.axis_info[0].unit_name.lower()
             # Grid sizes of requested datasets in that SubsetGeom unit
             grid_sizes = [
                     dsc[dsid].getGridSize(geom_unit) for dsid in dsvars
