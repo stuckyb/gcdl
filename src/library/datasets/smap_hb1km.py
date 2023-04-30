@@ -48,7 +48,7 @@ class SMAP_HB1km(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'HBSMAP_SM': 'surface soil moisture'
+            'sm': 'surface soil moisture [m3/m3]'
         }
 
         # Temporal coverage of the dataset.
