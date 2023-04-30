@@ -1354,6 +1354,36 @@ class TestDataRequest(unittest.TestCase):
         )
         self.assertEqual(exp, r)
 
+    def test_parseHours(self):
+        dr = self.dr
+
+        # Test no input hours
+        exp = None
+        r = dr._parseHours(None)
+        self.assertEqual(exp, r)
+
+        # Test one valid hour
+        exp = [0]
+        r = dr._parseHours("0")
+        self.assertEqual(exp, r)
+
+        # Test multiple valid hours
+        exp = [0,6]
+        r = dr._parseHours("0,6")
+        self.assertEqual(exp, r)
+
+        # Test valid and invalid hours
+        with self.assertRaisesRegex(ValueError, 
+            'Invalid date values string'
+        ):
+           dr._parseHours("0,24")
+
+        # Test only invalid hours
+        with self.assertRaisesRegex(ValueError, 
+            'Invalid date values string'
+        ):
+           dr._parseHours("24")
+
     def test_parse_ri_method_str(self):
         dr = self.dr
 

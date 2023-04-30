@@ -87,6 +87,9 @@ class GSDataSet(ABC):
             # Resolution of daily data.
             'day': None
         }
+        # Hours available for sub-daily datasets. In concrete subclasses, 
+        # hours should be provided as a list of integers 0-23
+        self.hours = None
 
         # If the dataset has any raster attribute tables and/or colormaps.  
         self.categorical_vars = []
@@ -119,6 +122,15 @@ class GSDataSet(ABC):
                 no_dates = False
 
         return no_dates
+    
+    @property
+    def subdaily(self):
+        """
+        True if the dataset has hourly data
+        """
+        has_hours = self.hours is not None
+
+        return has_hours
 
     @property
     def supported_grains(self):

@@ -212,6 +212,15 @@ async def subset_polygon(
         'step size increment. Required if "years" or "years" and "months" are '
         'specified and daily data are desired.'
     ), 
+    hours: str = Query(
+        None, title='Hours of day to include in request',
+        description='Only valid for daily requests of datasets with sub-daily '
+        'temporal resolutions (parameter is otherwise ignored). Accepts integer ' 
+        'values between 0 and 23. Can be expressed as ranges or sequences, such '
+        'as "0-6" or "0,12". If not all requested hours are available, only the '
+        'hours available will be returned. "hours" is required for daily requests '
+        'of datasets with sub-daily data. '
+    ),
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
         description='How to handle scenario of requested date grains not '
@@ -301,7 +310,7 @@ async def subset_polygon(
         target_crs = get_target_crs(crs, resolution, clip_geom)
 
         request = DataRequest(
-            dsc, datasets, dates, years, months, days, grain_method, 
+            dsc, datasets, dates, years, months, days, hours, grain_method, 
             validate_method, clip_geom, target_crs, resolution, 
             resample_method, REQ_RASTER, output_format, req_md
         )
@@ -376,6 +385,15 @@ async def subset_points(
         'step size increment. Required if "years" or "years" and "months" are '
         'specified and daily data are desired.'
     ), 
+    hours: str = Query(
+        None, title='Hours of day to include in request',
+        description='Only valid for daily requests of datasets with sub-daily '
+        'temporal resolutions (parameter is otherwise ignored). Accepts integer ' 
+        'values between 0 and 23. Can be expressed as ranges or sequences, such '
+        'as "0-6" or "0,12". If not all requested hours are available, only the '
+        'hours available will be returned. "hours" is required for daily requests '
+        'of datasets with sub-daily data. '
+    ),
     grain_method: str = Query(
         None, title='Matching specified date grain to dataset date grains.',
         description='How to handle scenario of requested date grains not '
@@ -466,7 +484,7 @@ async def subset_points(
         target_crs = get_target_crs(crs, None, sub_points)
 
         request = DataRequest(
-            dsc, datasets, dates, years, months, days, grain_method,
+            dsc, datasets, dates, years, months, days, hours, grain_method,
             validate_method, sub_points, target_crs, None, interp_method, 
             REQ_POINT, output_format, req_md
         )

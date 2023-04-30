@@ -63,7 +63,11 @@ class SMAP_HB1km(GSDataSet):
         ]
 
         # Temporal resolution
-        self.temporal_resolution['day'] = '6 hours (h = 0, 6, 12, 18)'
+        self.hours = [0, 6, 12, 18]
+        self.temporal_resolution['day'] = '{0} hours (h = {1})'.format(
+            self.hours[1] - self.hours[0],
+            ', '.join([str(h) for h in self.hours])
+        )
 
         # File name patterns for each variable. 
         # One file per month with YYYYMM format in filename
@@ -133,7 +137,8 @@ class SMAP_HB1km(GSDataSet):
         varname: The variable to return.
         date_grain: The date granularity to return, specified as a constant in
             data_request.
-        request_date: A data_request.RequestDate instance.
+        request_date: Because this is a sub-daily dataset - a dictionary of a 
+            data_request.RequestDate instance and a list of requested hours. 
         ri_method: The resample/interpolation method to use, if needed.
         subset_geom: An instance of SubsetGeom.  If the CRS does not match the
             dataset, an exception is raised.
@@ -142,21 +147,17 @@ class SMAP_HB1km(GSDataSet):
             raise ValueError(
                 'Subset geometry CRS does not match dataset CRS.'
             )
+        
+        rdate = request_date['date']
+        data = self._loadData(varname, date_grain, rdate, subset_geom)
 
-        data = self._loadData(varname, date_grain, request_date, subset_geom)
-
-        # Filter to the requested date and hours
-        # Currently returning all hours
-        requested_hours = [0,6,12,18]
-        dt_hours = [
-            datetime.datetime(
-                request_date.year, request_date.month, request_date.day, h
-            ) for h in requested_hours
-        ]
-        data = data.sel(t=dt_hours)
-        # Reformat to a 'time' coordinate storing the hours only
+        # Filter to the requested date and hour
+        rhour = request_date['hour']
+        if rhour not in self.hours:
+            return None
+        dt_hour = datetime.datetime(rdate.year, rdate.month, rdate.day, rhour)
+        data = data.sel(t=dt_hour)
         data = data.rename({'t': 'time'})
-        data['time'] = [t.hour for t in data['time'].values]
 
         # If the subset request is a polygon, the data will already be
         # subsetted by _loadData(), so we don't need to handle that here.
@@ -169,7 +170,7 @@ class SMAP_HB1km(GSDataSet):
                 x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
                 method=ri_method
             )
-            data = res.values[0]
+            data = res.values
 
         return data
 

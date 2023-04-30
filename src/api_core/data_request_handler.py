@@ -14,7 +14,7 @@ class DataRequestHandler:
     def __init__(self):
         pass
 
-    def _requestDateAsString(self, grain, rdate):
+    def _requestDateAsString(self, grain, rdate, rhour = None):
         if grain == dr.NONE or rdate is None:
             dstr = ''
         elif grain == dr.ANNUAL and rdate.year is not None:
@@ -31,13 +31,15 @@ class DataRequestHandler:
             dstr = '{0}-{1:02}-{2:02}'.format(
                 rdate.year, rdate.month, rdate.day
             )
+            if rhour is not None:
+                dstr = '{0}-{1:02}'.format(dstr, rhour)
         else:
             raise ValueError('Invalid date granularity specification.')
 
         return dstr
 
     def _getPointLayer(
-        self, dataset, varname, grain, rdate, subset_geom, request
+        self, dataset, varname, grain, rdate, rhour, subset_geom, request
     ):
 
         # Determine if variable is categorical or continuous
@@ -46,12 +48,18 @@ class DataRequestHandler:
         else:
             ri_method = request.ri_method['continuous']
 
+        # If this is a sub-daily dataset,
+        # pass along requested hour with the requested date
+        req_date = rdate
+        if rhour is not None:
+            req_date = {'date': rdate, 'hour': rhour}
+
         # Retrieve the point data.
         data = dataset.getData(
-            varname, grain, rdate, ri_method, subset_geom
+            varname, grain, req_date, ri_method, subset_geom
         )
 
-        my_date = self._requestDateAsString(grain, rdate)
+        my_date = self._requestDateAsString(grain, rdate, rhour)
 
         if data is not None:
             # Not a great solution to be creating a new base dataframe on every
@@ -84,7 +92,7 @@ class DataRequestHandler:
             return None
 
     def _getRasterLayer(
-        self, dataset, varname, grain, rdate, subset_geom, request,
+        self, dataset, varname, grain, rdate, rhour, subset_geom, request,
         target_data = None
     ):
         
@@ -94,9 +102,15 @@ class DataRequestHandler:
         else:
             ri_method = request.ri_method['continuous']
         
+        # If this is a sub-daily dataset,
+        # pass along requested hour with the requested date
+        req_date = rdate
+        if rhour is not None:
+            req_date = {'date': rdate, 'hour': rhour}
+
         # Retrieve the (subsetted) data layer.
         data = dataset.getData(
-            varname, grain, rdate, ri_method, subset_geom
+            varname, grain, req_date, ri_method, subset_geom
         )
 
         if data is not None:
@@ -124,11 +138,8 @@ class DataRequestHandler:
 
             # Assign time coordinate to request date. 
             # Overwrite native time format if present.
-            # Check for sub-daily data (more than one time coordinate returned)
-            date_str = self._requestDateAsString(grain, rdate)
+            date_str = self._requestDateAsString(grain, rdate, rhour)
             if 'time' in data.dims:
-                if data.sizes['time'] > 1:
-                    date_str = [date_str+'_'+f'{h:02}' for h in data['time'].values]
                 data['time'] = date_str
             else:
                 date_series = pd.Series(date_str)
@@ -191,16 +202,21 @@ class DataRequestHandler:
         for varname in request.dsvars[dsid]:
             var_date_data = []
             for rdate in date_list:
-                raster_layer = self._getRasterLayer(
-                    request.dsc[dsid], varname, grain, rdate, geom,
-                    request, target_data
-                )
-                if request.harmonization and target_data is None:
-                    target_data = raster_layer
-                # Check if data returned
-                # (sparse data not always returned)
-                if raster_layer is not None:
-                    var_date_data.append(raster_layer)     
+                # Handle sub-daily data
+                rhours = [None]
+                if request.dsc[dsid].subdaily:
+                    rhours = request.hours
+                for rhour in rhours:
+                    raster_layer = self._getRasterLayer(
+                        request.dsc[dsid], varname, grain, rdate, rhour, geom,
+                        request, target_data
+                    )
+                    if request.harmonization and target_data is None:
+                        target_data = raster_layer
+                    # Check if data returned
+                    # (sparse data not always returned)
+                    if raster_layer is not None:
+                        var_date_data.append(raster_layer)     
             if len(var_date_data) > 0:
                 var_date_data = xr.concat(var_date_data, dim='time') 
                 ds_output_data[varname] = var_date_data 
@@ -213,14 +229,19 @@ class DataRequestHandler:
         for varname in request.dsvars[dsid]:
             var_date_data = []
             for rdate in date_list:
-                point_layer = self._getPointLayer(
-                    request.dsc[dsid], varname, grain, rdate, geom,
-                    request
-                )
-                # Check if data returned
-                # (sparse daily data not always returned)
-                if point_layer is not None:
-                    var_date_data.append(point_layer)
+                # Handle sub-daily data
+                rhours = [None]
+                if request.dsc[dsid].subdaily:
+                    rhours = request.hours
+                for rhour in rhours:
+                    point_layer = self._getPointLayer(
+                        request.dsc[dsid], varname, grain, rdate, rhour, geom,
+                        request
+                    )
+                    # Check if data returned
+                    # (sparse daily data not always returned)
+                    if point_layer is not None:
+                        var_date_data.append(point_layer)
         var_date_data = pd.concat(var_date_data)
 
         return var_date_data

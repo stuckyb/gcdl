@@ -54,7 +54,7 @@ class DataRequest:
     Encapsulates and validates a single API data request.
     """
     def __init__(
-        self, dataset_catalog, dsvars, dates, years, months, days,
+        self, dataset_catalog, dsvars, dates, years, months, days, hours,
         grain_method, validate_method, subset_geom, target_crs, 
         target_resolution, ri_method, request_type, output_format, 
         req_metadata
@@ -67,6 +67,7 @@ class DataRequest:
         years: Years to include in the request.
         months: Months to include in the request.
         days: Days to include in the request.
+        hours: Hours to include in the request.
         grain_method: 
         subset_geom: A SubsetGeom representing the clipping region or points to
             use or None.
@@ -108,6 +109,11 @@ class DataRequest:
             self.inferred_grain, self.ds_date_grains, dates, 
             years, months, days
         ))
+        # Handle sub-daily data: parsing hours and check hours
+        # specified if sub-daily dataset requested
+        self.hours = self._parseHours(hours)
+        self._verifyHours(self.dsc, self.dsvars, self.hours)
+
 
         # Validate requested date range against datasets' 
         # available data date range
@@ -582,7 +588,7 @@ class DataRequest:
 
         return list(range(startval, endval + 1, inc))
 
-    def _parseNumValsStr(self, nvstr, maxval):
+    def _parseNumValsStr(self, nvstr, maxval, minval = 1):
         """
         Parses a string that specifies integer values for year, day of year, or
         day of month.  The string should be of the format (in EBNF):
@@ -619,10 +625,10 @@ class DataRequest:
                         f'cannot exceed {maxval}.'
                     )
                 
-                if newval <= 0:
+                if newval < minval:
                     raise ValueError(
                         f'Invalid date values string: "{nvstr}". The values '
-                        f'must be greater than 0.'
+                        f'must be greater than or equal to {minval}.'
                     )
 
                 nvals.add(newval)
@@ -901,6 +907,35 @@ class DataRequest:
             raise ValueError(
                 f'Invalid date range validation method: "{method}".'
             )
+        
+    def _parseHours(self, hours_str):
+        """
+        Parses input string to list of hours.
+        Checks if hours are integers between 0 and 23.
+        """
+        if hours_str is None:
+            hours = None
+        else:
+            hours = self._parseNumValsStr(hours_str, 23, 0)
+
+        return hours
+    
+    def _verifyHours(self, dsc, dsvars, hours):
+        """
+        Verifies that if at least one subdaily dataset is
+        requested, that there are also hours given
+        """
+        any_subdaily = False
+
+        for dsid in dsvars:
+            if dsc[dsid].subdaily:
+                any_subdaily = True
+        
+        if any_subdaily and hours is None:
+            raise ValueError(
+                    f'"hours" is required for sub-daily datasets.'
+                )
+
 
     def _parse_ri_method_str(self, method_str):
         """
