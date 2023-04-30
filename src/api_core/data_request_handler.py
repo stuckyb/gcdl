@@ -124,11 +124,16 @@ class DataRequestHandler:
 
             # Assign time coordinate to request date. 
             # Overwrite native time format if present.
-            date_series = pd.Series(self._requestDateAsString(grain, rdate))
-            time_dim = xr.DataArray(date_series, [('time',date_series)])
-            if 'time' in list(data.coords):
-                data = data.drop_vars('time')
-            data = data.expand_dims(time=time_dim)
+            # Check for sub-daily data (more than one time coordinate returned)
+            date_str = self._requestDateAsString(grain, rdate)
+            if 'time' in data.dims:
+                if data.sizes['time'] > 1:
+                    date_str = [date_str+'_'+f'{h:02}' for h in data['time'].values]
+                data['time'] = date_str
+            else:
+                date_series = pd.Series(date_str)
+                time_dim = xr.DataArray(date_series, [('time',date_series)])
+                data = data.expand_dims(time=time_dim)
 
             return data
         else:
