@@ -31,8 +31,15 @@ class SMAP_HB1km(GSDataSet):
         self.provider_url = ''
 
         # CRS information.
-        #self.crs = CRS.from_user_input('World_Plate_Carree')
-        self.crs = CRS.from_epsg(4326)
+        self.crs = CRS.from_wkt(
+            'PROJCS["World_Plate_Carree_Degrees",'
+            'GEOGCS["GCS_WGS_1984",' 
+            'DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]], '
+            'PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],'
+            'PROJECTION["Plate_Carree"],PARAMETER["False_Easting",0],'
+            'PARAMETER["False_Northing",0],PARAMETER["Central_Meridian",0],'
+            'UNIT["Degree",111319.49079327357264771338267056]]'
+        )
 
         # The grid size.
         # (0.008333333333333302, -0.0083333333333333) 
