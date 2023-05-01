@@ -71,7 +71,7 @@ class TestDataRequest(unittest.TestCase):
         self.dr = DataRequest(
             self.dsc, self.dsvars,
             # Date parameters.
-            '1990', None, None, None, None, None,
+            '1990', None, None, None, None, None, None,
             # Subset geometry.
             None,
             # Projection/resolution parameters.
@@ -87,7 +87,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
-                '1990', None, None, None, None, None,
+                '1990', None, None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -101,7 +101,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
-                '1990', None, None, None, None, None,
+                '1990', None, None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -115,7 +115,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
-                '1990', None, None, None, 'fakemethod', None,
+                '1990', None, None, None, None,'fakemethod', None, 
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -129,7 +129,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
-                '1990', None, None, None, None, 'fakemethod',
+                '1990', None, None, None, None, None, 'fakemethod',
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -143,7 +143,7 @@ class TestDataRequest(unittest.TestCase):
             dr = DataRequest(
                 self.dsc, self.dsvars,
                 # Date parameters.
-                '1990', None, None, None, None, None,
+                '1990', None, None, None, None, None, None,
                 # Subset geometry.
                 None,
                 # Projection/resolution parameters.
@@ -468,7 +468,7 @@ class TestDataRequest(unittest.TestCase):
         self.assertEqual(exp, r)
 
         # Test error conditions.
-        with self.assertRaisesRegex(ValueError, 'greater than 0'):
+        with self.assertRaisesRegex(ValueError, 'greater than or equal to 1'):
             dr._parseNumValsStr('0,1', None)
 
         with self.assertRaisesRegex(ValueError, 'values cannot exceed 8'):

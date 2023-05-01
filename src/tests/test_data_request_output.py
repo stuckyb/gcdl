@@ -269,7 +269,7 @@ class TestDataRequestOutput(unittest.TestCase):
         test_req = DataRequest(
             self.dsc, {'ds1' : 'var1', 'ds2' : 'var2'},
             # Date parameters.
-            '1980', None, None, None, None, None,
+            '1980', None, None, None, None, None, None,
             # Subset geometry.
             SubsetMultiPoint([[1,2],[2,1]], 'EPSG:4326'),
             # Projection/resolution parameters.
@@ -293,7 +293,7 @@ class TestDataRequestOutput(unittest.TestCase):
             test_req = DataRequest(
                 self.dsc, {'ds1' : 'var1', 'ds2' : 'var2'},
                 # Date parameters.
-                '1980', None, None, None, None, None,
+                '1980', None, None, None, None, None, None,
                 # Subset geometry.
                 SubsetMultiPoint([[1,2],[2,1]], 'EPSG:4326'),
                 # Projection/resolution parameters.
