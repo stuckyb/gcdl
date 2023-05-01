@@ -8,7 +8,6 @@ import xarray as xr
 from osgeo import gdal
 import rasterio
 import geopandas as gpd
-import pandas as pd
 
 # Characters for generating random file names.
 fname_chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -151,7 +150,7 @@ class DataRequestOutput:
         for gdf in ds_output_list:
             if 'color' in gdf.columns:
                 gdf['color'] = [self._rgbaToHex(rgb) for rgb in gdf['color']]
-            final_gdf = pd.concat([final_gdf,gdf])
+            final_gdf = final_gdf.append(gdf)
 
         if request.file_extension == ".csv":
             self._writeCSV(final_gdf, fout_path)
