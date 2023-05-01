@@ -27,8 +27,8 @@ class SMAP_HB1km(GSDataSet):
         "the top 5-cm surface soil moisture in volumetric units (m3/m3).")
 
         # Provider information
-        self.provider_name = ''
-        self.provider_url = ''
+        self.provider_name = 'Noemi Vergopolan'
+        self.provider_url = 'https://waterai.earth'
 
         # CRS information.
         self.crs = CRS.from_wkt(
