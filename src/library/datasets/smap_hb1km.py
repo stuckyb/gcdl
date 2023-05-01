@@ -15,7 +15,7 @@ class SMAP_HB1km(GSDataSet):
         super().__init__(store_path, 'smap-hb1km')
 
         # Basic dataset information.
-        self.id = 'SMAP-hb1km'
+        self.id = 'SMAP-HB1km'
         self.name = 'SMAP HydroBlocks - 1 km'
         self.url = 'https://doi.org/10.5281/zenodo.5206725'
         self.description = ('SMAP-HydroBlocks (SMAP-HB) is a hyper-resolution '

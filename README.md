@@ -69,5 +69,6 @@
 | NASS_CDL |    NASS Cropland Data Layer |
 | NLCD |        National Land Cover Database |
 | PRISM |       PRISM |
+| SMAP-HB1km |  SMAP HydroBlocks - 1 km |
 | Soilgrids250mV2 | SoilGrids — global gridded soil information |
 | VIP |         Vegetation Index and Phenology (VIP) Vegetation Indices Daily Global 0.05Deg CMG V004 | 
