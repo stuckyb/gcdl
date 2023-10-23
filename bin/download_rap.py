@@ -6,6 +6,8 @@
 from concurrent.futures import ThreadPoolExecutor
 import subprocess as sp
 import sys
+from urllib.parse import urlparse
+import os.path
 
 
 vegcover_baseurl = 'http://rangeland.ntsg.umt.edu/data/rap/rap-vegetation-cover/v3/vegetation-cover-v3-{0}.tif'
@@ -16,9 +18,15 @@ biomass_years = range(1986, 2023)
 # Download up to 10 files concurrently.
 max_threads = 10
 
+
 def download_file(url):
-    print(f'Downloading {url}...')
-    sp.run(['wget', '-q', url])
+    fname = os.path.basename(urlparse(url).path)
+    if os.path.isfile(fname):
+        print(f'{fname} already downloaded, skipping...')
+    else:
+        print(f'Downloading {url}...')
+        sp.run(['wget', '-q', url])
+
 
 with ThreadPoolExecutor(max_workers=max_threads) as runner:
     for year in vegcover_years:
