@@ -11,4 +11,4 @@ from .nlcd import NLCD
 from .timeout import Timeout
 from .soilgrids import Soilgrids250mV2
 from .smap_hb1km import SMAP_HB1km
-from .rap-annual import RAPV3
+from .rapv3 import RAPV3
