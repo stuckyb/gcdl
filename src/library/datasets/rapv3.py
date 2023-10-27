@@ -87,6 +87,12 @@ class RAPV3(GSDataSet):
             'biomass_pfg': {'fpattern' : biomass_fpattern, 'band_id' : 2}
         }
 
+        # Attributes for caching loaded and subsetted data.
+        self.data_loaded = None
+        self.cur_data = None
+        self.current_clip = None
+        self.cur_data_clipped = None
+
     def _loadData(self, varname, date_grain, request_date, subset_geom):
         """
         Loads the data from disk, if needed.  Will re-use already loaded (and
