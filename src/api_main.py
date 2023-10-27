@@ -19,7 +19,7 @@ from api_core.helpers import (
 from library.catalog import DatasetCatalog
 from library.datasets import (
     PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP, NLCD, Timeout, 
-    Soilgrids250mV2, SMAP_HB1km
+    Soilgrids250mV2, SMAP_HB1km, RAPV3
 )
 from subset_geom import SubsetPolygon, SubsetMultiPoint
 from api_core.upload_cache import DataUploadCache
@@ -28,7 +28,7 @@ from api_core.upload_cache import DataUploadCache
 dsc = DatasetCatalog('../local_data')
 dsc.addDatasetsByClass(
     PRISM, DaymetV4, GTOPO, SRTM, MODIS_NDVI, NASS_CDL, VIP, NLCD, Timeout,
-    Soilgrids250mV2, SMAP_HB1km
+    Soilgrids250mV2, SMAP_HB1km, RAPV3
 )
 
 # Directory for serving output files.
