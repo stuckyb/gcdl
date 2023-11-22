@@ -174,6 +174,6 @@ class RAPV3(GSDataSet):
                 x=('z', subset_geom.geom.x), y=('z', subset_geom.geom.y),
                 method=ri_method
             )
-            data = res.values[0]
+            data = res.values
 
         return data
