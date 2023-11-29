@@ -221,6 +221,7 @@ class TestDataRequestOutput(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tdir:
             outdir = Path(tdir)
             fname = outdir / 'writeNetCDF.nc'
+            print("\n fname: ", fname,"\n")
 
             # Point data
             dro._writeNetCDF(self.test_gdf, fname)
@@ -252,7 +253,7 @@ class TestDataRequestOutput(unittest.TestCase):
             exp_nan = np.isnan(exp_vals)
             r_nan = np.isnan(r_vals)
             self.assertTrue((same | (exp_nan & r_nan)).all())
-
+            r.close()
 
     def test_writeGeoTIFF(self):
         pass
