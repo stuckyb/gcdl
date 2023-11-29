@@ -221,7 +221,6 @@ class TestDataRequestOutput(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tdir:
             outdir = Path(tdir)
             fname = outdir / 'writeNetCDF.nc'
-            print("\n fname: ", fname,"\n")
 
             # Point data
             dro._writeNetCDF(self.test_gdf, fname)
