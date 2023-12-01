@@ -90,7 +90,7 @@ class TestDataUploadCache(unittest.TestCase):
 
         exp = 'data/upload_cache/csv_1.csv'
         r = uc._getCacheFile('csv_1')
-        self.assertEqual(exp, str(r))
+        self.assertEqual(Path(exp), Path(r))
 
         # Test an invalid GUID.
         with self.assertRaisesRegex(Exception, 'No cached .* data found'):

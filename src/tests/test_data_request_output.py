@@ -252,7 +252,7 @@ class TestDataRequestOutput(unittest.TestCase):
             exp_nan = np.isnan(exp_vals)
             r_nan = np.isnan(r_vals)
             self.assertTrue((same | (exp_nan & r_nan)).all())
-
+            r.close()
 
     def test_writeGeoTIFF(self):
         pass
