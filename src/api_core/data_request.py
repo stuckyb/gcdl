@@ -149,13 +149,18 @@ class DataRequest:
         # variables
         ri_method = self._parse_ri_method_str(ri_method)
 
+        cat_requested = False
+        for dsid in dsvars:
+            if len(self.dsc[dsid].categorical_vars) > 0:
+                cat_requested = True
+
         if request_type == REQ_RASTER:
             if ri_method['continuous'] not in RESAMPLE_METHODS:
                 method = ri_method['continuous']
                 raise ValueError(
                     f'Invalid resampling method: "{method}".'
                 )
-            if ri_method['categorical'] not in RESAMPLE_CATEGORICAL_METHODS:
+            if cat_requested and ri_method['categorical'] not in RESAMPLE_CATEGORICAL_METHODS:
                 method = ri_method['categorical']
                 raise ValueError(
                     f'Invalid categorical resampling method: "{method}".'
