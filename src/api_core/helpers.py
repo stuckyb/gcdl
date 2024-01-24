@@ -155,10 +155,8 @@ def get_target_crs(input_crs_str, resolution, user_geom):
     # in the clip geometry.
     if input_crs_str is not None:
         target_crs = CRS(input_crs_str)
-    elif input_crs_str is None and resolution is not None:
-        target_crs = user_geom.geom.crs
     else:
-        target_crs = None
+        target_crs = user_geom.geom.crs
 
     return target_crs
 
