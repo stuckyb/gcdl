@@ -132,6 +132,11 @@ class DataRequestHandler:
                         match_data_array=target_data,
                         resampling=Resampling[ri_method]
                     )
+            # If raster reprojection is not needed, then reproject subset_geom
+            # to match the crs of the data
+            else:
+                request.subset_geom = request.subset_geom.reproject(
+                    data.rio.crs)
 
             # Clip to the non-modified requested geometry
             data = data.rio.clip([request.subset_geom.json], all_touched = True)
