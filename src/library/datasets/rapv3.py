@@ -55,7 +55,7 @@ class RAPV3(GSDataSet):
 
         # Temporal coverage of the dataset.
         self.date_ranges['year'] = [
-            datetime.date(1986, 1, 1), datetime.date(2022, 1, 1)
+            datetime.date(1986, 1, 1), datetime.date(2023, 1, 1)
         ]
         self.date_ranges['month'] = [
             None, None

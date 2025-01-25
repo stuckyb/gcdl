@@ -68,8 +68,8 @@ class DataRequest:
         months: Months to include in the request.
         days: Days to include in the request.
         hours: Hours to include in the request.
-        grain_method: Determines what temporal grains (ie annual, monthly, daily)
-            the user will accept if the grain the user requests is not 
+        grain_method: Determines which temporal grains (i.e., annual, monthly, 
+            daily) the user will accept if the grain the user requests is not 
             implemented for a requested dataset. Options include, "strict", 
             "skip", "any", "coarser", and "finer".
         subset_geom: A SubsetGeom representing the clipping region or points to

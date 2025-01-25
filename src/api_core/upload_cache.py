@@ -63,8 +63,12 @@ class DataUploadCache:
 
         if byte_cnt > self.maxsize:
             fpath.unlink()
+            max_mb = self.maxsize / (1024 * 1024)
             raise Exception(
-                'Uploaded file size exceeded maximum file size.'
+                '''Uploaded file size exceeded maximum file size of {} MB.
+                Please submit a GeoCDL github issue at 
+                github.com/stuckyb/gcdl/issues to request a larger 
+                file size limit, or decrease your file size.'''.format(max_mb)
             )
 
         return guid
