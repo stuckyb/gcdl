@@ -132,14 +132,15 @@ class DataRequestHandler:
                         match_data_array=target_data,
                         resampling=Resampling[ri_method]
                     )
+                temp_geom = request.subset_geom
             # If raster reprojection is not needed, then reproject subset_geom
             # to match the crs of the data
             else:
-                request.subset_geom = request.subset_geom.reproject(
+                temp_geom = request.subset_geom.reproject(
                     data.rio.crs)
 
             # Clip to the non-modified requested geometry
-            data = data.rio.clip([request.subset_geom.json], all_touched = True)
+            data = data.rio.clip([temp_geom.json], all_touched = True)
 
             # Assign time coordinate to request date. 
             # Overwrite native time format if present.

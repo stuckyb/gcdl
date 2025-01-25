@@ -162,5 +162,3 @@ def get_target_crs(input_crs_str, resolution, user_geom):
 
     return target_crs
 
-
-
