@@ -38,7 +38,7 @@ output_dir = Path('../output')
 access_log_path = Path('../logs/access.log')
 
 # Data upload cache.
-ul_cache = DataUploadCache('../upload', 1024 * 1024)
+ul_cache = DataUploadCache('../upload', 25 * 1024 * 1024) # 25 mb
 
 # Configure logging and get requests logger.
 with open('logging_config.yaml') as fin:

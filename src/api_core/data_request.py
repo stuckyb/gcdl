@@ -68,7 +68,8 @@ class DataRequest:
         months: Months to include in the request.
         days: Days to include in the request.
         hours: Hours to include in the request.
-        grain_method: 
+        grain_method: A string indicating which other temporal grains to use if
+            the requested grain is not implemented for a requested dataset.
         subset_geom: A SubsetGeom representing the clipping region or points to
             use or None.
         target_crs: A CRS instance.
