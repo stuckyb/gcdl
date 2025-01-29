@@ -1,6 +1,6 @@
-name: Dataset Request
+name: Dataset request
 description: Request that a specific dataset be included in the GeoCDL.
-title: "Dataset request: "
+title: "Dataset Request: "
 labels: ["dataset request"]
 body:
   - type: markdown
