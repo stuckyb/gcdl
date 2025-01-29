@@ -12,15 +12,15 @@ body:
     attributes:
       label: Email
       description: Please provide your email address so we can contact you if we have any questions.
-      placeholder: ex. firstname.lastname@usda.gov
+      placeholder: e.g., firstname.lastname@usda.gov
     validations:
-      required: false
+      required: true
   - type: input
     id: dataset-name
     attributes:
       label: Dataset name
       description: What is the name of the dataset?
-      placeholder: ex. DaymetV4
+      placeholder: e.g., DaymetV4
     validations:
       required: true
   - type: input
@@ -33,7 +33,7 @@ body:
   - type: dropdown
     id: dataset-type
     attributes:
-      label: Dataset type
+      label: Included data type(s)
       description: Does this dataset contain raster data, vector data, or both?
       options:
         - raster
@@ -45,7 +45,7 @@ body:
   - type: textarea
     id: dataset-description
     attributes:
-      label: Why would you like to have this dataset included in the GeoCDL?
+      label: Why would you like this dataset to be included in the GeoCDL?
       description: Please describe why you think this dataset would be a good fit for the GeoCDL. We typically prioritize datasets with the most potential users.
     validations:
       required: true
