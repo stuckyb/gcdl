@@ -1,0 +1,51 @@
+name: Dataset Request
+description: Request that a specific dataset be included in the GeoCDL.
+title: "Dataset request: "
+labels: ["dataset request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a dataset to include in the GeoCDL! Please complete and submit this form to provide the key details about your suggested dataset. 
+  - type: input
+    id: contact
+    attributes:
+      label: Email
+      description: Please provide your email address so we can contact you if we have any questions.
+      placeholder: ex. firstname.lastname@usda.gov
+    validations:
+      required: false
+  - type: input
+    id: dataset-name
+    attributes:
+      label: Dataset name
+      description: What is the name of the dataset?
+      placeholder: ex. DaymetV4
+    validations:
+      required: true
+  - type: input
+    id: dataset-url
+    attributes:
+      label: Dataset URL
+      description: What is the URL for this dataset? Please provide a URL that links to dataset information and documentation.
+    validations:
+      required: true
+  - type: dropdown
+    id: dataset-type
+    attributes:
+      label: Dataset type
+      description: Does this dataset contain raster data, vector data, or both?
+      options:
+        - raster
+        - vector
+        - both raster and vector
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    id: dataset-description
+    attributes:
+      label: Why would you like to have this dataset included in the GeoCDL?
+      description: Please describe why you think this dataset would be a good fit for the GeoCDL. We typically prioritize datasets with the most potential users.
+    validations:
+      required: true
