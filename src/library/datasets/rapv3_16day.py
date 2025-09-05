@@ -5,18 +5,19 @@ import datetime
 import rioxarray
 import api_core.data_request as dr
 from subset_geom import SubsetPolygon, SubsetMultiPoint
+from library.datasets.tileset import TileSet
 
 
-class RAPV3(GSDataSet):
+class RAPV3_16day(GSDataSet):
     def __init__(self, store_path):
         """
         store_path (Path): The location of on-disk dataset storage.
         """
-        super().__init__(store_path, 'rapv3')
+        super().__init__(store_path, 'rapv3-16day')
 
         # Basic dataset information.
-        self._id = 'RAPV3'
-        self.name = 'Rangeland Analysis Platform Version 3: Annual cover and biomass'
+        self._id = 'RAPV3_16day'
+        self.name = 'Rangeland Analysis Platform Version 3: 16-Day NPP'
         self.url = 'https://rangelands.app/'
         self.description = (
             "The Rangeland Analysis Platform's vegetation cover product "
@@ -42,49 +43,34 @@ class RAPV3(GSDataSet):
 
         # The variables/layers/bands in the dataset.
         self.vars = {
-            'cover_afg': 'fractional vegetation cover: annual forb and grass (%)', 
-            'cover_bare': 'fractional vegetation cover: bare ground (%)',
-            'cover_litter': 'fractional vegetation cover: litter (%)', 
-            'cover_pfg': 'fractional vegetation cover: perennial forb and grass (%)',
-            'cover_shrub': 'fractional vegetation cover: shrub (%)',
-            'cover_tree': 'fractional vegetation cover: tree (%)',
-            'biomass_afg': 'annual aboveground biomass: annual forb and grass (lbs/acre)',
-            'biomass_pfg': 'annual aboveground biomass: perennial forb and grass (lbs/acre)'
+            'npp_afg': '16-day aboveground biomass: annual forb and grass (lbs/acre)',
+            'npp_pfg': '16-day aboveground biomass: perennial forb and grass (lbs/acre)'
         }
 
 
         # Temporal coverage of the dataset.
         self.date_ranges['year'] = [
-            datetime.date(1986, 1, 1), datetime.date(2024, 1, 1)
+            None, None
         ]
         self.date_ranges['month'] = [
             None, None
         ]
         self.date_ranges['day'] = [
-            None, None
+            datetime.date(1986, 1, 1), datetime.date(2024, 12, 18)
         ]
 
         # Temporal resolution.
-        self.temporal_resolution['year'] = '1 year'
+        self.temporal_resolution['day'] = '16 days'
 
-        # File names distinguish biomass vs cover, as well as year.
-        # RAP files don't have layer names, but band IDs that start at 1
-        # See dataset READMEs for layer name to band ID mapping:
-        #   http://rangeland.ntsg.umt.edu/data/rap/rap-vegetation-cover/v3/README
-        #   http://rangeland.ntsg.umt.edu/data/rap/rap-vegetation-biomass/v3/README
-        fpattern = 'vegetation-{0}-v3-'
-        fpattern_suffix = '{0}.tif'
-        cover_fpattern = fpattern.format('cover') + fpattern_suffix
-        biomass_fpattern = fpattern.format('biomass') + fpattern_suffix
+        # File names distinguish year, day of year, and tile.
+        # The files don't include layer names, but the band 
+        # descriptions indicate:
+        #   Band 1: afgNPP
+        #   Band 2: pfgNPP
+        fpattern = 'vegetation-npp-16day-v3-{0}'
         self.fpat_bid = {
-            'cover_afg': {'fpattern' : cover_fpattern, 'band_id' : 1}, 
-            'cover_bare': {'fpattern' : cover_fpattern, 'band_id' : 2},
-            'cover_litter': {'fpattern' : cover_fpattern, 'band_id' : 3}, 
-            'cover_pfg': {'fpattern' : cover_fpattern, 'band_id' : 4},
-            'cover_shrub': {'fpattern' : cover_fpattern, 'band_id' : 5},
-            'cover_tree': {'fpattern' : cover_fpattern, 'band_id' : 6},
-            'biomass_afg': {'fpattern' : biomass_fpattern, 'band_id' : 1},
-            'biomass_pfg': {'fpattern' : biomass_fpattern, 'band_id' : 2}
+            'npp_afg': {'fpattern' : fpattern, 'band_id' : 1},
+            'npp_pfg': {'fpattern' : fpattern, 'band_id' : 2}
         }
 
         # Attributes for caching loaded and subsetted data.
@@ -92,6 +78,10 @@ class RAPV3(GSDataSet):
         self.cur_data = None
         self.current_clip = None
         self.cur_data_clipped = None
+
+        # Initialize the TileSet for the RAP 16-day data.
+        tile_paths = sorted(self.ds_path.glob('vegetation-npp-16day*.tif'))
+        self.tileset = TileSet(tile_paths, self.crs)
 
     def _loadData(self, varname, date_grain, request_date, subset_geom):
         """
@@ -101,20 +91,28 @@ class RAPV3(GSDataSet):
 
         # Get the file name of the requested data.
         if date_grain == dr.ANNUAL:
-            fname = self.fpat_bid[varname]['fpattern'].format(request_date.year)
+            raise NotImplementedError()
         elif date_grain == dr.MONTHLY:
             raise NotImplementedError()
         elif date_grain == dr.DAILY:
-            raise NotImplementedError()
+            date = datetime.date(
+                request_date.year, request_date.month, request_date.day
+            )
+            doy = date.timetuple().tm_yday
+            datestr = '{0}-{1:03}'.format(
+                request_date.year, doy
+            )
+            fname = self.fpat_bid[varname]['fpattern'].format(datestr)
         else:
             raise ValueError('Invalid date grain specification.')
-
-        fpath = self.ds_path / fname
 
         # Load the data from disk, if needed.
         data_needed = (fname)
         if data_needed != self.data_loaded:
-            data = rioxarray.open_rasterio(fpath, masked=True)
+            data = self.tileset.getRaster(subset_geom, request_fpattern=fname)
+
+            if data is None:
+                return None
 
             # Update the cache.
             self.data_loaded = data_needed
@@ -161,7 +159,16 @@ class RAPV3(GSDataSet):
 
         data = self._loadData(varname, date_grain, request_date, subset_geom)
 
+        if data is None:
+            return None
+
         data = data.sel(band=self.fpat_bid[varname]['band_id'])
+
+        # Without reassignment, the 'long_name' attribute remains the original
+        # length and causes an error when writing to file.
+        data = data.assign_attrs(
+            long_name=varname
+        )
 
         # If the subset request is a polygon, the data will already be
         # subsetted by _loadData(), so we don't need to handle that here.

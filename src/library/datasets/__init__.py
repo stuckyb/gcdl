@@ -12,3 +12,4 @@ from .timeout import Timeout
 from .soilgrids import Soilgrids250mV2
 from .smap_hb1km import SMAP_HB1km
 from .rapv3 import RAPV3
+from .rapv3_16day import RAPV3_16day
