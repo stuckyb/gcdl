@@ -75,7 +75,7 @@ class SRTM(GSDataSet):
         """
         if subset_geom is None:
             raise ValueError(
-                'A subset geometry is required for using GTOPO30 data.'
+                'A subset geometry is required for using SRTM data.'
             )
         
         if not(self.crs.equals(subset_geom.crs)):
