@@ -10,8 +10,7 @@ import xarray
 class TileSet:
     """
     Implements a high-level interface to geospatial data stored as a local,
-    on-disk collection of contiguous tiles.  Currently, only datasets with one
-    file per tile are supported.
+    on-disk collection of contiguous tiles.
     """
     def __init__(self, files, crs):
         """
@@ -52,7 +51,7 @@ class TileSet:
         """
         return self.polys.total_bounds
 
-    def getTilePaths(self, subset_geom):
+    def getTilePaths(self, subset_geom, request_fpattern):
         """
         Returns a Series containing the file paths of the tiles required to
         cover the given subset geometry.
@@ -65,20 +64,31 @@ class TileSet:
                 'data tiles.'
             )
 
-        idxs = self.polys.intersects(subset_geom.geom.unary_union)
+        polys = self.polys
+        if request_fpattern is not None:
+            tile_match = [request_fpattern in path.name for path in self.fpaths]
+            # Not every day will have data, so skip if no tiles match.
+            if not any(tile_match):
+                return None
+            polys = polys[tile_match]
+
+        idxs = polys.intersects(subset_geom.geom.unary_union)
 
         return self.fpaths[idxs]
 
-    def getRaster(self, subset_geom):
+    def getRaster(self, subset_geom, request_fpattern=None):
         """
         Returns an xarray.DataArray containing a mosaic of the tiles required
         to cover the given subset geometry.
 
         subset_geom: An instance of SubsetGeom.
         """
-        fpaths = self.getTilePaths(subset_geom)
-        tiles = []
+        fpaths = self.getTilePaths(subset_geom, request_fpattern)
+
+        if fpaths is None:
+            return None
         
+        tiles = []
         for fpath in fpaths:
             tiles.append(open_rasterio(fpath, masked=True))
 
