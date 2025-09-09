@@ -65,16 +65,18 @@ class TileSet:
             )
 
         polys = self.polys
+        tile_paths = self.fpaths
         if request_fpattern is not None:
             tile_match = [request_fpattern in path.name for path in self.fpaths]
             # Not every day will have data, so skip if no tiles match.
             if not any(tile_match):
                 return None
             polys = polys[tile_match]
+            tile_paths = tile_paths[tile_match]
 
         idxs = polys.intersects(subset_geom.geom.unary_union)
 
-        return self.fpaths[idxs]
+        return tile_paths[idxs]
 
     def getRaster(self, subset_geom, request_fpattern=None):
         """
