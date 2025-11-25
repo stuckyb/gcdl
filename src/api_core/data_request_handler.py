@@ -69,20 +69,20 @@ class DataRequestHandler:
             # Check if category color also returned
             if isinstance(data, dict):
                 out_df = gpd.GeoDataFrame({
-                    'time': my_date, 
-                    'dataset': dataset.id,
-                    'variable': varname,
-                    'value': data['data'],
-                    'color': data['color']
+                    'time': [my_date], 
+                    'dataset': [dataset.id],
+                    'variable': [varname],
+                    'value': [data['data']],
+                    'color': [data['color']]
                     }, 
                     geometry = request.subset_geom.geom,
             )   
             else:
                 out_df = gpd.GeoDataFrame({
-                    'time': my_date, 
-                    'dataset': dataset.id,
-                    'variable': varname,
-                    'value': data
+                    'time': [my_date], 
+                    'dataset': [dataset.id],
+                    'variable': [varname],
+                    'value': [data]
                     }, 
                     geometry = request.subset_geom.geom,
                 )
@@ -145,7 +145,7 @@ class DataRequestHandler:
             # Assign time coordinate to request date. 
             # Overwrite native time format if present.
             date_str = self._requestDateAsString(grain, rdate, rhour)
-            if 'time' in data.dims:
+            if 'time' in list(data.coords):
                 data['time'] = date_str
             else:
                 date_series = pd.Series(date_str)
