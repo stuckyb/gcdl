@@ -11,9 +11,9 @@ import os.path
 
 
 vegcover_baseurl = 'http://rangeland.ntsg.umt.edu/data/rap/rap-vegetation-cover/v3/vegetation-cover-v3-{0}.tif'
-vegcover_years = range(1986, 2023)
+vegcover_years = range(2025, 2026)
 biomass_baseurl = 'http://rangeland.ntsg.umt.edu/data/rap/rap-vegetation-biomass/v3/vegetation-biomass-v3-{0}.tif'
-biomass_years = range(1986, 2023)
+biomass_years = range(2025, 2026)
 
 # Download up to 10 files concurrently.
 max_threads = 10
